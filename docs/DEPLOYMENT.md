@@ -24,3 +24,13 @@ GitHub 源码仓库保持组织私有。Git 不保存 GLB、人物头像、Blend
 - 本地回执位于忽略目录 `reports/`，包含构建清单、上传记录、公网校验及截图。后续发布先运行本地检查，再用 `node scripts/verify-remote.mjs` 与 `node scripts/smoke.mjs https://eys.onewonder.co.jp/ production` 验证真实域名。
 
 回滚使用保留的 S3 对象版本或上一版本发布包；不删除本地或云端文件。CloudFormation 的 bucket 设置 Retain。当前项目无需 EC2、数据库或在线生成服务；每位访问者独立探索。
+
+## 1.1.0 更新（2026-09-10）
+
+粉花绿鹅的五瓣花环增加实体厚度、正反面弧度和圆润边缘，沿用原装备 ID、外轮廓与脸部开口。模型和角色缩略图来自衣橱 4.3.28，Blender 在 S1 生成并重载确认；原角色与贵族眼镜／褶领混搭已查看。
+
+行走时用 V 或「视角」按钮切换俯视／第一人称。第一人称保持鹅的眼睛高度，鼠标拖动或点击锁定后环顾；手机可同时按方向键与拖动画面。Esc 先释放已锁定的鼠标。移动仍经过原有地图碰撞与房间判定。
+
+本地选角／行走检查及公网第一人称检查通过，包含相对视线移动、桌面锁定和释放、390px 双指同时移动与转头、返回俯视及换角。`reports/production/first-person.json` 保存结果与所测构建哈希。公网花环 GLB、角色头像、视角代码及原地图的 SHA256 一致，运行错误列表为空。
+
+此次构建 113 个文件，实际上传 8 个变化文件，105 个已按远端大小和 SHA256 元数据确认一致并复用；缓存失效完成。无 DNS／基础设施变更。旧文件保留。后续同步源资产可运行 `python -X utf8 scripts/sync-workspace-assets.py --source C:/3d/eys/web_wardrobe`；发布前运行 `node scripts/smoke-first-person.mjs`，上传脚本要求该结果与当前构建哈希一致。

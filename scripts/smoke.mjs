@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 const url=process.argv[2]||'http://127.0.0.1:8870/',label=process.argv[3]||'local',out='reports/'+label;await fs.mkdir(out,{recursive:true});
+const expectedVersion=JSON.parse(await fs.readFile('src/assets/manifest.json','utf8')).version;
 const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--enable-unsafe-swiftshader']});
 const errors=[],requests=[],evidence=[];
 try{
@@ -10,7 +11,7 @@ try{
  const response=await page.goto(url);assert.equal(response.status(),200);await page.waitForFunction(()=>window.eys?.state().ready||window.eys?.state().error,null,{timeout:60000});assert.equal((await state()).error,null);assert.equal((await state()).actorCount,27);assert.equal(await page.locator('[data-actor]').count(),27);assert.equal((await state()).walk,null);assert(!requests.some(r=>r.endsWith('.glb')),'Do not load 3D models before selection');
  await page.locator('#selected-portrait').evaluate(i=>i.decode());await page.screenshot({path:out+'/selection-desktop.png'});
  for(const id of label==='local'?['cast.14','cast.01','cast.27']:['cast.27']){
-  await page.locator('[data-actor="'+id+'"]').click();assert.equal((await state()).selected,id);assert.equal(await page.locator('[data-actor="'+id+'"]').getAttribute('aria-pressed'),'true');await page.locator('#walk-enter').click();await page.waitForFunction(()=>eys.state().walk?.active||eys.state().walk?.error||eys.state().error,null,{timeout:90000});let s=await state();assert.equal(s.error,null);assert.equal(s.walk.error,null);assert.equal(s.walk.actor,id);assert.equal(s.walk.wardrobeVersion,'4.3.27');
+  await page.locator('[data-actor="'+id+'"]').click();assert.equal((await state()).selected,id);assert.equal(await page.locator('[data-actor="'+id+'"]').getAttribute('aria-pressed'),'true');await page.locator('#walk-enter').click();await page.waitForFunction(()=>eys.state().walk?.active||eys.state().walk?.error||eys.state().error,null,{timeout:90000});let s=await state();assert.equal(s.error,null);assert.equal(s.walk.error,null);assert.equal(s.walk.actor,id);assert.equal(s.walk.wardrobeVersion,expectedVersion);
   await page.locator('#walk-help-toggle').click();await page.locator('#walk-home').click();await page.locator('#walk-help-toggle').click();s=await state();
   const before=[...s.walk.position];await page.keyboard.down('KeyD');await page.waitForTimeout(450);await page.keyboard.up('KeyD');await page.waitForTimeout(120);s=await state();assert(s.walk.position[0]>before[0]+.25);assert(await page.locator('#walk-fan-notice').isVisible());await page.screenshot({path:out+'/walk-'+id+'.png'});evidence.push({actor:id,modules:s.walk.modules,position:s.walk.position,drawCalls:s.walk.drawCalls});
   if(id==='cast.14'){

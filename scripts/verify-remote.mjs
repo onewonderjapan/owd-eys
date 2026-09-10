@@ -6,9 +6,10 @@ import assert from 'node:assert/strict';
 const url = new URL(process.argv[2] || 'https://eys.onewonder.co.jp/');
 const build = JSON.parse(await fs.readFile('reports/build.json', 'utf8'));
 const scene = JSON.parse(await fs.readFile('dist/map-scene.json', 'utf8'));
+const manifest = JSON.parse(await fs.readFile('dist/assets/manifest.json', 'utf8'));
 const byPath = new Map(build.files.map(f => [f.path, f]));
 const checks = [];
-for (const path of ['index.html', 'assets/manifest.json', 'map-scene.json', scene.glb]) {
+for (const path of ['index.html', 'assets/manifest.json', 'map-scene.json', scene.glb, 'map-walk-view.js', manifest.modules.find(a=>a.id==='flower.crown').url, manifest.presets['cast.10'].thumbnail]) {
   const response = await fetch(new URL(path, url));
   const data = Buffer.from(await response.arrayBuffer());
   const sha256 = crypto.createHash('sha256').update(data).digest('hex');

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {createNavigation,createWalker} from './map-walk-simulation.js';
 import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
+import {createWalkView} from './map-walk-view.js';
 
 // Explicit boundary between overview controls and the flat walking simulation.
 export function installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor=()=> 'cast.14'}){
@@ -9,6 +10,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  let nav,walker,avatar,loading=false,active=false,paused=false,failure=null,saved=null,raf=0,last=0,frame=0;
  const target=new THREE.Vector3(),offset=new THREE.Vector3(0,13,9),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const movement=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
+ const view=createWalkView({overview:camera,host,canvas:renderer.domElement,getAvatar:()=>avatar,getWalker:()=>walker,isActive:()=>active,canLook:()=>active&&!paused&&info.hidden&&$('#walk-help').hidden,clearInput});
  const note={
   '01':'西北角的酒馆。沿斜角门口进出，绕过吧台和木桶。','02':'镇长的办公室，书桌位于房间北侧。','03':'两把理发椅并排，入口朝向南侧街道。',
   '04':'法院的长厅，门口设在东南侧；前方为长椅与审判席。','05':'礼拜堂，南侧小门厅连接广场，北侧保留狭长附室。','06':'银行的柜台与保险箱；从南侧小门厅回到街道。',
@@ -23,20 +25,21 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  }
  function inspect(){
   if(!active)return;const s=walker.state,id=s.area.kind==='room'?s.area.id:s.near?.room;if(!id)return;
-  clearInput();$('#walk-info-title').textContent=nav.rooms.find(r=>r.id===id).label;$('#walk-info-text').textContent=note[id];info.hidden=false;
+  clearInput();view.unlock();$('#walk-info-title').textContent=nav.rooms.find(r=>r.id===id).label;$('#walk-info-text').textContent=note[id];info.hidden=false;
  }
  function frameLoop(time){
   if(!active)return;const dt=Math.min((time-last)/1000,.05)||0;last=time;
   const values=new Set([...keys,...touches.values()]);const x=Number(values.has('KeyD')||values.has('ArrowRight'))-Number(values.has('KeyA')||values.has('ArrowLeft')),z=Number(values.has('KeyS')||values.has('ArrowDown'))-Number(values.has('KeyW')||values.has('ArrowUp'));
-  const s=walker.step(paused||!info.hidden?[0,0]:[x,z],dt);
+  const s=walker.step(paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
   avatar.player.position.set(s.position[0],nav.heightAt(s.position),s.position[1]);
   const angle=Math.atan2(Math.sin(s.heading-avatar.visual.rotation.y),Math.cos(s.heading-avatar.visual.rotation.y));avatar.visual.rotation.y+=angle*Math.min(1,dt*18);
   avatar.model.rotation.z=!reduced&&s.moving?Math.sin(s.distance*15)*.045:0;
   avatar.visual.position.y=!reduced&&s.moving?Math.abs(Math.sin(s.distance*15))*.025:0;
   const aim=new THREE.Vector3(s.position[0],.2,s.position[1]);target.lerp(aim,1-Math.exp(-dt*12));camera.position.copy(target).add(offset);camera.lookAt(target);
+  view.update(s.position,nav.heightAt(s.position));
   if(++frame%3===0)updateHud();render();raf=requestAnimationFrame(frameLoop);
  }
- function projection(){if(!active)return false;const w=host.clientWidth,h=host.clientHeight,width=w/h<1?8.5:12.5;camera.left=-width/2;camera.right=width/2;camera.top=width*h/w/2;camera.bottom=-camera.top;camera.zoom=1;camera.updateProjectionMatrix();return true;}
+ function projection(){if(!active)return false;const w=host.clientWidth,h=host.clientHeight,width=w/h<1?8.5:12.5;camera.left=-width/2;camera.right=width/2;camera.top=width*h/w/2;camera.bottom=-camera.top;camera.zoom=1;camera.updateProjectionMatrix();view.projection();return true;}
  async function start(){
   if(active||loading)return;loading=true;failure=null;enter.disabled=true;enter.textContent='正在准备角色…';$('#walk-error').hidden=true;
   try{
@@ -47,6 +50,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    root.traverse(o=>{if(o.userData.map_category==='characters'){saved.visible.push([o,o.visible]);o.visible=false;}});
    controls.enabled=false;active=true;paused=false;clearInput();avatar.player.visible=true;
    document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
+   view.sync();view.update(walker.state.position,nav.heightAt(walker.state.position));
    renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));resize();projection();
    target.set(walker.state.position[0],.2,walker.state.position[1]);camera.position.copy(target).add(offset);camera.lookAt(target);updateHud();
    host.tabIndex=0;host.focus({preventScroll:true});last=performance.now();raf=requestAnimationFrame(frameLoop);
@@ -55,19 +59,20 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   finally{loading=false;enter.disabled=false;enter.textContent='带 TA 进入小镇 ↗';}
  }
  function stop(){
-  if(!active)return;active=false;clearInput();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
+  if(!active)return;active=false;clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
   for(const [o,visible] of saved.visible)o.visible=visible;highlight.visible=saved.highlight;
   controls.enabled=true;controls.target.copy(saved.target);camera.position.copy(saved.position);camera.up.copy(saved.up);camera.zoom=saved.zoom;renderer.setPixelRatio(saved.pixelRatio);resize();controls.update();render();
   const url=new URL(location.href);url.searchParams.delete('walk');history.replaceState(null,'',url);scrollTo(0,saved.scroll);enter.focus({preventScroll:true});
  }
- function pause(){if(!active)return;paused=true;clearInput();$('#walk-paused').hidden=false;}
+ function pause(){if(!active)return;paused=true;clearInput();view.unlock();$('#walk-paused').hidden=false;}
  function resume(){if(!active)return;paused=false;clearInput();$('#walk-paused').hidden=true;last=performance.now();}
  window.addEventListener('blur',pause);window.addEventListener('focus',resume);document.addEventListener('visibilitychange',()=>document.hidden?pause():resume());
  window.addEventListener('keydown',e=>{
   if(!active||e.target.closest('input,textarea,select'))return;
   if(movement.has(e.code)){e.preventDefault();if(!paused&&info.hidden&&!e.target.closest('button'))keys.add(e.code);}
-  else if(e.code==='Escape'){e.preventDefault();if(!info.hidden)info.hidden=true;else if(!$('#walk-help').hidden)$('#walk-help').hidden=true;else stop();}
+  else if(e.code==='Escape'){e.preventDefault();if(view.escape())return;if(!info.hidden)info.hidden=true;else if(!$('#walk-help').hidden)$('#walk-help').hidden=true;else stop();}
   else if(e.code==='KeyE'&&!e.repeat){e.preventDefault();inspect();}
+  else if(e.code==='KeyV'&&!e.repeat){e.preventDefault();view.change();}
  });
  window.addEventListener('keyup',e=>{if(movement.has(e.code)){keys.delete(e.code);if(active)e.preventDefault();}});
  for(const b of document.querySelectorAll('[data-move]')){
@@ -76,11 +81,11 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  }
  enter.onclick=start;exit.onclick=stop;$('#walk-inspect').onclick=inspect;
  $('#walk-info-close').onclick=()=>{info.hidden=true;host.focus({preventScroll:true});};
- $('#walk-help-toggle').onclick=()=>{clearInput();$('#walk-help').hidden=!$('#walk-help').hidden;host.focus({preventScroll:true});};
+ $('#walk-help-toggle').onclick=()=>{clearInput();view.unlock();$('#walk-help').hidden=!$('#walk-help').hidden;host.focus({preventScroll:true});};
  $('#walk-home').onclick=()=>{clearInput();walker.reset();target.set(walker.state.position[0],.2,walker.state.position[1]);info.hidden=true;host.focus({preventScroll:true});};
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v1',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),drawCalls:renderer.info.render.calls});
- return {start,stop,projection,state};
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v2',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls});
+ return {start,stop,projection,state,get camera(){return view.camera;}};
 }

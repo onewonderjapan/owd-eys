@@ -3,6 +3,11 @@
   "base_url": "https://eys.onewonder.co.jp/",
   "assets": [
     {
+      "path": "assets/c1e54cc384f002494178b872234c38c91d1dc82c033a078b3fa3434eaac4cbc6.glb",
+      "sha256": "c1e54cc384f002494178b872234c38c91d1dc82c033a078b3fa3434eaac4cbc6",
+      "bytes": 1153028
+    },
+    {
       "path": "assets/0b6ccc2f2fbea348914df2941f5b5d107a6802d3453b7bd7b2edc2e7897b3be6.glb",
       "sha256": "0b6ccc2f2fbea348914df2941f5b5d107a6802d3453b7bd7b2edc2e7897b3be6",
       "bytes": 2741472
@@ -108,9 +113,9 @@
       "bytes": 2981512
     },
     {
-      "path": "assets/862156f498468305fb99170efb4a27c9c661e8342bc6f64b25668bae4795acf7.glb",
-      "sha256": "862156f498468305fb99170efb4a27c9c661e8342bc6f64b25668bae4795acf7",
-      "bytes": 396508
+      "path": "assets/31124a0bdc532ce388cfb5c7a080f926fc729cb871d2ec20563345291e0a6a71.glb",
+      "sha256": "31124a0bdc532ce388cfb5c7a080f926fc729cb871d2ec20563345291e0a6a71",
+      "bytes": 700596
     },
     {
       "path": "assets/c9d01ab7dbc12ddda0478e30caec4148267d4976c8f0aec73b8d08ebeb66ea19.glb",
@@ -373,9 +378,9 @@
       "bytes": 17556
     },
     {
-      "path": "assets/f49d017cdc29e91e844bb9cc912774b4157daba65036cffff301ebb2f118fab4.png",
-      "sha256": "f49d017cdc29e91e844bb9cc912774b4157daba65036cffff301ebb2f118fab4",
-      "bytes": 21126
+      "path": "assets/497b135f5ff3acf3af7e33128bb4de50c665ad5b2a5f762fa7d47879b1ffbaf2.png",
+      "sha256": "497b135f5ff3acf3af7e33128bb4de50c665ad5b2a5f762fa7d47879b1ffbaf2",
+      "bytes": 22196
     },
     {
       "path": "assets/036ee800f7dbcd02e38b232804ecb87b07f4cff8e4022e850f16ad2f69913686.png",
@@ -461,11 +466,6 @@
       "path": "assets/4eb17206cb53b74cf68b8e558b64798ae73959247c21d8fefc3e03f94d2f64a4.png",
       "sha256": "4eb17206cb53b74cf68b8e558b64798ae73959247c21d8fefc3e03f94d2f64a4",
       "bytes": 21609
-    },
-    {
-      "path": "assets/c1e54cc384f002494178b872234c38c91d1dc82c033a078b3fa3434eaac4cbc6.glb",
-      "sha256": "c1e54cc384f002494178b872234c38c91d1dc82c033a078b3fa3434eaac4cbc6",
-      "bytes": 1153028
     },
     {
       "path": "assets/9edddbcf238d39ee974485b3479fc139cd687c42c5e173339d2afe42714948b7.glb",

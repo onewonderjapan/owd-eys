@@ -1,5 +1,5 @@
 {
-  "version": "4.3.27",
+  "version": "4.3.28",
   "body_fit": "GGD_BODY_3.0",
   "base": {
     "id": "GGD_BASE_BODY",
@@ -193,7 +193,7 @@
       "hide_tags": [
         "crown"
       ],
-      "url": "assets/862156f498468305fb99170efb4a27c9c661e8342bc6f64b25668bae4795acf7.glb"
+      "url": "assets/31124a0bdc532ce388cfb5c7a080f926fc729cb871d2ec20563345291e0a6a71.glb"
     },
     {
       "id": "flower.collar",
@@ -662,7 +662,7 @@
         "flower.collar",
         "flower.cuffs"
       ],
-      "thumbnail": "assets/f49d017cdc29e91e844bb9cc912774b4157daba65036cffff301ebb2f118fab4.png"
+      "thumbnail": "assets/497b135f5ff3acf3af7e33128bb4de50c665ad5b2a5f762fa7d47879b1ffbaf2.png"
     },
     "cast.11": {
       "label": "11 黑衣毛绒",

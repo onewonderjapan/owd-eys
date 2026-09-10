@@ -22,7 +22,7 @@ async function makeGame(){
  for(const [position,color,power] of [[[-15,25,8],'#c3dfff',2.3],[[7,20,-14],'#ffe0ab',2.5],[[18,12,20],'#c6dde1',1]]){const light=new THREE.DirectionalLight(color,power);light.position.set(...position);scene.add(light);}
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:'#293c3f',roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.64;scene.add(ground);
  const highlight=new THREE.Object3D();highlight.visible=false;
- const render=()=>renderer.render(scene,camera);
+ const render=()=>renderer.render(scene,walking?.camera||camera);
  const resize=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;walking?.projection();renderer.setSize(w,h,false);render();};
  new ResizeObserver(resize).observe(host);
  walking=installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor:()=>selected});return walking;
