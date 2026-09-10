@@ -1,0 +1,5 @@
+.fan-notice{font-size:11px;line-height:1.8;color:#657970;max-width:700px;margin:12px 0 0;padding-left:10px;border-left:2px solid #b59b69;letter-spacing:0}
+.studio-heading .fan-notice{font-size:10px;line-height:1.7;letter-spacing:0;max-width:340px;margin:13px 0 0;color:#506b5f}
+#walk-help .fan-notice-full{font-size:11px;line-height:1.85;color:#e1d8bd;border-top:1px solid #82948566;padding-top:13px;margin:17px 0 0}
+.walk-fan-notice{position:absolute;bottom:max(70px,calc(env(safe-area-inset-bottom) + 50px));left:50%;transform:translateX(-50%);margin:0;width:max-content;max-width:calc(100% - 36px);text-align:center;line-height:1.65;font-size:10px;color:#e9e3cf;background:#203638e8;border:1px solid #8f9e8044;padding:6px 11px;border-radius:6px;pointer-events:none}
+@media(pointer:coarse),(max-width:650px){.walk-fan-notice{bottom:max(137px,calc(env(safe-area-inset-bottom) + 119px));font-size:10px}.studio-heading .fan-notice{max-width:290px}.fan-notice{font-size:10px}}

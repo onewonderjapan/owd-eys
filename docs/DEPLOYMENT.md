@@ -1,0 +1,26 @@
+# 发布方式
+
+与现有 pet.onewonder.co.jp 对照实测：AWS 账号 566601428909，东京私有 S3、CloudFront OAC 回源 `/out`、HTTPS、自定义域名、Route 53 Alias A。EYS 独立 bucket 与分发，不修改 pet 站点。
+
+复用 pet 站点的已签发通配符证书、静态缓存策略及安全响应头策略。eys.onewonder.co.jp 只新建 A 记录；该名称在发布前查询为空，公网 NS 与 Hosted Zone Z049829035FWZ7KYTMXD4 一致。
+
+1. `npm ci`；先由原始工作区整理资产，或上线后 `npm run fetch-assets` 恢复哈希锁定的资产。
+2. `npm run build`，`npm test`；核对实际网页角色选择与进入地图。
+3. `aws cloudformation deploy --profile onewonder.root --region ap-northeast-1 --stack-name onewonder-eys --template-file infra/site.yaml --parameter-overrides PublishDns=false` 创建独立基础设施。
+4. 按 `scripts/publish.py` 的清单上传 `dist/`，先内容哈希资产、后 HTML；不删除远端旧文件。
+5. 核对 CloudFront 实际资源，再将 `PublishDns=true` 应用到同一 stack，创建 eys 的 Alias A。
+6. 检查 HTTPS、真实角色加载与移动、原始 S3 匿名请求被拒绝，记录发布回执。
+
+GitHub 源码仓库保持组织私有。Git 不保存 GLB、人物头像、Blender 原件、登录信息或生成目录。公开文件仅为运行网页、运行 GLB 和缩略图；非官方二创与非商用声明必须保留。公开内容范围已按用户要求核对。
+
+## 首次上线验证（2026-09-10）
+
+- 地址：<https://eys.onewonder.co.jp/>；CloudFormation `onewonder-eys` 状态 `UPDATE_COMPLETE`。
+- S3：`onewonder-eys-566601428909/out/`；CloudFront：`E23UO5CSFQ0BWM`（`d3cngbirlx1hz5.cloudfront.net`）。
+- Route 53 只创建 `eys.onewonder.co.jp` 的 Alias A，指向此 CloudFront 分发。
+- 112 个运行文件共 136,646,626 bytes，上传后逐个验证大小与 SHA256 元数据；缓存失效已完成。
+- HTTPS 首页、角色清单、地图清单与地图 GLB 的公网 SHA256 与构建结果一致；HTTP 自动转 HTTPS，S3 原始地址匿名访问返回 403。
+- 浏览器确认 27 位角色可选、全部头像解码成功；本地实测 14／01／27 三套角色，公网实测 27 与手机 14 的装配、移动、返回换角。390px 页面与触屏方向键通过，运行错误列表为空。
+- 本地回执位于忽略目录 `reports/`，包含构建清单、上传记录、公网校验及截图。后续发布先运行本地检查，再用 `node scripts/verify-remote.mjs` 与 `node scripts/smoke.mjs https://eys.onewonder.co.jp/ production` 验证真实域名。
+
+回滚使用保留的 S3 对象版本或上一版本发布包；不删除本地或云端文件。CloudFormation 的 bucket 设置 Retain。当前项目无需 EC2、数据库或在线生成服务；每位访问者独立探索。

@@ -1,0 +1,828 @@
+{
+  "version": "4.3.27",
+  "body_fit": "GGD_BODY_3.0",
+  "base": {
+    "id": "GGD_BASE_BODY",
+    "url": "assets/c1e54cc384f002494178b872234c38c91d1dc82c033a078b3fa3434eaac4cbc6.glb"
+  },
+  "modules": [
+    {
+      "id": "anubis.belt",
+      "label": "阿努比斯酒红腰带",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/0b6ccc2f2fbea348914df2941f5b5d107a6802d3453b7bd7b2edc2e7897b3be6.glb"
+    },
+    {
+      "id": "anubis.cuirass",
+      "label": "阿努比斯躯干衣甲",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/fd456b8f7c4758635090086ca6ff0445b8c28ba61f0f904b047c846b315f5023.glb"
+    },
+    {
+      "id": "anubis.jackal_mask",
+      "label": "阿努比斯胡狼面具",
+      "slot": "facewear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "face",
+        "crown"
+      ],
+      "url": "assets/c9fa6378054412202516babdef535db41fc3d840214d1cd1e349e363470e0f23.glb"
+    },
+    {
+      "id": "anubis.khopesh",
+      "label": "阿努比斯弯刀",
+      "slot": "handheld",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/3bb6e385430e14fc891122fcb745590af465bb9832276343a18d827b738c1c45.glb"
+    },
+    {
+      "id": "anubis.kilt",
+      "label": "阿努比斯短裙",
+      "slot": "lower",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/13202ea0951734c43ddeeae09a442f19fe55d47eecfd1b178883805f8d37f308.glb"
+    },
+    {
+      "id": "anubis.nemes",
+      "label": "阿努比斯蓝金头巾",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "crown"
+      ],
+      "url": "assets/09f05b28e194421fef7087613eeecc7d7cef007bbb78e2afef6889df5400e872.glb"
+    },
+    {
+      "id": "anubis.shoulders",
+      "label": "阿努比斯尖叶肩甲",
+      "slot": "shoulders",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/b47f14ebd368804bd054f8574852ed9fdc49fc78f63103f05115e33f413b7510.glb"
+    },
+    {
+      "id": "anubis.wesekh",
+      "label": "阿努比斯领饰",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/29a4334bb6dea9266c8247d0dc6ae2dbaf9cee88b74ff83ef0fbf9cdd4b02da7.glb"
+    },
+    {
+      "id": "common.bow",
+      "label": "粉色丝绸蝴蝶结",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/20f31003bf2b2627e2d78caa729f52306cecaacd7804397f7f3c922ea99766cb.glb"
+    },
+    {
+      "id": "common.monocle",
+      "label": "黄铜单片眼镜",
+      "slot": "facewear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/30db02f522cb44cdf46bba79c998906681ffb86d3846f5e17c68a9e874bf5370.glb"
+    },
+    {
+      "id": "common.bucket_hat",
+      "label": "蓝纹刺绣紫色帽",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "crown"
+      ],
+      "url": "assets/b2dcdd79258347925a7d8f78feac8f2437526f79ac0d3dbf7d660e62f47d95ba.glb"
+    },
+    {
+      "id": "common.ruff",
+      "label": "折叠褶领",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/1d550c65828c82471545e366c78a57153f4714509806b91565214da9a85af02c.glb"
+    },
+    {
+      "id": "captain.coat",
+      "label": "船长深蓝外衣",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/4334feed49ad440e3f9305e77bf8192bced0e5c8926ffe7c1b2950a93195cfbb.glb"
+    },
+    {
+      "id": "captain.fur",
+      "label": "船长毛绒领肩",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/25d6c619fbb6f69fc22ac1e6a5b966615b93000ac9f7f30dcb37b74c3e18c609.glb"
+    },
+    {
+      "id": "explorer.vest",
+      "label": "探险者皮革背心",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/560f2cf6f80de76ba1de324e6dc2dad91665c739d911c8c74c7358c538a8a76a.glb"
+    },
+    {
+      "id": "explorer.utility_belt",
+      "label": "探险者腰带与工具包",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/374779482c800b1fc1283e23ffd72c8b13901b5134f5be324c6f822b652e5e0f.glb"
+    },
+    {
+      "id": "noble.disguise",
+      "label": "贵族假鼻与卷胡须",
+      "slot": "facewear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "bill"
+      ],
+      "url": "assets/3b37fd923c7c7fd62880f09ce1c85e8aa180b4f7070deb79335946fb4900e03f.glb"
+    },
+    {
+      "id": "noble.coat",
+      "label": "贵族金绣绿礼服",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/4f60ac84cf5417d978ad1b74c08b9f45a2f693edb9169909f8fcd6014902d135.glb"
+    },
+    {
+      "id": "noble.sash",
+      "label": "贵族酒红束带",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/fb88c3909c8f7e039913a70650b46b7eee1a8c56e5d0970690cb4cd7296fc436.glb"
+    },
+    {
+      "id": "rose.crown",
+      "label": "红玫瑰花冠",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "crown"
+      ],
+      "url": "assets/0c6b47ccb7aca2bb8861c5312f12b53fd86640dd404ef8737313058f4a4b3ef2.glb"
+    },
+    {
+      "id": "scarf.blue",
+      "label": "蓝色系结围巾",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/b05dcf57614710bda7b0fb0c1852c3a0a17edec7ca9dde2c6041415129fad6f5.glb"
+    },
+    {
+      "id": "flower.crown",
+      "label": "粉色花瓣头饰",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "crown"
+      ],
+      "url": "assets/862156f498468305fb99170efb4a27c9c661e8342bc6f64b25668bae4795acf7.glb"
+    },
+    {
+      "id": "flower.collar",
+      "label": "花精绿色领环",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/c9d01ab7dbc12ddda0478e30caec4148267d4976c8f0aec73b8d08ebeb66ea19.glb"
+    },
+    {
+      "id": "flower.cuffs",
+      "label": "花精叶片腕环",
+      "slot": "wristwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/39c993f6c58acbe09ec9dc2055172d21a717083acb9334f51438bd322660ede6.glb"
+    },
+    {
+      "id": "winter.coat",
+      "label": "黑色绗缝外套",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/fd3151e263d13991c5db1a5a5300a4ff7421a7e208e3d62b87725efeb7bdabbb.glb"
+    },
+    {
+      "id": "winter.collar",
+      "label": "白色毛绒领",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/e64883106111efd7f4e8ca7d3b4c1b78b3f53fcdf5e7927f0186eaacd88106d8.glb"
+    },
+    {
+      "id": "winter.hem",
+      "label": "白色毛绒下摆",
+      "slot": "lower",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/bfabcb7e2ccd18897617432d55df8488622016ceb526e46fecd635d8fc236e36.glb"
+    },
+    {
+      "id": "winter.harness",
+      "label": "黑衣金扣束带",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/7cc71b002f10a259b3b6113d8d6bfbd17786fe2660b4ed08a9b422e905435f65.glb"
+    },
+    {
+      "id": "winter.cuffs",
+      "label": "毛绒袖口",
+      "slot": "wristwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/2dbf66df95b26c2501a51175367fce4d3a2e3b42ce9b6b1408603743dd9d4467.glb"
+    },
+    {
+      "id": "winter.iris",
+      "label": "冰蓝星光眼饰",
+      "slot": "facewear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "eye_right"
+      ],
+      "url": "assets/b583614815293f0c993e59151d53fe89af9719ab7272bdf9ad9624dc89203139.glb"
+    },
+    {
+      "id": "leaf.mantle",
+      "label": "层叠绿叶披肩",
+      "slot": "shoulders",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/cd01a264451139a2baf677e706b22985d60e2bb0b5afd999f0b6b8f1f0bc1f27.glb"
+    },
+    {
+      "id": "doctor.mask",
+      "label": "鸟嘴面具与镜片",
+      "slot": "facewear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "face",
+        "crown"
+      ],
+      "url": "assets/4eec5eef25bf8bd3b640c2de7a1af9ca0b8d2f7b13c858fcbee49034394c8d9d.glb"
+    },
+    {
+      "id": "doctor.hat",
+      "label": "黑色缎带礼帽",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "crown"
+      ],
+      "url": "assets/f980d7ccb6a180828c99488325a197a64abbeed4c0cb1bcb0370fa8909e45436.glb"
+    },
+    {
+      "id": "doctor.coat",
+      "label": "鸟嘴医生黑袍",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/b3740035c5da87c477898263375886f72b42a2be7833dab71ed7aee315c6ed39.glb"
+    },
+    {
+      "id": "doctor.scarf",
+      "label": "黑袍翻领围巾",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/89e6df938d87cb0bcee447078779b0de98cbd8a97a815112dc3403548d9f981c.glb"
+    },
+    {
+      "id": "doctor.belt",
+      "label": "黑袍腰封",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/75c9ecd4863173178947b9d605759f16744a6c0d332a9ebe1dcaeb455795f3fd.glb"
+    },
+    {
+      "id": "bard.tunic",
+      "label": "吟游诗人红金上衣",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/6f4a23e8c5350252e33d9e1fcaf585a127bcc4ee7793a3516a5631ec824152be.glb"
+    },
+    {
+      "id": "bard.belt",
+      "label": "吟游诗人皮腰带",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/9890bcd7482e38c355132f81ff63b137af7fd214c4848bd7c1721f564daf7c05.glb"
+    },
+    {
+      "id": "bard.lute",
+      "label": "精修鲁特琴",
+      "slot": "handheld",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/24f04b4f86a5b76e4bda2d472b3b40e30fb36cf76495e0540db7578d65735378.glb"
+    },
+    {
+      "id": "knight.mail",
+      "label": "银色锁子甲背心",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/c313b6c1548509151e5deb3c7efa3e62ec82a012ccf28ecc50f5f9e2a0bdf5cb.glb"
+    },
+    {
+      "id": "scarf.red",
+      "label": "红色系结围巾",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/c1858d527a51cc66d0ec727420fa243754fb4d5ca3acde55fc7a292f41002027.glb"
+    },
+    {
+      "id": "knight.belt",
+      "label": "骑士窄腰带",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/8c32d3bb23dc895c2f99143056e49d2509c43b6ae1316974d8807d36bc9868d3.glb"
+    },
+    {
+      "id": "guard.helmet",
+      "label": "鸟骨面罩与宽红冠羽",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "crown"
+      ],
+      "url": "assets/0bb2dfd02eeefbd0e72f4ee7be457509486cc3b4c2bf4ef3c1c43fea1bf93f02.glb"
+    },
+    {
+      "id": "guard.cuirass",
+      "label": "护卫棕色皮胸甲",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/a1e14fba4c486620d057c92b18baaf21792fb6a99c411edb59ff249a7aadd1b2.glb"
+    },
+    {
+      "id": "guard.shoulders",
+      "label": "护卫叠层皮护肩",
+      "slot": "shoulders",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/8f2dea8f38f37fd2eff5d74f91a79690653847b7368546df9dfe2851a17cd594.glb"
+    },
+    {
+      "id": "guard.belt",
+      "label": "护卫宽铆钉腰带",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/03c7a6fa49f46baaa0a1f5027ccea701d8fbc13b7084ef193a637e132d63384c.glb"
+    },
+    {
+      "id": "guard.skirt",
+      "label": "护卫短皮甲裙",
+      "slot": "lower",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/19d5e8b11cc81c28bc6b98f8d96aabb6971f17d75a22fe485c727b2cac70d3f9.glb"
+    },
+    {
+      "id": "guard.spear",
+      "label": "护卫短矛",
+      "slot": "handheld",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/ed3010589aa7441f2a9e7b8e23cbf986ba701e9542cd109ad7fb35611cd912f3.glb"
+    },
+    {
+      "id": "guard.iris",
+      "label": "护卫火焰琥珀眼",
+      "slot": "facewear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "pupils"
+      ],
+      "url": "assets/a0779876cc836860b20e4124e05fa0b0cb97789d9ca1a5dcba48321f61473fa6.glb"
+    },
+    {
+      "id": "shawl.lavender",
+      "label": "淡紫交叠披巾",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/94df8063eebcd2efde2e246593d8daf8030fe9a23d329e18029c57679a5cf7fb.glb"
+    },
+    {
+      "id": "hair.violet",
+      "label": "紫色蓬松短发",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "crown"
+      ],
+      "keep_crown": false,
+      "url": "assets/9019c0b070f10d59f82925344376dc31018e9c25c2e24d3ba404d11b9f4cf62e.glb"
+    },
+    {
+      "id": "shirt.plaid",
+      "label": "灰绿格纹上衣",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/e9e9d9c275d1bbe02b271fcd8a999a9db09f0a7ee091b56ffb18ae0bacbd76ff.glb"
+    },
+    {
+      "id": "drink.carton",
+      "label": "小饮品纸盒",
+      "slot": "handheld",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/64d7b689d190dbd169d0fea2aa390dd0350def196297c88973d7901269f756b6.glb"
+    },
+    {
+      "id": "floral.bouquet",
+      "label": "红玫瑰胸前花束",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/23ab3145b810062670556b53a146e9889ab62ffaa2de0c51091cb21ea8c11e1d.glb"
+    },
+    {
+      "id": "devil.horns",
+      "label": "深红小恶魔角",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": true,
+      "url": "assets/44df5b05dc1198cfcc0bb3a11c0a94cb64e6e7d5a55eb1917d823e2cb0a67406.glb"
+    },
+    {
+      "id": "noble.violet_disguise",
+      "label": "紫瞳贵族伪装",
+      "slot": "facewear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [
+        "bill",
+        "pupils"
+      ],
+      "keep_crown": false,
+      "url": "assets/eb453287d7c4721e7b612f73db5ced4c3189f81cbef428fb28bd675f25d0a898.glb"
+    },
+    {
+      "id": "angel.halo",
+      "label": "金色天使光环",
+      "slot": "headwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": true,
+      "url": "assets/006963624207628ceb581ed05dcdb445cee80524d9bb0d66499ee5b2aee2f547.glb"
+    },
+    {
+      "id": "sailor.shirt",
+      "label": "蓝白条纹短上衣",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/2393015629e83980c12a6439a0f704f2cbd0d4cc2eea5553332b0ef5e83535c2.glb"
+    },
+    {
+      "id": "sailor.pouch",
+      "label": "金黄旅行腰包",
+      "slot": "waist",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/0919808636fcd26de9333acf374134b4ddff23fa554fb35d6b4dbc1f0f6f76df.glb"
+    },
+    {
+      "id": "devil.fur_collar",
+      "label": "米白碎毛领",
+      "slot": "neckwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/9b6e9b741b12472fa23e8184f30e98f25575b668c7668643b8997d89f1b6ed9d.glb"
+    },
+    {
+      "id": "guard.axe",
+      "label": "护卫双刃短斧",
+      "slot": "handheld",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/79a439123a55f4cc07a9ef503ca621ce279b8fcf30c3a1d61f205e84773ece54.glb"
+    },
+    {
+      "id": "guard.shield",
+      "label": "护卫蓝缘圆盾",
+      "slot": "back",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "url": "assets/dcc4660b916fda20e5385a901ffc3539dc6acaaf0386d1fe21e7471c9d7b6c7a.glb"
+    },
+    {
+      "id": "lobster.shell",
+      "label": "龙虾红壳与奶油腹甲",
+      "slot": "upper",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/3939d3dff39102364ce42c3375886fae572ef0065f02add242e743c8a980bab3.glb"
+    },
+    {
+      "id": "lobster.claws",
+      "label": "龙虾成对大钳",
+      "slot": "wristwear",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/8d27acde09340562c028fe7f74da8c0ae6c10511a242f8d8ab0c6924e5858b2b.glb"
+    },
+    {
+      "id": "lobster.tail",
+      "label": "龙虾分节尾与尾扇",
+      "slot": "back",
+      "body_fit": "GGD_BODY_3.0",
+      "hide_tags": [],
+      "keep_crown": false,
+      "url": "assets/a77d4c88dc51477a35650163b442afe0ca0d98ae0bac71a3d4ab8aaeb2a4cdfb.glb"
+    }
+  ],
+  "presets": {
+    "cast.01": {
+      "label": "01 阿努比斯",
+      "color": "353B40",
+      "modules": [
+        "anubis.belt",
+        "anubis.cuirass",
+        "anubis.jackal_mask",
+        "anubis.khopesh",
+        "anubis.kilt",
+        "anubis.nemes",
+        "anubis.shoulders",
+        "anubis.wesekh"
+      ],
+      "thumbnail": "assets/66dc9ae1b5b668edcdc8c29dfb65647ece878e5a8a49ab76dcfc2cc8eaa92a22.png"
+    },
+    "cast.02": {
+      "label": "02 蓝灰船长",
+      "color": "416C7E",
+      "modules": [
+        "captain.coat",
+        "captain.fur"
+      ],
+      "thumbnail": "assets/45e28599fb3639f1912393ce512fd34d5876481bc73d65ce4c6b75efd0c16db6.png"
+    },
+    "cast.03": {
+      "label": "03 粉色单片镜",
+      "color": "DA80D5",
+      "modules": [
+        "common.bow",
+        "common.monocle"
+      ],
+      "thumbnail": "assets/9ca6cf567bff851da4fee40b829784bfdf03a899aa07ce7ebc475a2895dbf766.png"
+    },
+    "cast.04": {
+      "label": "04 橙色本体",
+      "color": "FF8A30",
+      "modules": [],
+      "thumbnail": "assets/e8f6722909c5410fd85212d5d6e6f7f22f2d776a1c5403180a79de90c848ecac.png"
+    },
+    "cast.05": {
+      "label": "05 灰色探险者",
+      "color": "969A97",
+      "modules": [
+        "common.bucket_hat",
+        "explorer.vest",
+        "explorer.utility_belt"
+      ],
+      "thumbnail": "assets/eabc2232ff1eee072a35bd54d41c36b551741933cb778ca5d022fa3a7682578b.png"
+    },
+    "cast.06": {
+      "label": "06 绿色贵族",
+      "color": "819127",
+      "modules": [
+        "noble.disguise",
+        "common.ruff",
+        "noble.coat",
+        "noble.sash"
+      ],
+      "thumbnail": "assets/0cb896766c3b821c41b901473216ad7cfe55783e5fb795765f4549141a68fc38.png"
+    },
+    "cast.07": {
+      "label": "07 玫瑰红鹅",
+      "color": "A91420",
+      "modules": [
+        "rose.crown",
+        "scarf.blue"
+      ],
+      "thumbnail": "assets/56e26fbcfd050fc222bb6c06a6e787b3658c1d9867532a64c6470257bd9b0128.png"
+    },
+    "cast.08": {
+      "label": "08 紫色本体",
+      "color": "9160CC",
+      "modules": [],
+      "thumbnail": "assets/2239d33b37f727ad6b649157584d1fb3f0886a0ab7fd8b076ad0577e272ad5b2.png"
+    },
+    "cast.09": {
+      "label": "09 白色蝴蝶结",
+      "color": "F0F3EC",
+      "modules": [
+        "common.bow"
+      ],
+      "thumbnail": "assets/e65633b0130911e769bb3b1423183d11b8b8de9cb15c5b2d4b9351512cbaeb7a.png"
+    },
+    "cast.10": {
+      "label": "10 粉花绿鹅",
+      "color": "8DEF54",
+      "modules": [
+        "flower.crown",
+        "flower.collar",
+        "flower.cuffs"
+      ],
+      "thumbnail": "assets/f49d017cdc29e91e844bb9cc912774b4157daba65036cffff301ebb2f118fab4.png"
+    },
+    "cast.11": {
+      "label": "11 黑衣毛绒",
+      "color": "22252B",
+      "modules": [
+        "winter.coat",
+        "winter.collar",
+        "winter.hem",
+        "winter.harness",
+        "winter.cuffs",
+        "winter.iris"
+      ],
+      "thumbnail": "assets/036ee800f7dbcd02e38b232804ecb87b07f4cff8e4022e850f16ad2f69913686.png"
+    },
+    "cast.12": {
+      "label": "12 绿叶披肩",
+      "color": "3BAD86",
+      "modules": [
+        "leaf.mantle"
+      ],
+      "thumbnail": "assets/d9a2b61d4944c25803410c04009b2f277c477292412c4b0761e5d21d54edff35.png"
+    },
+    "cast.13": {
+      "label": "13 鸟嘴医生",
+      "color": "22252B",
+      "modules": [
+        "doctor.mask",
+        "doctor.hat",
+        "doctor.coat",
+        "doctor.scarf",
+        "doctor.belt"
+      ],
+      "thumbnail": "assets/924e2ff8854c75b44d3d85fb8ce6b3925e5ade57901e52650ebff31c880e5faf.png"
+    },
+    "cast.14": {
+      "label": "14 紫红吟游诗人",
+      "color": "A33991",
+      "modules": [
+        "common.bucket_hat",
+        "common.ruff",
+        "bard.tunic",
+        "bard.belt",
+        "bard.lute"
+      ],
+      "thumbnail": "assets/7a74bdc6d9d84c01a5587e831bf40f173b40208f19ce48c624c654b7266ad27d.png"
+    },
+    "cast.15": {
+      "label": "15 蓝色骑士",
+      "color": "3088B4",
+      "modules": [
+        "knight.mail",
+        "scarf.red",
+        "knight.belt"
+      ],
+      "thumbnail": "assets/fb96a801ddf49da919a474c326eea595a03ae8c1b7ec922c10bdf25a18eef63e.png"
+    },
+    "cast.16": {
+      "label": "16 骨盔护卫",
+      "color": "EFB94C",
+      "modules": [
+        "guard.helmet",
+        "guard.iris",
+        "guard.cuirass",
+        "guard.shoulders",
+        "guard.belt",
+        "guard.skirt",
+        "guard.axe",
+        "guard.shield"
+      ],
+      "thumbnail": "assets/7782aa0713f91358dd6d43ec3a427035f0527503aa21afc774347b9fb92b453e.png"
+    },
+    "cast.17": {
+      "label": "17 甲贺忍蛙",
+      "color": "D8A9DD",
+      "modules": [
+        "rose.crown",
+        "shawl.lavender"
+      ],
+      "thumbnail": "assets/f517361aa5455d0c77cd60432c6eefabd504212cd55d99b29a84db65cd964a02.png"
+    },
+    "cast.18": {
+      "label": "18 R",
+      "color": "A3988C",
+      "modules": [],
+      "thumbnail": "assets/95ac7de767b85645b91752b03f00495a2d76fe52b15a5c44fc9fb291f5eba225.png"
+    },
+    "cast.19": {
+      "label": "19 白泽不白",
+      "color": "252831",
+      "modules": [
+        "hair.violet",
+        "shirt.plaid",
+        "drink.carton"
+      ],
+      "thumbnail": "assets/ffa0125adfa02c4c7be322ef507bd8984b5c8cfbd99b603fa4d4699aa73f19df.png"
+    },
+    "cast.20": {
+      "label": "20 醒了不起的盖茨比",
+      "color": "A1ACA5",
+      "modules": [
+        "floral.bouquet"
+      ],
+      "thumbnail": "assets/db4f32a1f38ed17253dc96727fb1cf133c136c9edd09c75382460d50f85103e5.png"
+    },
+    "cast.21": {
+      "label": "21 V",
+      "color": "E8E0C3",
+      "modules": [
+        "devil.horns",
+        "devil.fur_collar"
+      ],
+      "thumbnail": "assets/1a623da7c6f1bffa25daed0eb94c78e8ca4eb4358ac18c43c709b852e50f68cc.png"
+    },
+    "cast.22": {
+      "label": "22 嘎嘎",
+      "color": "C64EBF",
+      "modules": [],
+      "thumbnail": "assets/92ba6eceecd0b9d61713891aae5c1ca802009aa8ad2e1053db623869dea3a6c2.png"
+    },
+    "cast.23": {
+      "label": "23 小脑秀夫",
+      "color": "89982D",
+      "modules": [
+        "noble.violet_disguise",
+        "common.ruff"
+      ],
+      "thumbnail": "assets/2f24405c3c521c1086241b00720f4c7eed9002163a8eb401b1f73b878b7e8af3.png"
+    },
+    "cast.24": {
+      "label": "24 JKINFU",
+      "color": "F1F3EE",
+      "modules": [],
+      "thumbnail": "assets/06aee7de35f2191efe7afd8f5e4b6f8970a956acd7ae2238c2df7dd93fd9cde5.png"
+    },
+    "cast.25": {
+      "label": "25 HIMI",
+      "color": "259D7E",
+      "modules": [],
+      "thumbnail": "assets/30d88dff782124957fe253ac2242b9489f56b2a1481f3765e15511d9f5135102.png"
+    },
+    "cast.26": {
+      "label": "26 聪明的NINA",
+      "color": "91D9EA",
+      "modules": [
+        "angel.halo",
+        "sailor.shirt",
+        "sailor.pouch"
+      ],
+      "thumbnail": "assets/768a9a6fe85a2b8a141617f51789ae9b1f54b730f6a2cbe5183600ad5f1e3c98.png"
+    },
+    "cast.27": {
+      "label": "27 善良正义可爱小脑虾",
+      "color": "89982D",
+      "modules": [
+        "noble.violet_disguise",
+        "lobster.shell",
+        "lobster.claws",
+        "lobster.tail"
+      ],
+      "thumbnail": "assets/4eb17206cb53b74cf68b8e558b64798ae73959247c21d8fefc3e03f94d2f64a4.png"
+    }
+  }
+}
