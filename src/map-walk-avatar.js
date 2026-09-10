@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {mountEquipment} from './rig-contract.js';
 
-export async function loadWalkingAvatar(actorId='cast.14'){
- const response=await fetch('assets/manifest.json');if(!response.ok)throw Error('衣橱清单未能打开');
+export async function loadWalkingAvatar(actorId='cast.14',onProgress=()=>{}){
+ const response=await fetch(new URL('assets/manifest.json',import.meta.url));if(!response.ok)throw Error('衣橱清单未能打开');
  const manifest=await response.json(),preset=manifest.presets[actorId],loader=new GLTFLoader();
  if(!preset)throw Error('请先选择一位角色');
  const gear=preset.modules.map(id=>manifest.modules.find(a=>a.id===id));
- const [body,...parts]=await Promise.all([manifest.base.url,...gear.map(g=>g.url)].map(url=>loader.loadAsync(url).then(g=>g.scene)));
+ let loaded=0;const urls=[manifest.base.url,...gear.map(g=>g.url)];
+ const [body,...parts]=await Promise.all(urls.map(url=>loader.loadAsync(url).then(g=>{onProgress(++loaded,urls.length);return g.scene;})));
  const tags=new Set();for(const a of gear){for(const tag of a.hide_tags||[])tags.add(tag);if(a.slot==='upper')tags.add('chest');if(a.slot==='headwear'&&!a.keep_crown)tags.add('crown');}
  body.traverse(o=>{const d=o.userData;o.visible=!((d.body_detail&&tags.has('chest'))||(d.eye_right_component&&tags.has('eye_right'))||(d.face_component&&tags.has('face'))||(d.face_component&&tags.has('bill')&&/beak|continuous.?L/i.test(o.name))||(d.face_component&&tags.has('pupils')&&/pupil|sparkle/i.test(o.name))||(d.crown_component&&tags.has('crown')));if(d.recolor&&o.isMesh)for(const m of(Array.isArray(o.material)?o.material:[o.material]))m.color.set('#'+preset.color);});
  const model=new THREE.Group();model.add(body);parts.forEach((p,i)=>model.add(mountEquipment(p,gear[i])));

@@ -43,9 +43,9 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  async function start(){
   if(active||loading)return;loading=true;failure=null;enter.disabled=true;enter.textContent='正在准备角色…';$('#walk-error').hidden=true;
   try{
-   if(!walker){const response=await fetch('map-walk-props.json');if(!response.ok)throw Error('碰撞数据未能打开');const props=await response.json();if(props.map_id!==data.id||props.source_blend_sha256!==data.report.blend_sha256)throw Error('碰撞数据与当前地图版本不一致');nav=createNavigation(data.layout,props);walker=createWalker(nav);}
+   if(!walker){const response=await fetch(new URL('map-walk-props.json',import.meta.url));if(!response.ok)throw Error('碰撞数据未能打开');const props=await response.json();if(props.map_id!==data.id||props.source_blend_sha256!==data.report.blend_sha256)throw Error('碰撞数据与当前地图版本不一致');nav=createNavigation(data.layout,props);walker=createWalker(nav);}
    const actorId=getActor();
-   if(!avatar||avatar.actorId!==actorId){const next=await loadWalkingAvatar(actorId);if(avatar){scene.remove(avatar.player);disposeWalkingAvatar(avatar);}avatar=next;scene.add(avatar.player);}
+   if(!avatar||avatar.actorId!==actorId){const next=await loadWalkingAvatar(actorId,(done,total)=>{enter.textContent=`正在准备角色 ${done}/${total}…`;});if(avatar){scene.remove(avatar.player);disposeWalkingAvatar(avatar);}avatar=next;scene.add(avatar.player);}
    saved={position:camera.position.clone(),target:controls.target.clone(),zoom:camera.zoom,up:camera.up.clone(),pixelRatio:renderer.getPixelRatio(),scroll:scrollY,visible:[],highlight:highlight.visible};highlight.visible=false;
    root.traverse(o=>{if(o.userData.map_category==='characters'){saved.visible.push([o,o.visible]);o.visible=false;}});
    controls.enabled=false;active=true;paused=false;clearInput();avatar.player.visible=true;
@@ -79,7 +79,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   b.addEventListener('pointerdown',e=>{if(!active)return;e.preventDefault();b.setPointerCapture(e.pointerId);touches.set(e.pointerId,b.dataset.move);b.setAttribute('data-down','');});
   const release=e=>{touches.delete(e.pointerId);b.removeAttribute('data-down');};for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,release);
  }
- enter.onclick=start;exit.onclick=stop;$('#walk-inspect').onclick=inspect;
+ exit.onclick=stop;$('#walk-inspect').onclick=inspect;
  $('#walk-info-close').onclick=()=>{info.hidden=true;host.focus({preventScroll:true});};
  $('#walk-help-toggle').onclick=()=>{clearInput();view.unlock();$('#walk-help').hidden=!$('#walk-help').hidden;host.focus({preventScroll:true});};
  $('#walk-home').onclick=()=>{clearInput();walker.reset();target.set(walker.state.position[0],.2,walker.state.position[1]);info.hidden=true;host.focus({preventScroll:true});};

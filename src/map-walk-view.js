@@ -12,10 +12,10 @@ export function createWalkView({overview, host, canvas, getAvatar, getWalker, is
  function sync() {
   const fp = mode === 'first-person' && isActive();
   document.body.classList.toggle('first-person', fp);
-  toggle.textContent = mode === 'first-person' ? '视角：第一人称' : '视角：俯视';
-  toggle.setAttribute('aria-pressed', String(mode === 'first-person'));
+  if(toggle) toggle.textContent = mode === 'first-person' ? '视角：第一人称' : '视角：俯视';
+  toggle?.setAttribute('aria-pressed', String(mode === 'first-person'));
   hint.textContent = fp ? 'WASD 移动 · 拖动 / 点击画面环顾 · V 切换视角' : 'WASD / 方向键移动 · E 查看 · V 切换视角';
-  reticle.hidden = !fp;
+  if(reticle) reticle.hidden = !fp;
   const avatar = getAvatar();
   if (avatar) avatar.player.visible = isActive() && !fp;
   const directions = fp ? ['前进', '向左平移', '后退', '向右平移'] : ['向北走', '向西走', '向南走', '向东走'];
@@ -65,7 +65,7 @@ export function createWalkView({overview, host, canvas, getAvatar, getWalker, is
  for (const event of ['pointercancel', 'lostpointercapture']) canvas.addEventListener(event, () => { drag = null; });
  document.addEventListener('mousemove', e => { if (locked()) look(e.movementX, e.movementY); });
  document.addEventListener('pointerlockchange', () => { if (!locked()) { lastUnlock = performance.now(); clearInput(); } });
- toggle.onclick = change;
+ if(toggle) toggle.onclick = change;
  return {
   change, sync, projection, unlock,
   escape: () => { if (locked()) { unlock(); return true; } return performance.now() - lastUnlock < 350; },

@@ -5,7 +5,7 @@
 复用 pet 站点的已签发通配符证书、静态缓存策略及安全响应头策略。eys.onewonder.co.jp 只新建 A 记录；该名称在发布前查询为空，公网 NS 与 Hosted Zone Z049829035FWZ7KYTMXD4 一致。
 
 1. `npm ci`；先由原始工作区整理资产，或上线后 `npm run fetch-assets` 恢复哈希锁定的资产。
-2. `npm run build`，`npm test`；核对实际网页角色选择与进入地图。
+2. 增加 `package.json` 版本后执行 `npm run build`、`npm test`，再运行 `scripts/smoke.mjs`、`scripts/smoke-first-person.mjs` 和 `scripts/smoke-entry-recovery.mjs`；核对实际网页角色选择、进入地图与加载失败重试。
 3. `aws cloudformation deploy --profile onewonder.root --region ap-northeast-1 --stack-name onewonder-eys --template-file infra/site.yaml --parameter-overrides PublishDns=false` 创建独立基础设施。
 4. 按 `scripts/publish.py` 的清单上传 `dist/`，先内容哈希资产、后 HTML；不删除远端旧文件。
 5. 核对 CloudFront 实际资源，再将 `PublishDns=true` 应用到同一 stack，创建 eys 的 Alias A。
@@ -34,3 +34,13 @@ GitHub 源码仓库保持组织私有。Git 不保存 GLB、人物头像、Blend
 本地选角／行走检查及公网第一人称检查通过，包含相对视线移动、桌面锁定和释放、390px 双指同时移动与转头、返回俯视及换角。`reports/production/first-person.json` 保存结果与所测构建哈希。公网花环 GLB、角色头像、视角代码及原地图的 SHA256 一致，运行错误列表为空。
 
 此次构建 113 个文件，实际上传 8 个变化文件，105 个已按远端大小和 SHA256 元数据确认一致并复用；缓存失效完成。无 DNS／基础设施变更。旧文件保留。后续同步源资产可运行 `python -X utf8 scripts/sync-workspace-assets.py --source C:/3d/eys/web_wardrobe`；发布前运行 `node scripts/smoke-first-person.mjs`，上传脚本要求该结果与当前构建哈希一致。
+
+## 1.1.1 进入地图修复（2026-09-10）
+
+复现了旧版 HTML 缓存与新版脚本混用时，缺少新增视角按钮导致初始化失败的问题。该问题与用户报告的「选了角色，点击进入没反应」一致，但未能确认用户当时的浏览器是否正处于这一组合。调查时，全新浏览器的 27 位角色逐一进入通过。
+
+视角组件现可兼容旧 HTML；新版页面把 JS、CSS、JSON 和 Three.js 依赖固定在 `releases/1.1.1/`。入口 HTML 与旧路径别名要求重新验证缓存，版本目录和哈希模型使用长期缓存。已发布的版本目录禁止覆盖不同内容。加载地图时显示下载进度，角色装配显示已完成数量；失败后显示提示并允许重试。
+
+本地及公网均通过三项定向检查：旧 HTML 搭配兼容脚本、地图下载一次 503 后重试、角色模型下载一次 503 后重试。公网桌面与手机第一人称检查通过，HTTP 缓存头、版本路径及 9 项文件 SHA256 校验通过。发布 131 个文件，37 个上传、94 个复用，缓存失效完成。角色模型维持 4.3.28，访问控制及 DNS 未变动。
+
+现有防护与低成本选项见 [ACCESS_PROTECTION.md](ACCESS_PROTECTION.md)。详细检查结果保存在忽略目录 `reports/incident/` 和 `reports/production/`。

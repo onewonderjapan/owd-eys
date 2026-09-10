@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#293c3f"><meta name="description" content="《鹅鸭杀》非官方二创。选择一位角色，探索鹅教堂小镇。仅用于技术验证与娱乐，不作商业用途。"><title>鹅教堂漫游 · 鹅鸭杀非官方二创</title><link rel="icon" href="data:,"><link rel="stylesheet" href="site.css"><link rel="stylesheet" href="map-walk.css"><link rel="stylesheet" href="fan-notice.css"><script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script></head>
+<body>
+<main id="selection">
+ <header class="site-header"><a class="wordmark" href="./" aria-label="鹅教堂漫游首页"><span class="goose-mark" aria-hidden="true">g.</span><span>鹅教堂漫游<small>GOOSECHAPEL WANDER</small></span></a><span class="fan-tag">《鹅鸭杀》非官方二创</span></header>
+ <section class="selection-layout" aria-labelledby="selection-title">
+  <aside class="selected-panel"><p class="eyebrow">从这里出发</p><h1 id="selection-title">选一位，<br>逛逛鹅教堂。</h1><p class="welcome">穿过街巷，推近暖窗。<br>去看看小镇里的每一个房间。</p>
+   <div class="selected-art"><div class="portrait-ground" aria-hidden="true"></div><img id="selected-portrait" alt="" hidden><span class="portrait-dash" aria-hidden="true"></span></div>
+   <div class="selected-name"><small>本次同行</small><h2 id="selected-name">请选择角色</h2></div>
+   <div class="select-confirm"><button id="walk-enter" disabled>正在打开角色册…</button><span class="enter-note">电脑用 WASD / 方向键 · 手机用触屏方向键</span></div>
+   <p id="walk-error" role="alert" hidden></p>
+  </aside>
+  <section class="character-panel" aria-label="选择同行角色"><div class="roster-heading"><h2>小镇来客</h2><span id="actor-count">正在读取…</span></div><div id="character-grid" class="character-grid" aria-label="角色列表"></div><p class="roster-note">先选角色，再出发。进入后可以随时更换。</p></section>
+ </section>
+ <footer class="site-footer"><p>本项目为《鹅鸭杀》（Goose Goose Duck）的非官方二次创作，仅用于技术验证与娱乐，不用于商业用途。与原作官方无关联，原作相关权利归其权利人所有。</p><span>单人场景探索 · 非原作完整游戏</span></footer>
+</main>
+<section id="game" aria-label="鹅教堂三维探索"><div id="viewport" tabindex="0" aria-label="WASD 或方向键移动，E 查看位置，Esc 更换角色"><div id="walk-hud" hidden>
+ <div class="walk-status"><span class="walk-dot"></span><div><strong id="walk-area">进出口</strong><small id="walk-visited">已到访 0 / 11</small></div></div>
+ <div class="walk-actions"><button id="walk-help-toggle" aria-label="显示行走操作说明">操作 ?</button><button id="walk-exit">更换角色 ×</button></div>
+ <div id="walk-paused" role="status" hidden>已暂停 · 回到窗口继续</div>
+ <div class="walk-bottom"><span class="walk-key-hint">WASD / 方向键移动 · E 查看 · Esc 换角色</span><button id="walk-inspect" disabled>查看位置 <kbd>E</kbd></button></div>
+ <div id="walk-prompt" hidden></div>
+ <p class="walk-fan-notice" id="walk-fan-notice">《鹅鸭杀》非官方二创 · 技术验证与娱乐 · 不作商业用途</p>
+ <div class="walk-pad" aria-label="触屏移动"><button data-move="KeyW" aria-label="向北走">↑</button><button data-move="KeyA" aria-label="向西走">←</button><button data-move="KeyS" aria-label="向南走">↓</button><button data-move="KeyD" aria-label="向东走">→</button></div>
+ <div id="walk-help" hidden><strong>逛一圈鹅教堂</strong><p>方向键或 WASD 移动，镜头自动跟随。沿门口走进房间；靠近入口或身处室内时，可以查看位置说明。</p><p>手机使用左下方向键。离开窗口会自动暂停。</p><button id="walk-home">回到港口入口</button><p class="fan-notice-full" id="walk-fan-notice-full">本项目为《鹅鸭杀》（Goose Goose Duck）的非官方二次创作，仅用于技术验证与娱乐，不用于商业用途。与原作官方无关联，原作相关权利归其权利人所有。</p></div>
+ <section id="walk-info" aria-labelledby="walk-info-title" hidden><button id="walk-info-close" aria-label="关闭位置说明">×</button><span class="eyebrow">GOOSECHAPEL</span><h2 id="walk-info-title"></h2><p id="walk-info-text"></p><small>关闭说明后继续行走</small></section>
+</div>
+</div></section>
+<script type="module" src="main.js"></script></body></html>

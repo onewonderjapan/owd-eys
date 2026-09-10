@@ -12,8 +12,11 @@ function choose(id){
  const url=new URL(location.href);url.searchParams.set('actor',id);url.searchParams.delete('walk');history.replaceState(null,'',url);
 }
 async function makeGame(){
- const response=await fetch('map-scene.json');if(!response.ok)throw Error('地图清单未能打开，请重试');const data=await response.json();
- const gltf=await new GLTFLoader().loadAsync(data.glb),root=gltf.scene,host=$('#viewport');
+ const response=await fetch(new URL('map-scene.json',import.meta.url));if(!response.ok)throw Error('地图清单未能打开，请重试');const data=await response.json();
+ const gltf=await new GLTFLoader().loadAsync(data.glb,event=>{
+  const amount=event.lengthComputable&&event.total?Math.round(event.loaded/event.total*100)+'%':(event.loaded/1048576).toFixed(1)+' MB';
+  $('#walk-enter').textContent='正在下载地图 '+amount+'…';
+ }),root=gltf.scene,host=$('#viewport');
  const scene=new THREE.Scene();scene.background=new THREE.Color('#293c3f');scene.add(root);
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;host.prepend(renderer.domElement);
  const camera=new THREE.OrthographicCamera(-19,19,16,-16,.1,180);camera.position.set(0,55,.001);camera.lookAt(0,0,0);
@@ -28,14 +31,14 @@ async function makeGame(){
  walking=installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor:()=>selected});return walking;
 }
 async function enter(){
- if(preparing)return;preparing=true;error=null;$('#walk-error').hidden=true;$('#walk-enter').disabled=true;$('#walk-enter').textContent='正在打开小镇…';
+ if(preparing)return;preparing=true;error=null;$('#walk-error').hidden=true;$('#walk-enter').disabled=true;$('#walk-enter').setAttribute('aria-busy','true');$('#walk-enter').textContent='正在打开小镇…';
  try{if(!gamePromise)gamePromise=makeGame().catch(e=>{gamePromise=null;throw e;});const game=await gamePromise;await game.start();}
- catch(e){error=e.message;$('#walk-error').textContent='小镇未能打开：'+error;$('#walk-error').hidden=false;}
- finally{preparing=false;$('#walk-enter').disabled=false;$('#walk-enter').textContent='带 TA 进入小镇 ↗';}
+ catch(e){error=e.message;$('#walk-error').textContent='小镇未能打开：'+error+'。请检查网络后重试。';$('#walk-error').hidden=false;$('#walk-error').scrollIntoView({block:'nearest'});}
+ finally{preparing=false;$('#walk-enter').disabled=false;$('#walk-enter').removeAttribute('aria-busy');$('#walk-enter').textContent='带 TA 进入小镇 ↗';}
 }
 window.eys={state:()=>({ready,error,selected,preparing,actorCount:manifest?Object.keys(manifest.presets).length:0,walk:walking?.state()||null})};
 try{
- const response=await fetch('assets/manifest.json');if(!response.ok)throw Error('角色册未能打开，请刷新页面');manifest=await response.json();
+ const response=await fetch(new URL('assets/manifest.json',import.meta.url));if(!response.ok)throw Error('角色册未能打开，请刷新页面');manifest=await response.json();
  for(const [id,p] of Object.entries(manifest.presets)){
   const b=document.createElement('button');b.className='character-card';b.dataset.actor=id;b.type='button';b.setAttribute('aria-pressed','false');b.setAttribute('aria-label','选择'+label(p));
   const image=document.createElement('img');image.src=p.thumbnail;image.alt='';image.loading='lazy';image.width=100;image.height=90;
