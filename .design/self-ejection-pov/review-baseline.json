@@ -1,0 +1,28 @@
+{
+  "review_date": "2026-09-14",
+  "version": "1.2.0",
+  "branch": "feature/pov-immersion",
+  "head": "87d47c1ff1044e56fa134c0f5e1ec9cbd0c084f1",
+  "preview": "http://127.0.0.1:8870/",
+  "actor": "cast.14",
+  "screenshots": 16,
+  "source_modified_by_review": false,
+  "files": {
+    "immersion-ejection.js": {
+      "sha256": "076f3ca1b495a2994276e2ea389a483747326e7b1ac64cf3bedb722af1f220ea",
+      "served_equal": true
+    },
+    "immersion-director.js": {
+      "sha256": "8853803ab7cee39bdf50a274d49551ac3740f38815fd989a15349904218b58db",
+      "served_equal": true
+    },
+    "immersion-actors.js": {
+      "sha256": "ac1315e574a36024e1142daa35f810b8ca9321ad05d595ab8ccfd76fa2945aeb",
+      "served_equal": true
+    },
+    "immersion-look.js": {
+      "sha256": "b9e2faab4eb0399ad1392c6c28e15223cf73584450f19b245b9299109b252b65",
+      "served_equal": true
+    }
+  }
+}

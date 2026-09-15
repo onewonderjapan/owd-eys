@@ -23,3 +23,5 @@ npm start
 地图几何来自已交付 map_reference_v2，角色来自衣橱 4.3.28。粉花绿鹅使用加厚、圆润的五瓣花环，保留原有轮廓与脸部开口。角色装配、碰撞、视角和渲染按模块分离，生成计算仍在 S1。运行、发布资料见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
 基础设施沿用 pet.onewonder.co.jp 的私有 S3＋CloudFront OAC＋HTTPS＋Route 53 Alias A 模式；EYS 使用独立 bucket 与分发。部署不删除历史资源或文件。
+
+待施工功能：[POV 按铃、圆桌会议与出局体验交接包](docs/immersion/START_HERE.md)。设计、施工 skill、P0/P0A/P1–P6 计划和独立进度记录已准备，交给 ZCode（GLM-Flash）按 Blender＋Three.js 流程施工；此链接不表示功能已经上线。

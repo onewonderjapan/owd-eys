@@ -471,6 +471,11 @@
       "path": "assets/9edddbcf238d39ee974485b3479fc139cd687c42c5e173339d2afe42714948b7.glb",
       "sha256": "9edddbcf238d39ee974485b3479fc139cd687c42c5e173339d2afe42714948b7",
       "bytes": 20425980
+    },
+    {
+      "path": "assets/2ccadcd4dd560764eea8cde989edf6301277a2d3fdbefa9805daa8b20d634181.glb",
+      "sha256": "2ccadcd4dd560764eea8cde989edf6301277a2d3fdbefa9805daa8b20d634181",
+      "bytes": 300812
     }
   ]
 }
