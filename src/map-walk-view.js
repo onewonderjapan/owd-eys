@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // Camera and look input stay separate from the collision/movement simulation.
-export function createWalkView({overview, host, canvas, getAvatar, getWalker, isActive, canLook, clearInput}) {
+export function createWalkView({overview, host, canvas, getAvatar, getWalker, isActive, canLook, canChange = () => true, clearInput}) {
  const first = new THREE.PerspectiveCamera(78, 1, .035, 180);
  const toggle = document.querySelector('#walk-view-toggle');
  const hint = document.querySelector('.walk-key-hint');
@@ -27,7 +27,7 @@ export function createWalkView({overview, host, canvas, getAvatar, getWalker, is
   first.aspect = w / h; first.updateProjectionMatrix();
  }
  function change() {
-  if (!isActive()) return;
+  if (!isActive() || !canChange()) return;
   clearInput(); unlock();
   mode = mode === 'overview' ? 'first-person' : 'overview';
   if (mode === 'first-person') {
@@ -68,6 +68,16 @@ export function createWalkView({overview, host, canvas, getAvatar, getWalker, is
  if(toggle) toggle.onclick = change;
  return {
   change, sync, projection, unlock,
+  snapshot: () => ({mode, yaw, pitch}),
+  // Direct numeric restore; never re-runs change(), which recomputes the initial heading.
+  restore(saved) {
+   if (!saved) return;
+   mode = saved.mode === 'first-person' ? 'first-person' : 'overview';
+   yaw = saved.yaw || 0;
+   pitch = saved.pitch || 0;
+   drag = null;
+   sync(); projection();
+  },
   escape: () => { if (locked()) { unlock(); return true; } return performance.now() - lastUnlock < 350; },
   input(x, z) { return mode === 'first-person' ? [x * Math.cos(yaw) + z * Math.sin(yaw), -x * Math.sin(yaw) + z * Math.cos(yaw)] : [x, z]; },
   update(position, floor) {

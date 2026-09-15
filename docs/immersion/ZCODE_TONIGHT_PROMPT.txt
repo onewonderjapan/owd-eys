@@ -1,0 +1,16 @@
+你是 ZCode，本次沿用 GLM-Flash，执行今晚的 EYS POV 沉浸体验施工。
+
+工作目录：C:\3d\eys\owd-eys。
+先读 C:\3d\eys\owd-eys\docs\immersion\START_HERE.md，
+再读 C:\Users\蔡瀛杰\.codex\skills\eys-pov-immersion\SKILL.md。
+按 design.md（1.2）、blender-assets-plan.md、water-reference.md、implementation-plan.md 和 progress.json 执行；官方及项目技能的具体路径在资产计划中，必须按职责使用。
+
+目标：完成按铃 → 玩家与7位NPC围坐圆桌 → 发言和投票 → 沉水/火堆出局 → 返回原位置的本地可玩闭环。覆盖自己POV与NPC旁观，不增加地图或联机系统。
+
+实体道具在S1用Blender制作，交付可编辑.blend与GLB；Three.js负责POV、交互、实例和动态效果。复用现有角色与装备。沉水按用户参考：鹅在上、长链、石块在下、深蓝水域；自己低头可看链石，NPC用水下平视镜头。
+
+先核对实时Git状态与基线，保留已有修改；然后按 P0→P0A→P1–P6 顺序施工。W2维护代码/文档/资产归档，S1执行建模渲染，经SMB核hash收集。每阶段更新progress，记录run_id、日志、产物、检查结果和下一步；中断先查既有任务状态，从未通过阶段续接，不能盲目重跑。
+
+直接推进已确定范围，不反复问常规实现选择。单代理，不派reviewer，不自行换模型，不追加多轮全量QC。遇到单点阻塞记录原因并继续独立工作；真实资产或视觉验收未通过不能用占位物/假PASS交差。
+
+完成后交付本地预览、源Blender/GLB、按铃/圆桌/沉水/火堆的截图、验证报告和implementation-report.md。只做到本地候选，不推送、不部署、不改WAF/CDN/DNS、不调用付费服务、不删除文件。

@@ -18,17 +18,18 @@ async function makeGame(){
   $('#walk-enter').textContent='正在下载地图 '+amount+'…';
  }),root=gltf.scene,host=$('#viewport');
  const scene=new THREE.Scene();scene.background=new THREE.Color('#293c3f');scene.add(root);
- const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;host.prepend(renderer.domElement);
+ const renderer=new THREE.WebGLRenderer({antialias:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;host.prepend(renderer.domElement);
+ window.eys.rendererInfo=()=>({calls:renderer.info.render?.calls??0,triangles:renderer.info.render?.triangles??0,programs:renderer.info.programs?.length??0,pixelRatio:renderer.getPixelRatio()});
  const camera=new THREE.OrthographicCamera(-19,19,16,-16,.1,180);camera.position.set(0,55,.001);camera.lookAt(0,0,0);
  const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=false;
  scene.add(new THREE.HemisphereLight('#bed8e7','#364135',2.3));
  for(const [position,color,power] of [[[-15,25,8],'#c3dfff',2.3],[[7,20,-14],'#ffe0ab',2.5],[[18,12,20],'#c6dde1',1]]){const light=new THREE.DirectionalLight(color,power);light.position.set(...position);scene.add(light);}
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:'#293c3f',roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.64;scene.add(ground);
  const highlight=new THREE.Object3D();highlight.visible=false;
- const render=()=>renderer.render(scene,walking?.camera||camera);
+ const render=()=>{const target=walking?.renderTarget;renderer.render(target?.scene||scene,target?.camera||walking?.camera||camera);};
  const resize=()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;walking?.projection();renderer.setSize(w,h,false);render();};
  new ResizeObserver(resize).observe(host);
- walking=installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor:()=>selected});return walking;
+ walking=installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor:()=>selected,describeActor:id=>{const p=manifest.presets[id];return p?{label:label(p),thumbnail:p.thumbnail}:null;}});return walking;
 }
 async function enter(){
  if(preparing)return;preparing=true;error=null;$('#walk-error').hidden=true;$('#walk-enter').disabled=true;$('#walk-enter').setAttribute('aria-busy','true');$('#walk-enter').textContent='正在打开小镇…';

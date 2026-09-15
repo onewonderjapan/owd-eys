@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "pack_id": "eys-immersion-props-v1",
+  "url": "assets/2ccadcd4dd560764eea8cde989edf6301277a2d3fdbefa9805daa8b20d634181.glb",
+  "sha256": "2ccadcd4dd560764eea8cde989edf6301277a2d3fdbefa9805daa8b20d634181",
+  "bytes": 300812,
+  "nodes": {
+    "bell": "prop_bell",
+    "bellSwingPivot": "bell_swing_pivot",
+    "bellClapperPivot": "bell_clapper_pivot",
+    "roundTable": "prop_round_table",
+    "chair": "prop_chair",
+    "dock": "prop_dock",
+    "sinkStone": "prop_sink_stone",
+    "chainAnchor": "chain_anchor",
+    "chainLink": "prop_chain_link",
+    "firepit": "prop_firepit"
+  },
+  "run_id": "20260913T160211Z-e1f2",
+  "blender_version": "4.0.2"
+}

@@ -24,6 +24,8 @@ npm start
 
 基础设施沿用 pet.onewonder.co.jp 的私有 S3＋CloudFront OAC＋HTTPS＋Route 53 Alias A 模式；EYS 使用独立 bucket 与分发。部署不删除历史资源或文件。
 
+待施工功能：[POV 按铃、圆桌会议与出局体验交接包](docs/immersion/START_HERE.md)。设计、施工 skill、P0/P0A/P1–P6 计划和独立进度记录已准备，交给 ZCode（GLM-Flash）按 Blender＋Three.js 流程施工；此链接不表示功能已经上线。
+
 
 ## Bot 协作轨（2026-09-11 起）
 

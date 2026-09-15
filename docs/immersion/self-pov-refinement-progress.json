@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "round": "self-pov-refinement",
+  "created": "2026-09-14",
+  "executor": "ZCode (GLM-Flash)",
+  "baseline": {
+    "branch": "feature/pov-immersion",
+    "head": "87d47c1ff1044e56fa134c0f5e1ec9cbd0c084f1",
+    "package_version": "1.2.0",
+    "review": ".design/self-ejection-pov/DESIGN_REVIEW.md",
+    "review_conclusion": "needs_refinement (R1-R3 P1, R4-R5 P2)",
+    "note": "首轮 P0-P6 PASS 保留；本轮只修 R1-R5 视觉问题与用户后续反馈，不重做功能。"
+  },
+  "sessions": [
+    {
+      "id": "S1",
+      "date": "2026-09-14 上午",
+      "summary": "第一次续接会话：完成 F1-F5 初版（look base+增量、翼代理雏形、链石绑定、护送鹅动作、火堆轨迹、鱼/气泡/火焰初版），写出台账与报告。",
+      "leftover_issues": [
+        "最后一步误用 '--help' 作 URL 重跑脚本，把通过的 refinement-run.json 覆盖成失败记录（12:44:52）",
+        "R4 眼位过水未真正修复：抛弧终点 -0.62、眼位偏移 +0.68，眼位实际 ~3.1s 才过水面，而鱼群/气泡/俯仰限制仍按 2.4s 切换",
+        "水花仍有两次闪白；smoke-immersion.mjs 的 NPC 链端检查仍读取已废弃别名字段；director.js 使用未定义的 lerp；石块偏白、气泡为灰色多边形、鱼轨道距眼位最近 ~0.37"
+      ]
+    },
+    {
+      "id": "S2",
+      "date": "2026-09-14 深夜",
+      "summary": "第二次续接：修复 S1 全部遗留（眼位过水事件驱动、翼代理精确骨骼矩阵+双面发光材质、石块放大调深灰、鱼/气泡柔化、smoke 独立端点检查、lerp 定义），重跑全部验证。",
+      "verified": "cast.14 水/火 0 失败、NPC 主冒烟 32/32、REDUCE_MOTION 与 cast.02 专项 PASS、build+npm test 通过。"
+    },
+    {
+      "id": "S3",
+      "date": "2026-09-15",
+      "summary": "用户实测反馈「演出不够明显」，按用户脚本重排演出时间线（本轮）。",
+      "user_script": "出局后先所有鹅朝我走来 → 画面一变被举着出去 → 走一段路 → 岸边停一下 → 扔下去，都要有过程；POV 默认能看到被沉底的全过程；掉下去时默认视线看着岸上的鹅缓慢下沉。",
+      "changes": [
+        "水演出扩为 9.5s 六拍：走来(0-1.7，视线迎着队伍) → 举起(1.7-2.9，转身低头看握持) → 携行(2.9-4.5，视线摇摆扫过两侧护送鹅与码头) → 岸边停顿(4.5-5.1，低头看水/护送鹅探身/翅尖入画) → 扔下(5.1-5.9，下坠中回头) → 缓慢下沉(5.9-9.5，默认视线锁定岸上鹅群，水下可观察 ≥3s)",
+        "全员行进列：escorts + 5 名围观鹅全部进入演出场景从码头后方走向玩家，护送鹅到达握点后举起/携行/松手；围观鹅停在码头目送（下坠与下沉的默认视线目标）",
+        "火演出同步加行进列并重排为 6.3s：走来(0-1.3) → 举起(1.3-2.6) → 携行(2.6-3.7) → 投坑(3.7-4.7) → 落定(4.7+)",
+        "config 集中记录新时长：water 9.5 / fire 6.3 / underwaterWindow [6.0,9.1] / fireWindow [3.8,6.1]",
+        "director 音频节拍改由 stage.beats 驱动（携行 whoosh、投坑 fire、入水 splash/underwater）",
+        "验证脚本同步：self_pov_refinement.mjs 每个 keyframe 前等 finished 再重播（重播按钮只存在于 finished，修复时刻漂移）；smoke-immersion.mjs 水下采样点移至 6.3/7.5/8.7"
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "id": "F1",
+      "title": "身体/眼位/观察分层 + 翅膀身体连接（R1、R3镜头部分）",
+      "status": "passed",
+      "items": [
+        "look = 舞台 base(逐帧编排) + 用户增量（不清零）；翼代理逐帧从源网格矩阵重derive（真实肩点），材质实例克隆+双面+风格自发光",
+        "S3：六拍视线全部为导演编排的 base，用户可随时拖走（增量保留）"
+      ],
+      "evidence": ["water-walk.png", "water-lift.png", "water-carried.png", "water-edge.png", "fire-walk.png"],
+      "verified": "走来/举起/携行/停顿四拍视线各有明确内容且互不跳变；低头/抬头自由度保留（低头 -1.413 可达）。"
+    },
+    {
+      "id": "F2",
+      "title": "水下链石真实连接与低头构图（R2）",
+      "status": "passed",
+      "items": [
+        "上锚=身体局部绑点 localToWorld，下锚=GLB chain_anchor 世界坐标；28 节按真实链长 ×1.14 搭接；石块 ~0.31m 深灰",
+        "诊断=模型锚点 vs 实际首末链节端点（系帽端 ±0.57×节长，对称系统偏差 0.0025×链长），容差 ≤0.03"
+      ],
+      "evidence": ["water-down-desktop.png", "water-down-tablet.png", "water-down-phone.png", "water-link-integrity-water.json"],
+      "verified": "抬(2.41s)/岸边(4.82s)/水下(7.21s)三时刻误差 ≤0.005；三视口低头链石可读。"
+    },
+    {
+      "id": "F3",
+      "title": "托举→抛出→入水/入坑连续动作（R3）+ S3 用户脚本时间线",
+      "status": "passed",
+      "items": [
+        "水 9.5s 六拍 / 火 6.3s 五拍，阶段边界连续（水 max=2.33/s、火 1.82/s，≤3.5 阈值）",
+        "全员行进列走来 + 护送鹅举起/携行跟随/岸边停顿/松手后退；火堆落坑翅膀外张不挡火芯",
+        "扔下/下沉默认视线看着岸上鹅群（shoreGaze 逐帧求解，随下沉自然抬角）"
+      ],
+      "evidence": [
+        "water-walk.png", "water-lift.png", "water-carried.png", "water-edge.png", "water-thrown.png", "water-underwater.png",
+        "videos/frames/water-thrown-video.png", "videos/frames/water-underwater-video.png",
+        "fire-walk.png", "fire-lift.png", "fire-carried.png", "fire-drop.png", "fire-inpit.png",
+        "videos/self-water.webm", "videos/self-fire.webm"
+      ],
+      "verified": "下坠帧正对码头边目送的鹅群；水下帧从水面下仰视探头鹅群；火堆全程火芯/木柴/坑沿可见。"
+    },
+    {
+      "id": "F4",
+      "title": "入水事件、水色与轻量效果（R4、R5）",
+      "status": "passed",
+      "items": [
+        "身体破水(~5.5s 单次水花)与眼位过水(~5.9s 环境/音频/俯仰放宽)由同一轨迹驱动",
+        "鱼=椭球身+竖尾鳍+微自发光+离眼 ≥0.85；气泡=柔边圆形精灵；火焰=渐变轮廓+根部连木柴",
+        "水下可观察 6.0-9.1s（≥3s）"
+      ],
+      "evidence": ["water-underwater.png", "videos/frames/water-underwater-video.png", "fire-inpit.png"],
+      "verified": "水下帧无硬水面横线；下沉视岸上构图下鱼群/气泡仍在（拖动可见）。"
+    },
+    {
+      "id": "F5",
+      "title": "导演边界与验收",
+      "status": "passed",
+      "items": [
+        "prefers-reduced-motion 接通 START（REDUCE_MOTION=1 全链 PASS，减少动态时无摇摆/摆动，行走节拍仍完整）",
+        "重播/跳过/确认统一 dispatchEvent；重播复位断言水 8 次/火 6 次全过；finished 冻结真实末帧",
+        "一次 renderer 一 RAF；取消/返回恢复原位置（误差 0）；NPC 主冒烟 32/32"
+      ],
+      "evidence": ["refinement-run.json", "reduce-motion/", "cast02/"],
+      "verified": "取消位置恢复误差 0；cast.02 身份/配色随角色；道具检查 7/7。"
+    }
+  ],
+  "verification": {
+    "canonical_run": "cast.14 water+fire：PASS 0 失败、0 pageerror；轨迹边界 max=2.33/s；链端三时刻 ≤0.005；重播复位水×8 火×6；取消位置恢复精确",
+    "regression": "smoke-immersion（NPC 水/火、5 轮 ring/cancel 泄漏、静音）32/32；test-immersion 28/28；props 7/7",
+    "build": "npm run build 156 files + npm test EYS_PACKAGE_PASS（最终源码态）",
+    "encoding": "改动文件 UTF-8 无 BOM、LF"
+  },
+  "artifacts": "reports/immersion-self-pov-refinement/（顶层=cast.14 水/火基准；reduce-motion/、cast02/ 专项归档；videos/frames/ 为六拍连帧；修改前证据保留于 .design/self-ejection-pov/screenshots/）",
+  "updated": "2026-09-15（S3d：定位卡顿在入场漫游（地图 205k 三角无分块全量渲染+MSAA+1.35×像素），已关 MSAA、漫游像素比降至 1.0，漫游 11-20→31fps；演出期渲染 1×+背景鹅减绘制使演出 88-105fps。结构性根治需地图按房间切块重导出，记录为后续项）",
+  "remaining": [
+    "低头时双翼为紫色椭圆豆状（绑定正确，圆润翼几何俯视下缺翼尖细节，需改几何才能再增强）",
+    "携行段护送鹅头部在画面下方占比较大（0.3-0.4m 距离的物理结果，读感为'从它们头顶看出去'）",
+    "手机/平板为桌面模拟触控；声音仅代码级验证；偶有鱼游过石块附近"
+  ],
+  "failures": "无未解决失败"
+}

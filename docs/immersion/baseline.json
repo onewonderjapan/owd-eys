@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-09-13",
+  "purpose": "Read-only construction input snapshot. Hash drift requires inspecting the diff, never resetting user changes.",
+  "workspace": "C:\\3d\\eys\\owd-eys",
+  "git_head": "87d47c1ff1044e56fa134c0f5e1ec9cbd0c084f1",
+  "runtime_version": "1.1.1",
+  "wardrobe_version": "4.3.28",
+  "actor_count": 27,
+  "equipment_count": 65,
+  "map_id": "map_reference_v2",
+  "map_glb": "assets/9edddbcf238d39ee974485b3479fc139cd687c42c5e173339d2afe42714948b7.glb",
+  "source_blend_sha256": "52cfd9610c384478be1405b6a4d7d227342a02225682868a228d55fd90434008",
+  "construction_started": false,
+  "files": [
+    {
+      "path": "package.json",
+      "bytes": 382,
+      "sha256": "1a2550f906a3889253ac8e7224bc050308d18dbdbd6d74d445aa5329d54f4d2f"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 2061,
+      "sha256": "673f3adcf1c598b384625d3904535cb1dfc2ed59f838fb2aa33c0ffcfdd7270d"
+    },
+    {
+      "path": "src/main.js",
+      "bytes": 5030,
+      "sha256": "cf75b7d02d014265f9d4ed7632fd8fc77f271372257b98c3d597c14e0942111e"
+    },
+    {
+      "path": "src/map-walk.js",
+      "bytes": 9993,
+      "sha256": "eee497c1bf01f548fb9815585ce09fcd78262de0ece33d0a919439421b7fb8df"
+    },
+    {
+      "path": "src/map-walk-view.js",
+      "bytes": 4458,
+      "sha256": "b7df77fc8279e5c0d03f78cbe4cf95754a92d8fda1c92012f1b811649779aec4"
+    },
+    {
+      "path": "src/map-walk-avatar.js",
+      "bytes": 2887,
+      "sha256": "e3bceadf34fe6f214110ace75aedeaee89395b03f250e9e0246fa39045a3339d"
+    },
+    {
+      "path": "src/map-walk-simulation.js",
+      "bytes": 6843,
+      "sha256": "46d8e9f0ba31d193810a32a3e153cd8633bf5fd659a913b221e3b7250136ff99"
+    },
+    {
+      "path": "src/map-scene.json",
+      "bytes": 19335,
+      "sha256": "e8e8b4965d677845a40a51b653b042a2eb85fce48209441ecbfd06ca1c9bd92f"
+    },
+    {
+      "path": "src/map-walk-props.json",
+      "bytes": 95666,
+      "sha256": "a9b29753f9618b7fbd258ca7a179a42f66004b80bf6469b07f4905f12aa206c5"
+    },
+    {
+      "path": "src/assets/manifest.json",
+      "bytes": 24593,
+      "sha256": "49f3939ff8364059dbb5379212435001e6ace37c17c032fbade1f24b3ddddde5"
+    },
+    {
+      "path": "assets-manifest.json",
+      "bytes": 20014,
+      "sha256": "b53db83784655382e61b1366740b0cdbf096ea5002b14d486bbf4029602b5a2a"
+    },
+    {
+      "path": "src/hud-fragment.html",
+      "bytes": 2310,
+      "sha256": "9ef1e1873f7589ec07e7e36797da77ff2c71a8a230237afd25c0c20d11e96724"
+    },
+    {
+      "path": "scripts/build.mjs",
+      "bytes": 4118,
+      "sha256": "bdd49e41e33a406b88e4b9746df29e175cb124bd2a8df2502439592f975618ee"
+    },
+    {
+      "path": "scripts/check-build.mjs",
+      "bytes": 1983,
+      "sha256": "f968564375bc2dee854e966af454e6e3d0256e2cb31976604ef6111a60f7b1ff"
+    },
+    {
+      "path": "scripts/smoke.mjs",
+      "bytes": 4746,
+      "sha256": "31d0e8ffeb1a61a80a02441db4b956f3394c9b775f5f08b0c7def2e95075859d"
+    },
+    {
+      "path": "scripts/smoke-first-person.mjs",
+      "bytes": 5827,
+      "sha256": "c68ce2dd25ab98a27ae37b05a8eb688c51ffdfa04ba1bb22f34b730cccbfcc32"
+    },
+    {
+      "path": "scripts/smoke-entry-recovery.mjs",
+      "bytes": 3111,
+      "sha256": "32de7d4bb62d720adc2db1015b2ad6132fd00d9f1748ab7f85597d92ab449ed2"
+    }
+  ],
+  "bell_anchor_probe": {
+    "coordinate_system": "Three XZ ground, Y up",
+    "base": [
+      9.7,
+      0.338,
+      -7.65
+    ],
+    "interaction_point_xz": [
+      9.12,
+      -7.56
+    ],
+    "original_nav_collision": null,
+    "room": "04",
+    "probe_status": "checked_against_current_navigation_before_new_bell_proxy",
+    "visual_fit": "not_yet_implemented"
+  }
+}

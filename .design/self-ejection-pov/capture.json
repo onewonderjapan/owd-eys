@@ -1,0 +1,2120 @@
+{
+  "capturedAt": "2026-09-14T02:09:39.558Z",
+  "actor": "cast.14",
+  "samples": [
+    {
+      "name": "desktop-water-forward-0_4",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 0.40159999999999846,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            0.3309348806204819,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            0.3309348806204819,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 0.5652000000000008,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            0.40108358677906275,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            0.40108358677906275,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      }
+    },
+    {
+      "name": "desktop-water-forward-1_1",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 1.1167000000000014,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            0.6183853768000003,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            0.6183853768000003,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 1.2622000000000009,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            0.6390051059269914,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            0.6390051059269914,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -0.8089999999999999,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      }
+    },
+    {
+      "name": "desktop-water-forward-1_8",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 1.8075999999999972,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            0.3343175664780136,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.176105975612198,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            0.3343175664780136,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.176105975612198,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 1.922699999999999,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            0.15334716274571933,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.3058039636605696,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            0.15334716274571933,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.3058039636605696,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      }
+    },
+    {
+      "name": "desktop-water-forward-2_5",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 2.554599999999993,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.5029817747443943,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.6819817747443941,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.5029817747443943,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.6819817747443941,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 2.65149999999999,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.5077263951425165,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.6867263951425164,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.5077263951425165,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.6867263951425164,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      }
+    },
+    {
+      "name": "desktop-water-forward-3_5",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 3.5000999999999896,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.620250544836397,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.799250544836397,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.620250544836397,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.799250544836397,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 3.609099999999989,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.640980968756636,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.819980968756636,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.640980968756636,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.819980968756636,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      }
+    },
+    {
+      "name": "desktop-water-forward-5_0",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 5.008999999999975,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.9005191381372039,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -2.079519138137204,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.9005191381372039,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -2.079519138137204,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 5.105999999999974,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 1,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.9117797627539036,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -2.0907797627539035,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.9117797627539036,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -2.0907797627539035,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": null
+      }
+    },
+    {
+      "name": "desktop-water-down-3_8",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 3.8498999999999874,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 2,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.6891326936023192,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.8681326936023193,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.6891326936023192,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.8681326936023193,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -1.282,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 3.9771999999999896,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 2,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.7152978183004667,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.8942978183004668,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.7152978183004667,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.8942978183004668,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -1.282,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "desktop-fire-forward-0_5",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 0.5045999999999988,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 0.6560999999999988,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "desktop-fire-forward-1_5",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 1.5045999999999973,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 1.6379999999999983,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "desktop-fire-forward-2_1",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 2.1045999999999947,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 2.2197000000000005,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "desktop-fire-forward-2_4",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 2.4014999999999955,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 2.5287999999999986,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "desktop-fire-forward-3_5",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 3.504599999999989,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 3.6439999999999904,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 3,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "tablet-water-down-3_8",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 3.8483999999999923,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 4,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.6888260686451547,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.8678260686451549,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.6888260686451547,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.8678260686451549,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -1.282,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 3.9513999999999916,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 4,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.7099793327729865,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.8889793327729865,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.7099793327729865,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.8889793327729865,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -1.282,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "tablet-fire-forward-3_0",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 3.0057999999999945,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 5,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 3.114999999999991,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 5,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "phone-water-down-3_8",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 3.8362999999999663,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 6,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.6863546840829594,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.8653546840829596,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.6863546840829594,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.8653546840829596,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -1.282,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 3.8907999999999654,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "water",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 6,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {
+          "chainTop": [
+            1.15,
+            -0.6975124704042117,
+            0
+          ],
+          "chainBottom": [
+            1.21,
+            -1.876512470404212,
+            0.04
+          ],
+          "gooseAnchor": [
+            1.15,
+            -0.6975124704042117,
+            0
+          ],
+          "stoneAnchor": [
+            1.21,
+            -1.876512470404212,
+            0.04
+          ]
+        },
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -1.282,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    },
+    {
+      "name": "phone-fire-forward-3_0",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "before": {
+        "phase": "ejection",
+        "elapsed": 3.0000999999999873,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 7,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      },
+      "after": {
+        "phase": "ejection",
+        "elapsed": 3.0484999999999802,
+        "paused": false,
+        "actorIds": [
+          "cast.14",
+          "cast.02",
+          "cast.03",
+          "cast.04",
+          "cast.05",
+          "cast.07",
+          "cast.08",
+          "cast.09"
+        ],
+        "playerActorId": "cast.14",
+        "selectedId": "cast.14",
+        "targetId": "cast.14",
+        "style": "fire",
+        "selfDemo": true,
+        "votes": {
+          "cast.14": null,
+          "cast.02": "cast.14",
+          "cast.03": "cast.14",
+          "cast.04": "cast.14",
+          "cast.05": "cast.14",
+          "cast.07": "cast.14",
+          "cast.08": "cast.14",
+          "cast.09": "cast.14"
+        },
+        "speakerIndex": 0,
+        "error": null,
+        "reducedMotion": false,
+        "busy": true,
+        "sessionId": 7,
+        "loadedActors": 8,
+        "props": {
+          "ready": true,
+          "loading": false,
+          "error": null,
+          "packId": "eys-immersion-props-v1"
+        },
+        "ejection": {},
+        "look": {
+          "enabled": true,
+          "yaw": -1.5707963267948966,
+          "pitch": -0.05,
+          "dragging": false
+        },
+        "positionDrift": 0
+      }
+    }
+  ],
+  "schema": 1,
+  "url": "http://127.0.0.1:8870/",
+  "label": "immersion",
+  "passed": true,
+  "version": null,
+  "checks": [
+    {
+      "name": "walk: 漫游激活",
+      "passed": true,
+      "detail": "[-0.6599999999999999,6.6]"
+    },
+    {
+      "name": "props: 道具库就绪",
+      "passed": true,
+      "detail": "{\"ready\":true,\"loading\":false,\"error\":null,\"packId\":\"eys-immersion-props-v1\"}"
+    },
+    {
+      "name": "nav: 计算出可通行路径",
+      "passed": true,
+      "detail": "20 waypoints"
+    }
+  ],
+  "errors": [],
+  "screenshots": []
+}
