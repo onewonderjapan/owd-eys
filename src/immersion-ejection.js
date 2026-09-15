@@ -173,7 +173,10 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   chainMat.color = new THREE.Color('#4c565f'); // faint lift so links read in deep water
   chainMat.emissive = new THREE.Color('#12161c');
   const chainCount = 28;
-  const chain = new THREE.InstancedMesh(take(chainProto.geometry), chainMat, chainCount);
+  // library geometry is BORROWED read-only (see immersion-props.js contract):
+  // never take() it into the stage's owned list — disposing it here would free
+  // the shared prototype's GPU buffers out from under the prop library
+  const chain = new THREE.InstancedMesh(chainProto.geometry, chainMat, chainCount);
   chain.frustumCulled = false;
   scene.add(chain);
 

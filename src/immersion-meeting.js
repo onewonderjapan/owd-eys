@@ -170,10 +170,6 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
    }
    if (wingsRig && wingsRig.parent === camera) camera.remove(wingsRig);
   },
-  attachWingsRig(rig) {
-   if (!rig) return;
-   if (wingsRig && rig.parent !== camera) camera.add(rig);
-  },
   dispose() {
    this.detachActors();
    for (const object of owned) if (object.parent === scene) scene.remove(object);

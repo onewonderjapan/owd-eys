@@ -12,7 +12,11 @@ const check = (name, fn) => {
  try { fn(); checks.push({name, result: 'passed'}); }
  catch (e) { checks.push({name, result: 'failed', error: String(e && e.message || e)}); }
 };
-const report = {schema: 1, generated_at: new Date().toISOString(), passed: 0, failed: 0, checks};
+const report = {schema: 1, generated_at: new Date().toISOString(), passed: 0, failed: 0, build_sha256: (() => {
+  // pin the report to the exact build so publish.py can reject stale reports
+  try { return createHash('sha256').update(readFileSync(new URL('../reports/build.json', import.meta.url))).digest('hex'); }
+  catch { return null; }
+})(), checks};
 
 const manifest = JSON.parse(readFileSync(new URL('../src/assets/manifest.json', import.meta.url), 'utf8'));
 const actorIds = Object.keys(manifest.presets);

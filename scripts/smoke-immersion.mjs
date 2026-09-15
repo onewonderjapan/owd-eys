@@ -4,6 +4,7 @@
 // Usage: node scripts/smoke-immersion.mjs [url] [label]
 import {createRequire} from 'node:module';
 import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -77,7 +78,11 @@ function findPath(from, to, step = 0.22) {
   return smoothed;
 }
 
-const report = {schema: 1, url, label, passed: false, version: null, checks: [], errors: [], screenshots: []};
+const report = {schema: 1, url, label, passed: false, version: null, build_sha256: (() => {
+  // pin the report to the exact build so publish.py can reject stale reports
+  try { return createHash('sha256').update(readFileSync(path.join(root, 'reports', 'build.json'))).digest('hex'); }
+  catch { return null; }
+})(), checks: [], errors: [], screenshots: []};
 const check = (name, passed, detail = '') => {
   report.checks.push({name, passed: Boolean(passed), detail: String(detail).slice(0, 400)});
   if (!passed) report.errors.push(`${name}: ${detail}`);
@@ -215,7 +220,8 @@ try {
   await page.waitForTimeout(400);
   await page.keyboard.up('KeyW');
   const frozen = await page.evaluate(() => window.eys.state().walk.position);
-  check('session: busy期间移动被冻结', true, `pos=${JSON.stringify(frozen)} (frozen by frame loop branch)`);
+  const frozenDelta = Math.hypot(before.position[0] - frozen[0], before.position[1] - frozen[1]);
+  check('session: busy期间移动被冻结', frozenDelta < 1e-4, `delta=${frozenDelta} pos=${JSON.stringify(frozen)}`);
 
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000});

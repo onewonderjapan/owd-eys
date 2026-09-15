@@ -426,6 +426,9 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   const before = machine.snapshot().phase;
   machine.dispatch(event);
   const after = machine.snapshot().phase;
+  // REPLAY rewinds finished->ejection: the repeated performance must get its
+  // one-shot audio cues again, so drop this session's cue memory
+  if (event.type === 'REPLAY' && after !== before) cues.clear();
   if (after !== 'roam' && before !== after) enterPhase(after);
  }
 
