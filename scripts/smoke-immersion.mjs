@@ -189,6 +189,31 @@ try {
   });
   check('bell: 真实按键走到铃前', arrived, JSON.stringify(nearState.position));
   check('bell: 触发提示出现', nearState.nearBell === true, `nearBell=${nearState.nearBell} area=${nearState.area?.id}`);
+
+  // Audio (B1): ambience runs on walk start, footfalls track real movement,
+  // idle is silent, and the HUD mute switch gates both ambience and steps.
+  // The muted walk uses KeyW (z decreasing — the approach direction toward the
+  // bell at z=-7.56) so the player stays inside the trigger radius for KeyE.
+  const audioAfterWalk = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 行走后脚步计数增长', (audioAfterWalk?.steps || 0) > 0, JSON.stringify(audioAfterWalk));
+  check('audio: 环境音随行走启动', audioAfterWalk?.on === true && audioAfterWalk?.ambience === true, JSON.stringify(audioAfterWalk));
+  const idleSteps = await page.evaluate(() => window.eys.state().walk.audio.steps);
+  await page.waitForTimeout(500);
+  const idleStepsAgain = await page.evaluate(() => window.eys.state().walk.audio.steps);
+  check('audio: 静止时脚步不增长', idleStepsAgain === idleSteps, `${idleSteps} -> ${idleStepsAgain}`);
+  await page.click('#walk-mute');
+  const mutedState = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 静音开关同时关掉环境音', mutedState?.muted === true && mutedState?.ambience === false, JSON.stringify(mutedState));
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(300);
+  await page.keyboard.up('KeyW');
+  await page.waitForTimeout(150);
+  const mutedSteps = await page.evaluate(() => window.eys.state().walk.audio.steps);
+  check('audio: 静音期间移动无声(计数不变)', mutedSteps === idleStepsAgain, `${idleStepsAgain} -> ${mutedSteps}`);
+  await page.click('#walk-mute');
+  const restoredAudio = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 恢复声音', restoredAudio?.muted === false && restoredAudio?.ambience === true, JSON.stringify(restoredAudio));
+
   const promptVisible = await page.evaluate(() => {
     const el = document.querySelector('#immersion-prompt');
     return el ? !el.hidden : null;

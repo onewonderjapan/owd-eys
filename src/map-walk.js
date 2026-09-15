@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import {createNavigation,createWalker} from './map-walk-simulation.js';
-import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
-import {createWalkView} from './map-walk-view.js';
-import {createPropLibrary} from './immersion-props.js';
-import {IMMERSION_CONFIG} from './immersion-config.js';
-import {createImmersionDirector} from './immersion-director.js';
+ import {createNavigation,createWalker} from './map-walk-simulation.js';
+ import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
+ import {createWalkView} from './map-walk-view.js';
+ import {createPropLibrary} from './immersion-props.js';
+ import {IMMERSION_CONFIG} from './immersion-config.js';
+ import {createImmersionDirector} from './immersion-director.js';
+ import {createWalkAudio} from './walk-audio.js';
 
 // Explicit boundary between overview controls and the flat walking simulation.
 export function installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor=()=> 'cast.14',describeActor=()=> null}){
@@ -13,6 +14,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  let nav,walker,avatar,loading=false,active=false,paused=false,failure=null,saved=null,raf=0,last=0,frame=0;
  let director=null,propsStarted=false,immersionSnapshot=null;
  const propsLibrary=createPropLibrary();
+ const walkAudio=createWalkAudio();
  const target=new THREE.Vector3(),offset=new THREE.Vector3(0,13,9),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const movement=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
  const view=createWalkView({overview:camera,host,canvas:renderer.domElement,getAvatar:()=>avatar,getWalker:()=>walker,isActive:()=>active,canLook:()=>active&&!paused&&info.hidden&&$('#walk-help').hidden&&!(director&&director.busy),canChange:()=>!(director&&director.busy),clearInput});
@@ -83,6 +85,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(avatar&&!avatar.player.visible)avatar.player.visible=true;
   const values=new Set([...keys,...touches.values()]);const x=Number(values.has('KeyD')||values.has('ArrowRight'))-Number(values.has('KeyA')||values.has('ArrowLeft')),z=Number(values.has('KeyS')||values.has('ArrowDown'))-Number(values.has('KeyW')||values.has('ArrowUp'));
   const s=walker.step(paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
+  walkAudio.frame(dt,s.moving,s.distance);
   avatar.player.position.set(s.position[0],nav.heightAt(s.position),s.position[1]);
   const angle=Math.atan2(Math.sin(s.heading-avatar.visual.rotation.y),Math.cos(s.heading-avatar.visual.rotation.y));avatar.visual.rotation.y+=angle*Math.min(1,dt*18);
   avatar.model.rotation.z=!reduced&&s.moving?Math.sin(s.distance*15)*.045:0;
@@ -115,6 +118,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    saved={position:camera.position.clone(),target:controls.target.clone(),zoom:camera.zoom,up:camera.up.clone(),pixelRatio:renderer.getPixelRatio(),scroll:scrollY,visible:[],highlight:highlight.visible};highlight.visible=false;
    root.traverse(o=>{if(o.userData.map_category==='characters'){saved.visible.push([o,o.visible]);o.visible=false;}});
    controls.enabled=false;active=true;paused=false;clearInput();avatar.player.visible=true;
+   walkAudio.start();syncMuteButton();
    document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
    view.sync();view.update(walker.state.position,nav.heightAt(walker.state.position));
    // Roam renders the full town (205k triangles, no LOD); 1x keeps the frame budget
@@ -129,14 +133,15 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function stop(){
   if(!active)return;active=false;
   if(director&&director.busy)director.cancel('stop');
+  walkAudio.stop();
   immersionSnapshot=null;updateBusyHud(false);
   clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
   for(const [o,visible] of saved.visible)o.visible=visible;highlight.visible=saved.highlight;
   controls.enabled=true;controls.target.copy(saved.target);camera.position.copy(saved.position);camera.up.copy(saved.up);camera.zoom=saved.zoom;renderer.setPixelRatio(saved.pixelRatio);resize();controls.update();render();
   const url=new URL(location.href);url.searchParams.delete('walk');history.replaceState(null,'',url);scrollTo(0,saved.scroll);enter.focus({preventScroll:true});
  }
- function pause(){if(!active)return;paused=true;clearInput();view.unlock();$('#walk-paused').hidden=false;director?.pause();}
- function resume(){if(!active)return;paused=false;clearInput();$('#walk-paused').hidden=true;last=performance.now();director?.resume();}
+ function pause(){if(!active)return;paused=true;clearInput();view.unlock();$('#walk-paused').hidden=false;director?.pause();walkAudio.pause();}
+ function resume(){if(!active)return;paused=false;clearInput();$('#walk-paused').hidden=true;last=performance.now();director?.resume();walkAudio.resume();}
  window.addEventListener('blur',pause);window.addEventListener('focus',resume);document.addEventListener('visibilitychange',()=>document.hidden?pause():resume());
  window.addEventListener('keydown',e=>{
   if(!active||e.target.closest('input,textarea,select'))return;
@@ -159,12 +164,16 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   const release=e=>{touches.delete(e.pointerId);b.removeAttribute('data-down');};for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,release);
  }
  exit.onclick=stop;$('#walk-inspect').onclick=inspect;
+ const muteButton=$('#walk-mute');
+ function syncMuteButton(){if(!muteButton)return;muteButton.setAttribute('aria-pressed',String(!walkAudio.isMuted()));muteButton.textContent=walkAudio.isMuted()?'声音：关':'声音：开';}
+ if(muteButton)muteButton.onclick=()=>{walkAudio.setMuted(!walkAudio.isMuted());syncMuteButton();host.focus({preventScroll:true});};
+ syncMuteButton();
  $('#walk-info-close').onclick=()=>{info.hidden=true;host.focus({preventScroll:true});};
  $('#walk-help-toggle').onclick=()=>{if(director&&director.busy)return;clearInput();view.unlock();$('#walk-help').hidden=!$('#walk-help').hidden;host.focus({preventScroll:true});};
  $('#walk-home').onclick=()=>{if(director&&director.busy)return;clearInput();walker.reset();target.set(walker.state.position[0],.2,walker.state.position[1]);info.hidden=true;host.focus({preventScroll:true});};
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state()});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state()});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }
