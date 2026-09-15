@@ -214,6 +214,18 @@ try {
   const restoredAudio = await page.evaluate(() => window.eys.state().walk.audio);
   check('audio: 恢复声音', restoredAudio?.muted === false && restoredAudio?.ambience === true, JSON.stringify(restoredAudio));
 
+  // Photo mode (B2): HUD hides (fan notice stays), Enter exports and auto-exits.
+  await page.click('#walk-photo');
+  const photoState = await page.evaluate(() => window.eys.state().walk.photo);
+  const controlsHidden = await page.locator('#walk-view-toggle').isHidden();
+  const barVisible = await page.locator('#walk-photo-bar').isVisible();
+  check('photo: 进入拍照并隐藏控件', photoState === true && controlsHidden && barVisible, `photo=${photoState} controlsHidden=${controlsHidden} bar=${barVisible}`);
+  const downloadPromise = page.waitForEvent('download', {timeout: 15000});
+  await page.keyboard.press('Enter');
+  const download = await downloadPromise.then(() => true).catch(() => false);
+  const photoAfter = await page.evaluate(() => window.eys.state().walk.photo);
+  check('photo: Enter 导出图片并自动退出', download === true && photoAfter === false, `download=${download} photo=${photoAfter}`);
+
   const promptVisible = await page.evaluate(() => {
     const el = document.querySelector('#immersion-prompt');
     return el ? !el.hidden : null;
