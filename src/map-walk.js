@@ -13,7 +13,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  const enter=$('#walk-enter'),exit=$('#walk-exit'),hud=$('#walk-hud'),info=$('#walk-info'),prompt=$('#walk-prompt');
  let nav,walker,avatar,loading=false,active=false,paused=false,failure=null,saved=null,raf=0,last=0,frame=0;
  let director=null,propsStarted=false,immersionSnapshot=null;
- let photoMode=false;
+ let photoMode=false,dusk=false,duskSaved=null;
  const propsLibrary=createPropLibrary();
  const walkAudio=createWalkAudio();
  const target=new THREE.Vector3(),offset=new THREE.Vector3(0,13,9),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -49,6 +49,25 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   a.download='goosechapel-'+area+'.png';
   document.body.append(a);a.click();a.remove();
   exitPhoto();
+ }
+ // Dusk mood (B3): lights and background only — no texture/material changes,
+ // fully reversible. Persist through immersion (the bell ring shares this
+ // scene) and restore when leaving walk so the main page is untouched.
+ function setDusk(next){
+  if(next===dusk)return;dusk=next;
+  if(next){
+   duskSaved={bg:scene.background&&scene.background.isColor?scene.background.getHex():null,hemi:null,dirls:[]};
+   for(const o of scene.children){
+    if(o.isHemisphereLight){duskSaved.hemi={o,color:o.color.getHex(),ground:o.groundColor.getHex(),intensity:o.intensity};o.color.set('#7d6aa8');o.groundColor.set('#4a3f3d');o.intensity*=.85;}
+    else if(o.isDirectionalLight){duskSaved.dirls.push({o,color:o.color.getHex(),intensity:o.intensity});o.color.set('#ffb26b');o.intensity*=.7;}
+   }
+   if(duskSaved.bg!==null)scene.background.set('#3d3654');
+  }else if(duskSaved){
+   if(duskSaved.bg!==null&&scene.background&&scene.background.isColor)scene.background.setHex(duskSaved.bg);
+   if(duskSaved.hemi){duskSaved.hemi.o.color.setHex(duskSaved.hemi.color);duskSaved.hemi.o.groundColor.setHex(duskSaved.hemi.ground);duskSaved.hemi.o.intensity=duskSaved.hemi.intensity;}
+   for(const d of duskSaved.dirls){d.o.color.setHex(d.color);d.o.intensity=d.intensity;}
+   duskSaved=null;
+  }
  }
  function clearInput(){keys.clear();touches.clear();for(const b of document.querySelectorAll('[data-move]'))b.removeAttribute('data-down');if(walker)walker.state.moving=false;}
  function nearBellPoint(){
@@ -159,7 +178,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function stop(){
   if(!active)return;active=false;
   if(director&&director.busy)director.cancel('stop');
-  walkAudio.stop();exitPhoto();
+  walkAudio.stop();exitPhoto();setDusk(false);syncDuskButton();
   immersionSnapshot=null;updateBusyHud(false);
   clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
   for(const [o,visible] of saved.visible)o.visible=visible;highlight.visible=saved.highlight;
@@ -189,6 +208,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   else if(e.code==='KeyE'&&!e.repeat){e.preventDefault();if(nearBellPoint())beginImmersion();else inspect();}
   else if(e.code==='KeyV'&&!e.repeat){e.preventDefault();view.change();}
   else if(e.code==='KeyP'&&!e.repeat){e.preventDefault();enterPhoto();}
+  else if(e.code==='KeyF'&&!e.repeat){e.preventDefault();setDusk(!dusk);syncDuskButton();}
  });
  window.addEventListener('keyup',e=>{if(movement.has(e.code)){keys.delete(e.code);if(active)e.preventDefault();}});
  for(const b of document.querySelectorAll('[data-move]')){
@@ -201,12 +221,16 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  if(muteButton)muteButton.onclick=()=>{walkAudio.setMuted(!walkAudio.isMuted());syncMuteButton();host.focus({preventScroll:true});};
  syncMuteButton();
  $('#walk-photo').onclick=enterPhoto;$('#walk-photo-save').onclick=exportPhoto;$('#walk-photo-exit').onclick=exitPhoto;
+ const duskButton=$('#walk-dusk');
+ function syncDuskButton(){if(duskButton)duskButton.setAttribute('aria-pressed',String(dusk));}
+ if(duskButton)duskButton.onclick=()=>{setDusk(!dusk);syncDuskButton();host.focus({preventScroll:true});};
+ syncDuskButton();
  $('#walk-info-close').onclick=()=>{info.hidden=true;host.focus({preventScroll:true});};
  $('#walk-help-toggle').onclick=()=>{if(director&&director.busy)return;clearInput();view.unlock();$('#walk-help').hidden=!$('#walk-help').hidden;host.focus({preventScroll:true});};
  $('#walk-home').onclick=()=>{if(director&&director.busy)return;clearInput();walker.reset();target.set(walker.state.position[0],.2,walker.state.position[1]);info.hidden=true;host.focus({preventScroll:true});};
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode,dusk});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }

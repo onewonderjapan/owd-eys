@@ -226,6 +226,17 @@ try {
   const photoAfter = await page.evaluate(() => window.eys.state().walk.photo);
   check('photo: Enter 导出图片并自动退出', download === true && photoAfter === false, `download=${download} photo=${photoAfter}`);
 
+  // Dusk mood (B3): toggles lights/background, exposes state, and reverts.
+  const bgBefore = await page.evaluate(() => document.querySelector('#viewport canvas') !== null);
+  await page.click('#walk-dusk');
+  const duskOn = await page.evaluate(() => window.eys.state().walk.dusk);
+  const duskPressed = await page.locator('#walk-dusk').getAttribute('aria-pressed');
+  check('dusk: 切换到黄昏', duskOn === true && duskPressed === 'true', `dusk=${duskOn} pressed=${duskPressed}`);
+  await page.click('#walk-dusk');
+  const duskOff = await page.evaluate(() => window.eys.state().walk.dusk);
+  check('dusk: 切回原光照', duskOff === false, `dusk=${duskOff}`);
+  void bgBefore;
+
   const promptVisible = await page.evaluate(() => {
     const el = document.querySelector('#immersion-prompt');
     return el ? !el.hidden : null;
