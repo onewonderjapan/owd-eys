@@ -36,8 +36,6 @@ export const IMMERSION_CONFIG = Object.freeze({
   // fire 7.5s = walk 1.7 + lift 1.2 + carry 1.4 + toss 1.0 + settle.
   water: 9.5,
   fire: 7.5,
-  underwaterWindow: Object.freeze([6.0, 9.1]),
-  fireWindow: Object.freeze([4.5, 7.3]),
  }),
  // Discussion lines: the original scripted three stay first for continuity; each
  // session deterministically picks three distinct lines via pickSessionSpeeches.
@@ -52,8 +50,8 @@ export const IMMERSION_CONFIG = Object.freeze({
  styles: Object.freeze(['water', 'fire']),
  defaultStyle: 'water',
  underwaterPitchRange: Object.freeze([-1.45, 1.10]),
- chainLinks: Object.freeze({min: 24, max: 32}),
- limits: Object.freeze({flames: 24, bubbles: 8, escorts: 2}),
+ chainLinks: 28,
+ limits: Object.freeze({flameRings: 9, flameLayers: 2, bubbles: 6, escorts: 2}),
 });
 
 // Player always sits at seat 0; the seven NPCs come from the fixed candidate order.

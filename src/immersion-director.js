@@ -386,7 +386,6 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  ui.on.replay = () => dispatchEvent({type: 'REPLAY'});
  ui.on.return = () => dispatchEvent({type: 'RETURN'});
 
- let beginPromise = null;
  async function begin() {
   if (machine.snapshot().phase !== 'roam') return false;
   if (!props.state().ready) {

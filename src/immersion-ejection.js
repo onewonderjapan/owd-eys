@@ -180,7 +180,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   const chainMat = take(chainProto.material.clone());
   chainMat.color = new THREE.Color('#4c565f'); // faint lift so links read in deep water
   chainMat.emissive = new THREE.Color('#12161c');
-  const chainCount = 28;
+  const chainCount = config.chainLinks;
   // library geometry is BORROWED read-only (see immersion-props.js contract):
   // never take() it into the stage's owned list — disposing it here would free
   // the shared prototype's GPU buffers out from under the prop library
@@ -198,7 +198,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   const bubbleTex = take(softBubbleTexture());
   const bubbleMat = take(new THREE.SpriteMaterial({map: bubbleTex, transparent: true, opacity: 0.4, depthWrite: false, fog: false}));
   const bubbles = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < config.limits.bubbles; i++) {
    const b = new THREE.Sprite(bubbleMat);
    b.scale.setScalar(0.045 + (i % 3) * 0.018);
    b.userData.seed = i * 2.399;
@@ -492,10 +492,12 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   flameMat = take(new THREE.MeshBasicMaterial({map: flameTex, transparent: true, opacity: 0.85,
    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
   flames = [];
-  for (let i = 0; i < 9; i++) {
-   const a = (i / 9) * Math.PI * 2;
+  const {flameRings, flameLayers} = config.limits;
+  for (let i = 0; i < flameRings; i++) {
+   const a = (i / flameRings) * Math.PI * 2;
    const fx = pitX + Math.cos(a) * 0.2, fz = Math.sin(a) * 0.2;
-   for (const rot of [0, Math.PI / 2.6]) {
+   for (let layer = 0; layer < flameLayers; layer++) {
+    const rot = (layer / Math.max(1, flameLayers)) * Math.PI / 1.3;
     const flame = new THREE.Mesh(flameGeo, flameMat);
     flame.position.set(fx, 0.12 + (i % 3) * 0.05, fz);
     flame.rotation.y = rot;

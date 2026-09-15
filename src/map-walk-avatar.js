@@ -2,9 +2,15 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {mountEquipment} from './rig-contract.js';
 
+// One manifest fetch per page: an 8-actor immersion session used to re-request
+// it once per loadWalkingAvatar call.
+let manifestPromise=null;
+const loadManifest=()=>manifestPromise??=fetch(new URL('assets/manifest.json',import.meta.url))
+ .then(async r=>{if(!r.ok)throw Error('衣橱清单未能打开');return r.json();})
+ .catch(e=>{manifestPromise=null;throw e;});
+
 export async function loadWalkingAvatar(actorId='cast.14',onProgress=()=>{}){
- const response=await fetch(new URL('assets/manifest.json',import.meta.url));if(!response.ok)throw Error('衣橱清单未能打开');
- const manifest=await response.json(),preset=manifest.presets[actorId],loader=new GLTFLoader();
+ const manifest=await loadManifest(),preset=manifest.presets[actorId],loader=new GLTFLoader();
  if(!preset)throw Error('请先选择一位角色');
  const gear=preset.modules.map(id=>manifest.modules.find(a=>a.id===id));
  let loaded=0;const urls=[manifest.base.url,...gear.map(g=>g.url)];

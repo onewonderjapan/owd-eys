@@ -3,7 +3,10 @@
 // Vote counting and phase timing stay in the state machine; this module only displays.
 export function ensureImmersionUi(host) {
  const existing = document.getElementById('immersion-ui');
- if (existing) return existing.__immersionUi || null;
+ if (existing) {
+  if (!existing.__immersionUi) throw new Error('immersion-ui 节点存在但未初始化（旧版 HTML?），无法安全复用');
+  return existing.__immersionUi;
+ }
  if (!document.getElementById('immersion-css')) {
   const link = document.createElement('link');
   link.id = 'immersion-css';
@@ -15,6 +18,8 @@ export function ensureImmersionUi(host) {
  const root = document.createElement('div');
  root.id = 'immersion-ui';
  const made = {};
+ // render() runs at ~20Hz; skip identical writes so layout doesn't churn
+ const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
  const div = id => {
   const node = document.createElement('div');
   node.id = 'immersion-' + id;
@@ -176,18 +181,19 @@ export function ensureImmersionUi(host) {
       : '选择一位NPC，或体验自己被投出';
     made['confirm'].disabled = !state.selectedId;
    }
+   const show_text = (id, text) => setText(made[id], text);
    show('banner', phase === 'result');
    if (phase === 'result') {
     const target = extras.describeActor(state.targetId) || {};
     const votesForTarget = state.votes ? Object.values(state.votes).filter(v => v === state.targetId).length : 0;
-    made['banner'].textContent = state.selfDemo
+    show_text('banner', state.selfDemo
      ? `全场投给了你（${votesForTarget} 票）`
-     : `「${target.label || state.targetId}」被投出（${votesForTarget} 票）`;
+     : `「${target.label || state.targetId}」被投出（${votesForTarget} 票）`);
    }
    show('caption', phase === 'discussion');
    if (phase === 'discussion') {
     const speaker = extras.describeActor(state.actorIds[state.speakerIndex]) || {};
-    made['caption'].textContent = `${speaker.label || '有人'}：${extras.speeches?.[state.speakerIndex] || ''}`;
+    setText(made['caption'], `${speaker.label || '有人'}：${extras.speeches?.[state.speakerIndex] || ''}`);
    }
    show('finished', phase === 'finished');
    made['fade'].classList.toggle('on', Boolean(extras.fade));
