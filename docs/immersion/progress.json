@@ -2,8 +2,8 @@
   "schema_version": 1,
   "feature_id": "eys-pov-immersion",
   "prepared_on": "2026-09-13",
-  "updated_at": "2026-09-14",
-  "status": "ready_for_user_review",
+  "updated_at": "2026-09-15",
+  "status": "user_accepted_merged",
   "execution_started": true,
   "executor": "ZCode",
   "current_stage": "P6",
@@ -329,7 +329,7 @@
     "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
     "本文件记录本地候选完成，不代表已发布或已部署。"
   ],
-  "next_action": "用户本地验收：npm start后按铃体验全流程；验收通过后另行授权发布（本轮未推送未部署）。",
+  "next_action": "Merged to main (418b9e4) after user acceptance 2026-09-15. Next: publish 1.2.0 through the wired gates, then the overnight plan (eys/PLAN_TONIGHT_20260915.md): engineering debt + B1/B2/B3 small POV features.",
   "blockers": [],
   "deviations": [
     {
