@@ -117,6 +117,8 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  // (pose-fresh), then add a small outward offset plus the stage's splay so the wings
  // droop away from the sight line while carried under or settled in the pit.
  const wingInv = new THREE.Matrix4();
+ const wingScaleMat = new THREE.Matrix4(); // per-frame scratch, no allocation in the wing loop
+ const ONES = new THREE.Vector3(1, 1, 1);
  const wingOff = new THREE.Matrix4();
  const wingOffPos = new THREE.Vector3();
  const wingOffQuat = new THREE.Quaternion();
@@ -129,7 +131,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   const narrow = aspect >= 1.3 ? 1 : aspect >= 0.8 ? lerp(1, 0.78, (1.3 - aspect) / 0.5) : 0.74;
   avatar.model.updateWorldMatrix(true, true);
   wingInv.copy(avatar.model.matrixWorld).invert();
-  ejectionWings.matrix.multiplyMatrices(avatar.model.matrixWorld, new THREE.Matrix4().makeScale(narrow, 1, 1));
+  ejectionWings.matrix.multiplyMatrices(avatar.model.matrixWorld, wingScaleMat.makeScale(narrow, 1, 1));
   const splay = ejectionStage.wingSplay || 0;
   for (const wing of ejectionWings.children) {
    const source = wing.userData.source;
@@ -141,7 +143,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    // clear V clear of the sight line, the small roll droops them naturally.
    wingOffEuler.set(0, -side * (0.62 + splay * 0.45), -side * 0.2);
    wingOffQuat.setFromEuler(wingOffEuler);
-   wingOff.compose(wingOffPos, wingOffQuat, new THREE.Vector3(1, 1, 1));
+   wingOff.compose(wingOffPos, wingOffQuat, ONES);
    wing.matrix.multiplyMatrices(wingInv, source.matrixWorld).multiply(wingOff);
   }
  }
@@ -290,6 +292,14 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  function cleanupSession() {
   destroyRingWings();
   destroyEjectionWings();
+  if (ringCamera) {
+   // drop the hidden bell camera so the roam scene graph is back to its
+   // pre-session state (it is re-created on demand by ensureRingCamera).
+   // worldBell intentionally STAYS: it is the town's persistent bell prop
+   // and must still be there for the next ring.
+   worldScene.remove(ringCamera);
+   ringCamera = null;
+  }
   if (ejectionStage) {
    ejectionStage.dispose();
    ejectionStage = null;
@@ -489,7 +499,9 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    extras.describeActor = fn;
   },
   refreshProps() {
-   if (attachWorldBell()) worldScene.add(worldBell.group);
+   // attachWorldBell() adds the group itself; adding again here would re-parent
+   // the same group for nothing
+   attachWorldBell();
   },
   get busy() {
    return machine.snapshot().busy;

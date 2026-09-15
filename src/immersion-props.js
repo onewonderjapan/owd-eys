@@ -9,7 +9,7 @@ export function createPropLibrary() {
  let ready = false, loading = false, error = null, packId = null;
  let pending = null;
 
- async function ensure({onProgress} = {}) {
+ async function ensure() {
   if (ready) return;
   if (pending) return pending;
   loading = true; error = null;
@@ -20,9 +20,21 @@ export function createPropLibrary() {
     config = await response.json();
     for (const key of Object.values(config.nodes))
      if (typeof key !== 'string' || !key) throw Error('会议道具配置节点名无效');
+    // Integrity gate: the manifest carries sha256/bytes from the S1 build; a
+    // truncated or corrupted GLB (partial cache, bad proxy) must fail here
+    // with a clear message instead of dying later inside the parser.
     const url = new URL(config.url, document.baseURI).href;
-    const gltf = await new GLTFLoader().loadAsync(url, event => {
-     if (onProgress && event.total) onProgress(event.loaded, event.total);
+    const bytes = await (await fetch(url)).arrayBuffer();
+    if (config.bytes !== undefined && bytes.byteLength !== config.bytes)
+     throw Error(`道具包字节数不符（${bytes.byteLength} ≠ ${config.bytes}），请刷新重试`);
+    if (config.sha256) {
+     const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+     if (digest !== config.sha256)
+      throw Error('道具包校验失败（sha256 不匹配），请刷新重试');
+    }
+    const gltf = await new Promise((resolve, reject) => {
+     new GLTFLoader().parse(bytes, '', resolve, reject);
     });
     pack = gltf.scene;
     for (const key of Object.values(config.nodes))

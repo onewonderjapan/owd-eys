@@ -8,20 +8,27 @@ import {IMMERSION_CONFIG} from './immersion-config.js';
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpMat = new THREE.Matrix4();
 const tmpVecA = new THREE.Vector3();
+// Per-frame scratch for the chain solve and camera track — the ejection update
+// used to allocate ~5 objects per link per frame (GC churn during the showpiece)
+const tmpVecB = new THREE.Vector3(), tmpVecC = new THREE.Vector3(), tmpVecD = new THREE.Vector3(), tmpVecE = new THREE.Vector3();
+const tmpLink = new THREE.Vector3(), tmpEnd = new THREE.Vector3(), tmpScale = new THREE.Vector3(0.8, 1, 0.8);
+const tmpQuat = new THREE.Quaternion();
+const TWIST_Q = new THREE.Quaternion().setFromAxisAngle(UP, Math.PI / 2);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp01 = t => Math.min(1, Math.max(0, t));
 const ease = t => t * t * (3 - 2 * t);
 // Smooth waypoint track: keys = [[time, [x,y,z]], ...] with ascending times.
-function track(t, keys) {
- if (t <= keys[0][0]) return new THREE.Vector3(...keys[0][1]);
+// Writes into `out` — callers own the vector, no per-frame allocation.
+function track(t, keys, out) {
+ if (t <= keys[0][0]) return out.set(...keys[0][1]);
  for (let i = 1; i < keys.length; i++) {
   if (t <= keys[i][0]) {
    const [t0, a] = keys[i - 1], [t1, b] = keys[i];
    const k = ease((t - t0) / (t1 - t0));
-   return new THREE.Vector3(lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k));
+   return out.set(lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k));
   }
  }
- return new THREE.Vector3(...keys[keys.length - 1][1]);
+ return out.set(...keys[keys.length - 1][1]);
 }
 function softFlameTexture() {
  const canvas = document.createElement('canvas');
@@ -67,6 +74,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
  const camera = new THREE.PerspectiveCamera(74, 1, 0.035, 80);
  scene.add(camera);
  const owned = [];
+ const eyePos = new THREE.Vector3(); // camera-track scratch, reused each frame
  const take = o => {
   if (Array.isArray(o)) owned.push(...o);
   else owned.push(o);
@@ -273,7 +281,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   stage.update = ({elapsed, reducedMotion}) => {
    reduced.value = Boolean(reducedMotion);
    stage.lookMode = 'free';
-   const position = new THREE.Vector3();
+   const position = eyePos; // stage-scoped scratch, reused every frame
    let yaw = -Math.PI / 2, pitch = 0;
    const by = bodyY(elapsed);
    const bx = bodyX(elapsed);
@@ -386,22 +394,24 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
 
    // Chain: bind to the performed body and to the GLB anchor, real link pitch.
    targetModel.updateWorldMatrix(true, false);
-   const bindWorld = targetModel.localToWorld(bindLocal.clone());
+   const bindWorld = targetModel.localToWorld(tmpVecB.copy(bindLocal));
    stoneAnchorNode.updateWorldMatrix(true, false);
-   const anchorWorld = stoneAnchorNode.getWorldPosition(new THREE.Vector3());
-   const len = Math.max(0.2, bindWorld.distanceTo(anchorWorld));
-   const dir = anchorWorld.clone().sub(bindWorld).normalize();
+   const anchorWorld = stoneAnchorNode.getWorldPosition(tmpVecC);
+   const span = tmpVecD.subVectors(anchorWorld, bindWorld);
+   const len = Math.max(0.2, span.length());
+   const dir = tmpVecE.copy(span).normalize();
    const linkLen = len / chainCount;
    const scaleLong = (linkLen * 1.14) / 0.126;
+   tmpScale.set(0.8, scaleLong, 0.8);
    for (let i = 0; i < chainCount; i++) {
     const t = (i + 0.5) / chainCount;
-    const linkPos = bindWorld.clone().addScaledVector(anchorWorld.clone().sub(bindWorld), t);
-    const twist = new THREE.Quaternion().setFromAxisAngle(UP, (i % 2) * Math.PI / 2);
-    const q = new THREE.Quaternion().setFromUnitVectors(UP, dir).multiply(twist);
-    tmpMat.compose(linkPos, q, new THREE.Vector3(0.8, scaleLong, 0.8));
+    tmpLink.copy(bindWorld).addScaledVector(span, t);
+    tmpQuat.setFromUnitVectors(UP, dir);
+    if (i % 2) tmpQuat.multiply(TWIST_Q);
+    tmpMat.compose(tmpLink, tmpQuat, tmpScale);
     chain.setMatrixAt(i, tmpMat);
-    if (i === 0) stage.linkTopEnd = linkPos.clone().addScaledVector(dir, -0.57 * linkLen).toArray();
-    if (i === chainCount - 1) stage.linkBottomEnd = linkPos.clone().addScaledVector(dir, 0.57 * linkLen).toArray();
+    if (i === 0) stage.linkTopEnd = tmpEnd.copy(tmpLink).addScaledVector(dir, -0.57 * linkLen).toArray();
+    if (i === chainCount - 1) stage.linkBottomEnd = tmpEnd.copy(tmpLink).addScaledVector(dir, 0.57 * linkLen).toArray();
    }
    chain.instanceMatrix.needsUpdate = true;
 
@@ -518,7 +528,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   stage.update = ({elapsed, reducedMotion}) => {
    reduced.value = Boolean(reducedMotion);
    stage.lookMode = 'free';
-   const position = track(elapsed, isSelf ? camTrackSelf : camTrackNpc);
+   const position = track(elapsed, isSelf ? camTrackSelf : camTrackNpc, eyePos);
    let yaw, pitch;
    if (isSelf && elapsed < walkEnd) {
     // The cast walks up; watch them come before the pit gaze takes over.
