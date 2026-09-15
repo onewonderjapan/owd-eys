@@ -54,6 +54,29 @@ const fresh = () => {
  return m;
 };
 
+check('state: preparing 中途 LOAD_FAILED 进 error,RETRY 回 preparing', () => {
+ const m = createImmersionState();
+ m.dispatch({type: 'START', actorIds: roster, playerActorId: 'cast.14', style: 'water', reducedMotion: false});
+ assert.equal(m.snapshot().phase, 'preparing');
+ m.dispatch({type: 'LOAD_FAILED', error: '演员加载失败'});
+ assert.equal(m.snapshot().phase, 'error');
+ assert.equal(m.snapshot().error, '演员加载失败');
+ // error 相位必须先 RETRY,不接受 READY
+ m.dispatch({type: 'READY'});
+ assert.equal(m.snapshot().phase, 'error');
+ m.dispatch({type: 'RETRY'});
+ assert.equal(m.snapshot().phase, 'preparing');
+ assert.equal(m.snapshot().error, null);
+ m.dispatch({type: 'READY'});
+ assert.equal(m.snapshot().phase, 'ringing');
+});
+check('state: error 相位 CANCEL 直接回漫游', () => {
+ const m = createImmersionState();
+ m.dispatch({type: 'START', actorIds: roster, playerActorId: 'cast.14', style: 'fire', reducedMotion: false});
+ m.dispatch({type: 'LOAD_FAILED', error: 'x'});
+ m.dispatch({type: 'CANCEL'});
+ assert.equal(m.snapshot().phase, 'roam');
+});
 check('state: 非法阶段事件无效果', () => {
  const m = createImmersionState();
  m.dispatch({type: 'READY'}); assert.equal(m.snapshot().phase, 'roam');

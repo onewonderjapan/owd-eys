@@ -493,6 +493,29 @@ try {
   check('reuse: 连续5轮会话几何数不增长', leakCheck.geometriesBefore != null && leakCheck.geometriesAfter <= leakCheck.geometriesBefore + 2,
     JSON.stringify(leakCheck));
 
+  // N4: injected actor-GLB failure during preparing -> error phase -> the
+  // retry button recovers into a working session. Reuses this page, which is
+  // still standing at the bell after the leak-check rounds. Desktop only.
+  if (!MOBILE) {
+    let glbBlocked = true, abortedUrl = '';
+    await page.route('**/*.glb', route => {
+      if (glbBlocked) { glbBlocked = false; abortedUrl = route.request().url(); return route.abort(); }
+      return route.continue();
+    });
+    await page.keyboard.press('KeyE');
+    const errPhase = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'error', {timeout: 40000}).then(() => true).catch(() => false);
+    check('retry: 注入演员加载失败进入 error', errPhase === true, `aborted=${abortedUrl || 'none'}`);
+    const retryVisible = errPhase ? await page.locator('#immersion-retry').isVisible() : false;
+    check('retry: 重试按钮可见', retryVisible === true, `visible=${retryVisible}`);
+    await page.click('#immersion-retry');
+    const ringed = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', {timeout: 60000}).then(() => true).catch(() => false);
+    const phaseNow = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
+    check('retry: 重试后完成加载进入鸣铃', ringed === true, `phase=${phaseNow}`);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000}).catch(() => {});
+    await page.unroute('**/*.glb');
+  }
+
   report.errors.push(...pageErrors.slice(0, 5));
   report.passed = report.checks.every(c => c.passed) && pageErrors.length === 0;
 } catch (fatal) {
