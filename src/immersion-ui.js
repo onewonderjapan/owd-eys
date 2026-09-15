@@ -187,7 +187,7 @@ export function ensureImmersionUi(host) {
    show('caption', phase === 'discussion');
    if (phase === 'discussion') {
     const speaker = extras.describeActor(state.actorIds[state.speakerIndex]) || {};
-    made['caption'].textContent = `${speaker.label || '有人'}：${IMMERSION_SPEECHES[state.speakerIndex] || ''}`;
+    made['caption'].textContent = `${speaker.label || '有人'}：${extras.speeches?.[state.speakerIndex] || ''}`;
    }
    show('finished', phase === 'finished');
    made['fade'].classList.toggle('on', Boolean(extras.fade));
@@ -242,4 +242,3 @@ export function ensureImmersionUi(host) {
  return ui;
 }
 
-const IMMERSION_SPEECHES = ['我刚才在码头。', '先听听大家怎么说。', '那我们投票吧。'];

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {IMMERSION_CONFIG, selectRoster, createBellProxy} from '../src/immersion-config.js';
+import {IMMERSION_CONFIG, selectRoster, createBellProxy, pickSessionSpeeches} from '../src/immersion-config.js';
 import {createImmersionState, countVotesFor} from '../src/immersion-state.js';
 import {createNavigation} from '../src/map-walk-simulation.js';
 
@@ -76,6 +76,18 @@ check('state: error 相位 CANCEL 直接回漫游', () => {
  m.dispatch({type: 'LOAD_FAILED', error: 'x'});
  m.dispatch({type: 'CANCEL'});
  assert.equal(m.snapshot().phase, 'roam');
+});
+check('speeches: 台词池取句确定、不重复、全部来自池', () => {
+ const a = pickSessionSpeeches(1), b = pickSessionSpeeches(1);
+ assert.deepEqual(a, b);
+ assert.equal(a.length, 3);
+ assert.equal(new Set(a).size, 3);
+ for (const line of a) assert.ok(IMMERSION_CONFIG.speechPool.includes(line));
+ // 原脚本三句在若干种子中都会出现(池中前三句 continuity)
+ const seen = new Set();
+ for (let s = 0; s < 40; s++) pickSessionSpeeches(s).forEach(l => seen.add(l));
+ for (const line of ['我刚才在码头。', '先听听大家怎么说。', '那我们投票吧。'])
+  assert.ok(seen.has(line), line);
 });
 check('state: 非法阶段事件无效果', () => {
  const m = createImmersionState();

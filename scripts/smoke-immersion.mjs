@@ -505,7 +505,7 @@ try {
     await page.keyboard.press('KeyE');
     const errPhase = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'error', {timeout: 40000}).then(() => true).catch(() => false);
     check('retry: 注入演员加载失败进入 error', errPhase === true, `aborted=${abortedUrl || 'none'}`);
-    const retryVisible = errPhase ? await page.locator('#immersion-retry').isVisible() : false;
+    const retryVisible = errPhase ? await page.locator('#immersion-retry').waitFor({state:'visible', timeout:10000}).then(()=>true).catch(()=>false) : false;
     check('retry: 重试按钮可见', retryVisible === true, `visible=${retryVisible}`);
     await page.click('#immersion-retry');
     const ringed = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', {timeout: 60000}).then(() => true).catch(() => false);

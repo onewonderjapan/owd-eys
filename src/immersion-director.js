@@ -2,7 +2,7 @@
 // temporary scenes/cameras handed to the walking render loop, actor/stage lifecycles,
 // one-shot audio cues and the DOM UI. Never writes walker.position directly.
 import * as THREE from 'three';
-import {IMMERSION_CONFIG, selectRoster} from './immersion-config.js';
+import {IMMERSION_CONFIG, selectRoster, pickSessionSpeeches} from './immersion-config.js';
 import {createImmersionState} from './immersion-state.js';
 import {createImmersionAudio} from './immersion-audio.js';
 import {createImmersionLook} from './immersion-look.js';
@@ -21,6 +21,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  const ui = ensureImmersionUi(host);
 
  let session = 0; // increments on start/retry/cancel; late async results check against it
+ let sessionSpeeches = [];
  let actors = null;
  let playerActorId = null;
  let worldBell = null;
@@ -366,6 +367,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   get progress() { return loadingProgress; },
   get muted() { return audio.isMuted(); },
   get fade() { return machine.snapshot().phase === 'returning'; },
+  get speeches() { return sessionSpeeches; },
   get propsReady() { return props.state().ready; },
   get propsError() { return props.state().error; },
  };
@@ -406,6 +408,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   endNotified = false;
   endReason = null;
   session += 1;
+  sessionSpeeches = pickSessionSpeeches(session);
   const prefersReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   machine.dispatch({type: 'START', actorIds: selectRoster(playerActorId), playerActorId, style: IMMERSION_CONFIG.defaultStyle, reducedMotion: prefersReduced});
   loadSession(session);
