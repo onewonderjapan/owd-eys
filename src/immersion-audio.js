@@ -113,8 +113,9 @@ export function createImmersionAudio() {
    if (context && context.state === 'running') context.suspend().catch(() => {});
   },
   resume() {
-   if (context && context.state === 'suspended' && !muted) context.resume().catch(() => {});
-   else if (context && context.state === 'suspended') context.resume().catch(() => {});
+   // muting is gain-based; a suspended context must always resume or later
+   // cues stay silent even after unmute
+   if (context && context.state === 'suspended') context.resume().catch(() => {});
   },
   stop() {
    for (const node of live) {

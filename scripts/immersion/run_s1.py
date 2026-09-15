@@ -9,6 +9,7 @@ Usage (from W2, Windows Python):
 """
 import argparse
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -18,10 +19,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ARCHIVE = Path(r'C:\3d\eys\immersion_assets')
-SMB_SHARE = Path(r'\\172.72.0.1\Home\outbox\eys-immersion')
-REMOTE_BASE = '/home/baibai/outbox/eys-immersion'
-RUNTIME = '/home/baibai/outbox/codex-3d-atelier/runtime/usr'
+# machine-specific locations: every one is env-overridable so the pipeline
+# survives a LAN/host move without code edits
+ARCHIVE = Path(os.environ.get('EYS_IMMERSION_ARCHIVE', r'C:\3d\eys\immersion_assets'))
+SMB_SHARE = Path(os.environ.get('EYS_IMMERSION_SHARE', r'\\172.72.0.1\Home\outbox\eys-immersion'))
+REMOTE_BASE = os.environ.get('EYS_IMMERSION_HOME', '/home/baibai/outbox/eys-immersion')
+RUNTIME = os.environ.get('EYS_IMMERSION_RUNTIME', '/home/baibai/outbox/codex-3d-atelier/runtime/usr')
 SSH = r'C:\Windows\System32\OpenSSH\ssh.exe'
 BUILD_SCRIPT = HERE / 'build_props_blender.py'
 

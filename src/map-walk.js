@@ -68,7 +68,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt'))el.hidden=busy;
  }
  function frameLoop(time){
-  if(!active)return;const dt=Math.min((time-last)/1000,.05)||0;last=time;
+  if(!active)return;const dt=Math.max(0,Math.min((time-last)/1000,.05))||0;last=time;
   if(director&&director.busy){
    updateBusyHud(true);
    if(avatar)avatar.player.visible=false;
@@ -141,8 +141,11 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  window.addEventListener('keydown',e=>{
   if(!active||e.target.closest('input,textarea,select'))return;
   if(director&&director.busy){
-   e.preventDefault();
-   if(e.code==='Escape'&&!document.pointerLockElement)director.cancel('escape');
+   // only swallow keys this handler consumes (movement + Escape); let Tab and
+   // other focus-navigation keys through so keyboard users can reach the
+   // immersion UI buttons
+   if(e.code==='Escape'&&!document.pointerLockElement){e.preventDefault();director.cancel('escape');}
+   else if(movement.has(e.code))e.preventDefault();
    return;
   }
   if(movement.has(e.code)){e.preventDefault();if(!paused&&info.hidden&&!e.target.closest('button'))keys.add(e.code);}
