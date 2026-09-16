@@ -110,8 +110,12 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
  // The procession beat is draw-call bound in software renderers. Sub-centimeter parts
  // (toe seams, nostrils, eye sparkles, bill crease) never read at performance
  // distances, so background walkers skip them; escorts keep their crown tufts.
- const watcherSimplify = /seam|nostril|sparkle|crease|crown|chest feather/i;
- const escortSimplify = /seam|nostril|sparkle|crease/i;
+ // Detail-only simplification for carried figures. NEVER use bare /seam/ —
+ // the body+head mesh is 'BASE_|_shared_seamless_rounded_body' and /seam/
+ // matched it, hiding every watcher's body (floating heads/eyes bug). Also
+ // avoid /crown/: it hides hat crowns. Only true millimeter details:
+ const watcherSimplify = /toe_seam|nostril|eye_sparkle|mouth_crease/i;
+ const escortSimplify = /toe_seam|nostril|eye_sparkle|mouth_crease/i;
  const hiddenParts = [];
  for (const id of watchers) {
   const avatar = actors.get(id);
