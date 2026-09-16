@@ -3,7 +3,7 @@
   "feature_id": "eys-pov-immersion",
   "prepared_on": "2026-09-13",
   "updated_at": "2026-09-16",
-  "status": "overnight_complete",
+  "status": "released",
   "execution_started": true,
   "executor": "ZCode",
   "current_stage": "P6",
@@ -22,9 +22,9 @@
   "plan": "implementation-plan.md",
   "preview_url": "http://127.0.0.1:8870/",
   "candidate_version": "1.2.0",
-  "actual_version": "1.2.0",
+  "actual_version": "1.3.0",
   "build_sha256": null,
-  "publishing_authorized": false,
+  "publishing_authorized": true,
   "stages": [
     {
       "id": "P0",
@@ -329,7 +329,7 @@
     "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
     "本文件记录本地候选完成，不代表已发布或已部署。"
   ],
-  "next_action": "Flash night queue N4-N9 done: retry e2e + pure tests (31/31), speech pool, hygiene batch, props sha256 runtime verify, per-frame alloc fixes. Smoke 45/45 desktop, 42/42 mobile. Publish still blocked on user `aws sso login --profile onewonder.root` (see REPORT_TONIGHT_20260915.md).",
+  "next_action": "v1.3.0 live at https://eys.onewonder.co.jp/ (releases/1.3.0, remote verify PASS). Repo now open source (MIT code + fan-work asset NOTICE).",
   "blockers": [],
   "deviations": [
     {
