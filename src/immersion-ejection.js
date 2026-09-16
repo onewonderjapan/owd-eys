@@ -149,7 +149,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   scene.add(new THREE.Mesh(domeGeo, take(new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.BackSide, fog: false}))));
 
   const water = new THREE.Mesh(take(new THREE.PlaneGeometry(34, 34)),
-   take(new THREE.MeshStandardMaterial({color: '#123f66', roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.94})));
+   take(new THREE.MeshStandardMaterial({color: '#123f66', roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.82})));
   water.rotation.x = -Math.PI / 2;
   scene.add(water);
 
@@ -242,7 +242,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   const eyeOff = eyeH * 0.9;
   const shorePoint = new THREE.Vector3(-1.1, 1.0, 0); // the crowd waiting on the dock
   const throwY = t => lerp(0.55, -0.75, ease(t)) + (reduced.value ? 0 : Math.sin(t * Math.PI) * 0.12);
-  const slowSink = t => lerp(-0.75, -1.19, ease(clamp01((t - dropEnd) / 3.6)));
+  const slowSink = t => lerp(-0.75, -2.05, ease(clamp01((t - dropEnd) / 3.6)));
   const bodyY = t => {
    if (t < walkEnd) return dockDeckY;
    if (t < liftEnd) return lerp(dockDeckY, 0.55, ease(clamp01((t - walkEnd) / (liftEnd - walkEnd))));
