@@ -29,6 +29,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  // lets the player keep looking around to compose, and exports the live frame.
  function enterPhoto(){
   if(!active||photoMode||(director&&director.busy))return;
+  if(!$('#walk-photo-bar'))return; // old cached HTML: photo UI not present
   clearInput();info.hidden=true;$('#walk-help').hidden=true; // canLook() keys off these
   photoMode=true;
   hud.classList.add('photo');host.classList.add('photo-frame');
@@ -39,7 +40,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function exitPhoto(){
   if(!photoMode)return;photoMode=false;
   hud.classList.remove('photo');host.classList.remove('photo-frame');
-  $('#walk-photo-bar').hidden=true;
+  const bar=$('#walk-photo-bar');if(bar)bar.hidden=true;
   syncPhotoButton();
   host.focus({preventScroll:true});
  }
@@ -225,7 +226,8 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function syncMuteButton(){if(!muteButton)return;muteButton.setAttribute('aria-pressed',String(!walkAudio.isMuted()));muteButton.textContent=walkAudio.isMuted()?'声音：关':'声音：开';}
  if(muteButton)muteButton.onclick=()=>{walkAudio.setMuted(!walkAudio.isMuted());syncMuteButton();host.focus({preventScroll:true});};
  syncMuteButton();
- $('#walk-photo').onclick=enterPhoto;$('#walk-photo-save').onclick=exportPhoto;$('#walk-photo-exit').onclick=exitPhoto;
+ const photoButton=$('#walk-photo');
+ if(photoButton){photoButton.onclick=enterPhoto;$('#walk-photo-save').onclick=exportPhoto;$('#walk-photo-exit').onclick=exitPhoto;}
  const duskButton=$('#walk-dusk');
  function syncDuskButton(){if(duskButton)duskButton.setAttribute('aria-pressed',String(dusk));}
  if(duskButton)duskButton.onclick=()=>{setDusk(!dusk);syncDuskButton();host.focus({preventScroll:true});};
