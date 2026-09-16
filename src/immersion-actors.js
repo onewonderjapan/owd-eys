@@ -21,16 +21,21 @@ function saveTransforms(root) {
 // mesh's world transform. Returns null when the node already sits inside a pivot.
 function wrapInPivot(node) {
   if (node.parent && node.parent.userData.immersionPivot) return node.parent;
-  const world = new THREE.Vector3(), quat = new THREE.Quaternion(), scale = new THREE.Vector3();
   node.updateWorldMatrix(true, false);
-  node.matrixWorld.decompose(world, quat, scale);
+  // The pivot's LOCAL transform must be parentWorld^-1 * nodeWorld. The old code
+  // decomposed node.matrixWorld directly, i.e. used WORLD values as local ones —
+  // under the 0.28-scaled visual parent that collapsed every leg node onto the
+  // model origin (all legs bunched on the body axis: the seated 'clipping').
+  const local = new THREE.Matrix4().copy(node.parent.matrixWorld).invert().multiply(node.matrixWorld);
+  const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scale = new THREE.Vector3();
+  local.decompose(pos, quat, scale);
   const pivot = new THREE.Group();
   pivot.userData.immersionPivot = true;
   pivot.name = node.name + ' pivot';
   node.parent.add(pivot);
   node.parent.remove(node);
   pivot.add(node);
-  pivot.position.copy(world);
+  pivot.position.copy(pos);
   pivot.quaternion.copy(quat);
   pivot.scale.copy(scale);
   // Re-express the node in pivot space with an identity transform so the pivot's

@@ -84,9 +84,14 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
  const cool = new THREE.DirectionalLight('#a8c2dd', 1.1);
  cool.position.set(-4, 3.2, -5);
  scene.add(cool);
- const fill = new THREE.DirectionalLight('#ffffff', 0.55);
+ const fill = new THREE.DirectionalLight('#ffffff', 0.85);
  fill.position.set(2, 2.4, 4);
  scene.add(fill);
+ // Camera-side key: seated NPCs face the player, so light their fronts from
+ // the player's side or pale feathers read as ghostly silhouettes.
+ const key = new THREE.PointLight('#ffe9cf', 7, 7, 1.8);
+ key.position.set(0, 1.5, 1.3);
+ scene.add(key);
 
  const backdropParts = buildBackdrop(scene);
 
