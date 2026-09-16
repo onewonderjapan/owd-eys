@@ -1,10 +1,18 @@
-# 鹅教堂漫游
+# 鹅教堂漫游 · Goose Chapel Walk
 
 《鹅鸭杀》（Goose Goose Duck）非官方二次创作，仅用于技术验证与娱乐，不用于商业用途；与原作官方无关联，原作相关权利归其权利人所有。
 
-公开入口：https://eys.onewonder.co.jp/
+在线体验：https://eys.onewonder.co.jp/
 
-先从 27 位角色中选择同行者，再进入鹅教堂小镇。WASD／方向键移动，E 查看位置，V 或「视角」按钮切换俯视／第一人称。第一人称按住画面拖动环顾，电脑也可点击画面锁定鼠标、Esc 释放；手机可同时用方向键移动与拖动画面转头。「更换角色」返回角色册。当前为单人场景探索，不包含原作完整规则或联机玩法。
+## 玩什么
+
+先从 27 位角色中选择同行者，再走进鹅教堂小镇：
+
+- **漫游**：WASD／方向键移动，E 查看位置，V 或「视角」切换俯视／第一人称。第一人称按住画面拖动环顾，电脑可点击画面锁定鼠标、Esc 释放；手机用方向键移动＋拖动转头。
+- **环境音与脚步**（2026-09-16）：纯 Web Audio 合成的风声水声底噪，脚步随真实移动节奏响起；HUD「声音」开关记住偏好。
+- **拍照模式**：P 键或「拍照」按钮进入，隐藏全部界面只留取景框，拖动构图，Enter 导出当前画面 PNG。
+- **黄昏光照**：F 键或「黄昏」按钮切换暖色暮光，只改灯光与背景、随时可逆。
+- **POV 沉浸演出**（2026-09-15）：走到法院按响金铃，与 7 位 NPC 围桌开会——三段发言、投票示意、结果揭晓；被投出（或自演示）时以第一人称体验沉水（链石下沉）或火堆两种出局演出，可跳过、重播、静音，失焦自动暂停。全部为本地单人 NPC 演出，不含联机、语音或完整胜负规则。
 
 ## 本地开发
 
@@ -16,20 +24,42 @@ npm test
 npm start
 ```
 
-预览地址：http://127.0.0.1:8870/ 。首次上线前由原始工作区填充 `.cache/assets/`；正式上线后 fetch-assets 从已发布站点下载并核对 SHA256。
+预览地址：http://127.0.0.1:8870/ 。首次上线前由原始工作区填充 `.cache/assets/`；正式上线后 fetch-assets 从已发布站点下载并核对 SHA256。GLB 和头像存放在 S3，不进入 Git；每个运行资产的哈希与大小见 `assets-manifest.json`，原始 Blender 与制作档案不在公开包内。
 
-代码在组织私有 GitHub 仓库协作；GLB 和头像在 S3，不进入 Git。每个运行资产的哈希与大小见 `assets-manifest.json`。原始 Blender 与制作档案保留在本地项目，公开包不含源文件下载入口。
+## 工程结构
 
-地图几何来自已交付 map_reference_v2，角色来自衣橱 4.3.28。粉花绿鹅使用加厚、圆润的五瓣花环，保留原有轮廓与脸部开口。角色装配、碰撞、视角和渲染按模块分离，生成计算仍在 S1。运行、发布资料见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+| 位置 | 职责 |
+|---|---|
+| `src/main.js` | 角色选择页与整体装配 |
+| `src/map-walk.js` + `map-walk-{simulation,view,avatar}.js` | 小镇行走、碰撞导航、双视角 |
+| `src/walk-audio.js` | 环境音与脚步（Web Audio 合成，无音频资产） |
+| `src/immersion-state.js` | 会议/出局纯状态机（零 DOM/渲染依赖，全量单测） |
+| `src/immersion-director.js` | 状态机与舞台/音频/UI 的编排，世代令牌防竞态 |
+| `src/immersion-{meeting,ejection}.js` | 圆桌会议舞台、沉水/火堆出局演出 |
+| `src/immersion-props.js` | 道具库（GLB sha256/bytes 运行时校验） |
+| `scripts/build.mjs` | 版本化构建（内容寻址 release 目录 + 哈希清单） |
+| `scripts/smoke-immersion.mjs` 等 | 端到端冒烟（桌面 + 手机断言） |
+| `scripts/publish.py` | 发布门 + S3/CloudFront 上传（哈希复核、HTML 最后传） |
 
-基础设施沿用 pet.onewonder.co.jp 的私有 S3＋CloudFront OAC＋HTTPS＋Route 53 Alias A 模式；EYS 使用独立 bucket 与分发。部署不删除历史资源或文件。
+发布与部署细节见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)；沉浸演出的设计与实施记录见 [docs/immersion/design.md](docs/immersion/design.md)。
 
-待施工功能：[POV 按铃、圆桌会议与出局体验交接包](docs/immersion/START_HERE.md)。设计、施工 skill、P0/P0A/P1–P6 计划和独立进度记录已准备，交给 ZCode（GLM-Flash）按 Blender＋Three.js 流程施工；此链接不表示功能已经上线。
+## 测试
 
+```sh
+npm test                         # 纯逻辑（状态机 31 项）+ 产物检查
+node scripts/smoke-immersion.mjs # 端到端：进入→行走→按铃→会议→出局（45 项）
+MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ mobile  # 手机断言
+```
+
+## 许可与边界
+
+- **代码**：以 [MIT License](LICENSE) 开源——本仓库中的 JavaScript/CSS/HTML 与构建发布脚本。
+- **模型与美术资产**（GLB、贴图、缩略图及 Blender 源的派生物）：为基于《鹅鸭杀》官方视觉的非商用二创，**不随代码以 MIT 提供**，仅限非商业的技术验证与娱乐用途；原作相关权利归其权利人所有。见 [NOTICE.md](NOTICE.md)。
+- 本项目不提供联机、语音、账户或任何后端服务。
 
 ## Bot 协作轨（2026-09-11 起）
 
-本仓有三条协作分支。它们都**不是仓库正本**，默认不合并进 `main`；经机主内容 review 后可例外合入（先例：2026-09-13、2026-09-15 机主令合并），只作为建议与反馈的输送通道：
+本仓有三条协作分支。它们都**不是仓库正本**，默认不合并进 `main`；经机主内容 review 后可例外合入，只作为建议与反馈的输送通道：
 
 | 分支 | 目录 | 写入方 | 读取方 | 用途 |
 |---|---|---|---|---|
