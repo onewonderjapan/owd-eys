@@ -512,7 +512,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   stage.beats = {walkEnd, liftEnd, carryEnd, pauseEnd: carryEnd, dropEnd};
   const camTrackSelf = [
    [0, [0.1, 0.85, 0]], [walkEnd, [-0.55, 1.18, 0]], [liftEnd, [-0.35, 1.2, 0]],
-   [carryEnd, [0.95, 1.22, 0]], [dropEnd, [0.8, 0.92, 0]], [7.5, [0.72, 0.82, 0]],
+   [carryEnd, [1.3, 1.08, 0]], [dropEnd, [2.02, 0.58, 0]], [dropEnd + 0.45, [2.24, 0.38, 0]], [7.5, [2.26, 0.34, 0]],
   ];
   const camTrackNpc = [
    [0, [-0.15, 1.24, -1.5]], [carryEnd, [-0.15, 1.24, -1.5]],
@@ -535,6 +535,12 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
    if (isSelf && elapsed < walkEnd) {
     // The cast walks up; watch them come before the pit gaze takes over.
     yaw = Math.PI / 2; pitch = -0.05;
+   } else if (isSelf && elapsed > dropEnd + 0.35) {
+    // Inside the fire now: look back out toward the crowd, slightly up —
+    // flames surround the view instead of the pit being watched from outside.
+    const dx = -0.9 - position.x, dz = 0.9 - position.z;
+    yaw = Math.atan2(-dx, -dz);
+    pitch = Math.atan2(0.9 - position.y, Math.hypot(dx, dz)) * 0.55;
    } else {
     const look = facePit(position, {});
     yaw = look.yaw; pitch = look.pitch * 0.8;
