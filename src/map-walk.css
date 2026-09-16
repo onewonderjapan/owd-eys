@@ -7,3 +7,11 @@
 #walk-reticle{position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;transform:translate(-50%,-50%);background:#fff4d5;box-shadow:0 0 0 1px #293c3f80}.first-person #viewport canvas{cursor:grab}.first-person #viewport canvas:active{cursor:grabbing}#walk-view-toggle[aria-pressed=true]{border-color:#e9b668;background:#3d5655}
 @media(max-width:650px){#walk-view-toggle{position:absolute;top:47px;right:0;white-space:nowrap}#walk-help{top:112px!important}}
 @media(pointer:coarse),(max-width:650px){.walk-pad{display:grid}.walk-key-hint{display:none}.walk-bottom{left:auto;right:18px;bottom:max(22px,env(safe-area-inset-bottom))}.walk-bottom button{padding:12px;font-size:11px}.walk-bottom kbd{display:none}.walk-status{top:max(14px,env(safe-area-inset-top));left:14px;padding:10px 12px;gap:8px}.walk-status strong{font-size:12px}.walk-status small{font-size:9px}.walk-actions{top:max(14px,env(safe-area-inset-top));right:14px;gap:5px}.walk-actions button{font-size:10px;padding:9px}.walk-actions button:first-child{padding:9px 7px}#walk-help{right:14px;top:73px}.walk-status{max-width:calc(100% - 165px)}}
+/* Photo mode (B2): hide controls, keep the fan notice, frame the view. */
+#walk-hud.photo>.walk-status,#walk-hud.photo>.walk-actions,#walk-hud.photo>.walk-bottom,#walk-hud.photo>.walk-pad,#walk-hud.photo>#walk-prompt,#walk-hud.photo>#walk-reticle,#walk-hud.photo>#walk-help,#walk-hud.photo>#walk-info,#walk-hud.photo>#walk-paused{display:none!important}
+#viewport.photo-frame #immersion-ui{display:none}
+#viewport.photo-frame::after{content:'';position:fixed;inset:0;pointer-events:none;border:1px solid #f8ecd055;box-shadow:inset 0 0 0 1px #0c181c33}
+#walk-photo-bar{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:#1e3335e8;padding:9px 12px;border:1px solid #81958544;border-radius:9px;pointer-events:auto;white-space:nowrap}
+#walk-photo-bar span{color:#ffe3a3;font-size:11px}
+@media(pointer:coarse),(max-width:650px){#walk-photo-bar{bottom:max(22px,env(safe-area-inset-bottom));max-width:calc(100% - 24px)}#walk-photo-bar span{display:none}}
+#walk-dusk[aria-pressed=true],#walk-photo[aria-pressed=true]{border-color:#e9b668;background:#3d5655}

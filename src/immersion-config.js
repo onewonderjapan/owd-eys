@@ -36,18 +36,22 @@ export const IMMERSION_CONFIG = Object.freeze({
   // fire 7.5s = walk 1.7 + lift 1.2 + carry 1.4 + toss 1.0 + settle.
   water: 9.5,
   fire: 7.5,
-  underwaterWindow: Object.freeze([6.0, 9.1]),
-  fireWindow: Object.freeze([4.5, 7.3]),
  }),
- speeches: Object.freeze(['我刚才在码头。', '先听听大家怎么说。', '那我们投票吧。']),
+ // Discussion lines: the original scripted three stay first for continuity; each
+ // session deterministically picks three distinct lines via pickSessionSpeeches.
+ speechPool: Object.freeze([
+  '我刚才在码头。', '先听听大家怎么说。', '那我们投票吧。',
+  '铃响之前我就在这附近。', '谁最后见过那只灰鹅？', '先别急着投，听听下一句。',
+  '我什么都没看见，真的。', '按规矩来，一票一票投。',
+ ]),
  rosterCandidates: Object.freeze(['cast.02', 'cast.03', 'cast.04', 'cast.05', 'cast.07', 'cast.08', 'cast.09', 'cast.10']),
  castSize: 8,
  maxConcurrentActorLoads: 2,
  styles: Object.freeze(['water', 'fire']),
  defaultStyle: 'water',
  underwaterPitchRange: Object.freeze([-1.45, 1.10]),
- chainLinks: Object.freeze({min: 24, max: 32}),
- limits: Object.freeze({flames: 24, bubbles: 8, escorts: 2}),
+ chainLinks: 28,
+ limits: Object.freeze({flameRings: 9, flameLayers: 2, bubbles: 6, escorts: 2}),
 });
 
 // Player always sits at seat 0; the seven NPCs come from the fixed candidate order.
@@ -73,3 +77,17 @@ export const seatTransform = i => {
  const angle = i * Math.PI * 2 / IMMERSION_CONFIG.meeting.seatCount;
  return {angle, position: [Math.sin(angle) * IMMERSION_CONFIG.meeting.seatRadius, 0, Math.cos(angle) * IMMERSION_CONFIG.meeting.seatRadius]};
 };
+
+// Deterministic three-line pick for one session: same seed -> same lines, no
+// repeats, always drawn from speechPool (LCG so tests can reproduce exactly).
+export function pickSessionSpeeches(seed) {
+ const pool = IMMERSION_CONFIG.speechPool;
+ let s = ((seed + 1) * 2654435761) >>> 0;
+ const picks = [], used = new Set();
+ while (picks.length < 3 && used.size < pool.length) {
+  s = (Math.imul(s, 1103515245) + 12345) >>> 0;
+  const idx = s % pool.length;
+  if (!used.has(idx)) { used.add(idx); picks.push(pool[idx]); }
+ }
+ return picks;
+}

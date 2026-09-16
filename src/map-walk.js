@@ -5,6 +5,7 @@ import {createWalkView} from './map-walk-view.js';
 import {createPropLibrary} from './immersion-props.js';
 import {IMMERSION_CONFIG} from './immersion-config.js';
 import {createImmersionDirector} from './immersion-director.js';
+import {createWalkAudio} from './walk-audio.js';
 
 // Explicit boundary between overview controls and the flat walking simulation.
 export function installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor=()=> 'cast.14',describeActor=()=> null}){
@@ -12,7 +13,9 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  const enter=$('#walk-enter'),exit=$('#walk-exit'),hud=$('#walk-hud'),info=$('#walk-info'),prompt=$('#walk-prompt');
  let nav,walker,avatar,loading=false,active=false,paused=false,failure=null,saved=null,raf=0,last=0,frame=0;
  let director=null,propsStarted=false,immersionSnapshot=null;
+ let photoMode=false,dusk=false,duskSaved=null;
  const propsLibrary=createPropLibrary();
+ const walkAudio=createWalkAudio();
  const target=new THREE.Vector3(),offset=new THREE.Vector3(0,13,9),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const movement=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
  const view=createWalkView({overview:camera,host,canvas:renderer.domElement,getAvatar:()=>avatar,getWalker:()=>walker,isActive:()=>active,canLook:()=>active&&!paused&&info.hidden&&$('#walk-help').hidden&&!(director&&director.busy),canChange:()=>!(director&&director.busy),clearInput});
@@ -22,6 +25,54 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   '07':'警察局的办公桌与牢房隔栏。','08':'仓库有北侧和东侧两个门口，堆放木箱与木桶。','09':'港口办公室，西门通往进出口，南边就是码头。',
   '10':'原图的开膛手棚屋。当前室内沿用裁缝陈设。','11':'西侧长屋的门朝东，吧台与木桶分布在狭长室内。'
  };
+ // Photo mode (B2): CSS-hides every control but keeps the noncommercial notice,
+ // lets the player keep looking around to compose, and exports the live frame.
+ function enterPhoto(){
+  if(!active||photoMode||(director&&director.busy))return;
+  clearInput();info.hidden=true;$('#walk-help').hidden=true; // canLook() keys off these
+  photoMode=true;
+  hud.classList.add('photo');host.classList.add('photo-frame');
+  $('#walk-photo-bar').hidden=false;
+  syncPhotoButton();
+  host.focus({preventScroll:true});
+ }
+ function exitPhoto(){
+  if(!photoMode)return;photoMode=false;
+  hud.classList.remove('photo');host.classList.remove('photo-frame');
+  $('#walk-photo-bar').hidden=true;
+  syncPhotoButton();
+  host.focus({preventScroll:true});
+ }
+ function syncPhotoButton(){const b=$('#walk-photo');if(b)b.setAttribute('aria-pressed',String(photoMode));}
+ function exportPhoto(){
+  if(!photoMode)return;
+  render();
+  const area=walker?.state?.area?.id||'photo';
+  const a=document.createElement('a');
+  a.href=renderer.domElement.toDataURL('image/png');
+  a.download='goosechapel-'+area+'.png';
+  document.body.append(a);a.click();a.remove();
+  exitPhoto();
+ }
+ // Dusk mood (B3): lights and background only — no texture/material changes,
+ // fully reversible. Persist through immersion (the bell ring shares this
+ // scene) and restore when leaving walk so the main page is untouched.
+ function setDusk(next){
+  if(next===dusk)return;dusk=next;
+  if(next){
+   duskSaved={bg:scene.background&&scene.background.isColor?scene.background.getHex():null,hemi:null,dirls:[]};
+   for(const o of scene.children){
+    if(o.isHemisphereLight){duskSaved.hemi={o,color:o.color.getHex(),ground:o.groundColor.getHex(),intensity:o.intensity};o.color.set('#7d6aa8');o.groundColor.set('#4a3f3d');o.intensity*=.85;}
+    else if(o.isDirectionalLight){duskSaved.dirls.push({o,color:o.color.getHex(),intensity:o.intensity});o.color.set('#ffb26b');o.intensity*=.7;}
+   }
+   if(duskSaved.bg!==null)scene.background.set('#3d3654');
+  }else if(duskSaved){
+   if(duskSaved.bg!==null&&scene.background&&scene.background.isColor)scene.background.setHex(duskSaved.bg);
+   if(duskSaved.hemi){duskSaved.hemi.o.color.setHex(duskSaved.hemi.color);duskSaved.hemi.o.groundColor.setHex(duskSaved.hemi.ground);duskSaved.hemi.o.intensity=duskSaved.hemi.intensity;}
+   for(const d of duskSaved.dirls){d.o.color.setHex(d.color);d.o.intensity=d.intensity;}
+   duskSaved=null;
+  }
+ }
  function clearInput(){keys.clear();touches.clear();for(const b of document.querySelectorAll('[data-move]'))b.removeAttribute('data-down');if(walker)walker.state.moving=false;}
  function nearBellPoint(){
   if(!director||director.busy||!nav||!walker||paused)return false;
@@ -55,6 +106,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  }
  function beginImmersion(){
   if(!director||director.busy||!walker)return;
+  exitPhoto(); // #immersion-ui is outside #walk-hud; a session must never start inside photo mode
   clearInput();view.unlock();
   const snap=view.snapshot();
   director.begin().then(accepted=>{
@@ -65,7 +117,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  let busyScaled=false;
  function updateBusyHud(busy){
   if(busy===busyHudHidden)return;busyHudHidden=busy;
-  for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt'))el.hidden=busy;
+  for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt,#walk-photo-bar'))el.hidden=busy;
  }
  function frameLoop(time){
   if(!active)return;const dt=Math.max(0,Math.min((time-last)/1000,.05))||0;last=time;
@@ -82,7 +134,8 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   updateBusyHud(false);
   if(avatar&&!avatar.player.visible)avatar.player.visible=true;
   const values=new Set([...keys,...touches.values()]);const x=Number(values.has('KeyD')||values.has('ArrowRight'))-Number(values.has('KeyA')||values.has('ArrowLeft')),z=Number(values.has('KeyS')||values.has('ArrowDown'))-Number(values.has('KeyW')||values.has('ArrowUp'));
-  const s=walker.step(paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
+  const s=walker.step(photoMode||paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
+  walkAudio.frame(dt,s.moving,s.distance);
   avatar.player.position.set(s.position[0],nav.heightAt(s.position),s.position[1]);
   const angle=Math.atan2(Math.sin(s.heading-avatar.visual.rotation.y),Math.cos(s.heading-avatar.visual.rotation.y));avatar.visual.rotation.y+=angle*Math.min(1,dt*18);
   avatar.model.rotation.z=!reduced&&s.moving?Math.sin(s.distance*15)*.045:0;
@@ -115,6 +168,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    saved={position:camera.position.clone(),target:controls.target.clone(),zoom:camera.zoom,up:camera.up.clone(),pixelRatio:renderer.getPixelRatio(),scroll:scrollY,visible:[],highlight:highlight.visible};highlight.visible=false;
    root.traverse(o=>{if(o.userData.map_category==='characters'){saved.visible.push([o,o.visible]);o.visible=false;}});
    controls.enabled=false;active=true;paused=false;clearInput();avatar.player.visible=true;
+   walkAudio.start();syncMuteButton();
    document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
    view.sync();view.update(walker.state.position,nav.heightAt(walker.state.position));
    // Roam renders the full town (205k triangles, no LOD); 1x keeps the frame budget
@@ -129,17 +183,23 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function stop(){
   if(!active)return;active=false;
   if(director&&director.busy)director.cancel('stop');
+  walkAudio.stop();exitPhoto();setDusk(false);syncDuskButton();
   immersionSnapshot=null;updateBusyHud(false);
   clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
   for(const [o,visible] of saved.visible)o.visible=visible;highlight.visible=saved.highlight;
   controls.enabled=true;controls.target.copy(saved.target);camera.position.copy(saved.position);camera.up.copy(saved.up);camera.zoom=saved.zoom;renderer.setPixelRatio(saved.pixelRatio);resize();controls.update();render();
   const url=new URL(location.href);url.searchParams.delete('walk');history.replaceState(null,'',url);scrollTo(0,saved.scroll);enter.focus({preventScroll:true});
  }
- function pause(){if(!active)return;paused=true;clearInput();view.unlock();$('#walk-paused').hidden=false;director?.pause();}
- function resume(){if(!active)return;paused=false;clearInput();$('#walk-paused').hidden=true;last=performance.now();director?.resume();}
+ function pause(){if(!active)return;paused=true;clearInput();view.unlock();$('#walk-paused').hidden=false;director?.pause();walkAudio.pause();}
+ function resume(){if(!active)return;paused=false;clearInput();$('#walk-paused').hidden=true;last=performance.now();director?.resume();walkAudio.resume();}
  window.addEventListener('blur',pause);window.addEventListener('focus',resume);document.addEventListener('visibilitychange',()=>document.hidden?pause():resume());
  window.addEventListener('keydown',e=>{
   if(!active||e.target.closest('input,textarea,select'))return;
+  if(photoMode){
+   if(e.code==='Escape'){e.preventDefault();exitPhoto();}
+   else if(e.code==='Enter'){e.preventDefault();exportPhoto();}
+   return;
+  }
   if(director&&director.busy){
    // only swallow keys this handler consumes (movement + Escape); let Tab and
    // other focus-navigation keys through so keyboard users can reach the
@@ -152,6 +212,8 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   else if(e.code==='Escape'){e.preventDefault();if(view.escape())return;if(!info.hidden)info.hidden=true;else if(!$('#walk-help').hidden)$('#walk-help').hidden=true;else stop();}
   else if(e.code==='KeyE'&&!e.repeat){e.preventDefault();if(nearBellPoint())beginImmersion();else inspect();}
   else if(e.code==='KeyV'&&!e.repeat){e.preventDefault();view.change();}
+  else if(e.code==='KeyP'&&!e.repeat){e.preventDefault();enterPhoto();}
+  else if(e.code==='KeyF'&&!e.repeat){e.preventDefault();setDusk(!dusk);syncDuskButton();}
  });
  window.addEventListener('keyup',e=>{if(movement.has(e.code)){keys.delete(e.code);if(active)e.preventDefault();}});
  for(const b of document.querySelectorAll('[data-move]')){
@@ -159,12 +221,21 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   const release=e=>{touches.delete(e.pointerId);b.removeAttribute('data-down');};for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,release);
  }
  exit.onclick=stop;$('#walk-inspect').onclick=inspect;
+ const muteButton=$('#walk-mute');
+ function syncMuteButton(){if(!muteButton)return;muteButton.setAttribute('aria-pressed',String(!walkAudio.isMuted()));muteButton.textContent=walkAudio.isMuted()?'声音：关':'声音：开';}
+ if(muteButton)muteButton.onclick=()=>{walkAudio.setMuted(!walkAudio.isMuted());syncMuteButton();host.focus({preventScroll:true});};
+ syncMuteButton();
+ $('#walk-photo').onclick=enterPhoto;$('#walk-photo-save').onclick=exportPhoto;$('#walk-photo-exit').onclick=exitPhoto;
+ const duskButton=$('#walk-dusk');
+ function syncDuskButton(){if(duskButton)duskButton.setAttribute('aria-pressed',String(dusk));}
+ if(duskButton)duskButton.onclick=()=>{setDusk(!dusk);syncDuskButton();host.focus({preventScroll:true});};
+ syncDuskButton();
  $('#walk-info-close').onclick=()=>{info.hidden=true;host.focus({preventScroll:true});};
  $('#walk-help-toggle').onclick=()=>{if(director&&director.busy)return;clearInput();view.unlock();$('#walk-help').hidden=!$('#walk-help').hidden;host.focus({preventScroll:true});};
  $('#walk-home').onclick=()=>{if(director&&director.busy)return;clearInput();walker.reset();target.set(walker.state.position[0],.2,walker.state.position[1]);info.hidden=true;host.focus({preventScroll:true});};
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state()});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }

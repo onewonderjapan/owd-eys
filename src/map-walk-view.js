@@ -18,8 +18,14 @@ export function createWalkView({overview, host, canvas, getAvatar, getWalker, is
   if(reticle) reticle.hidden = !fp;
   const avatar = getAvatar();
   if (avatar) avatar.player.visible = isActive() && !fp;
-  const directions = fp ? ['前进', '向左平移', '后退', '向右平移'] : ['向北走', '向西走', '向南走', '向东走'];
-  document.querySelectorAll('[data-move]').forEach((b, i) => b.setAttribute('aria-label', directions[i]));
+  // key off data-move so DOM reordering can never mislabel controls for AT
+  const directions = fp
+   ? {KeyW: '前进', KeyA: '向左平移', KeyS: '后退', KeyD: '向右平移'}
+   : {KeyW: '向北走', KeyA: '向西走', KeyS: '向南走', KeyD: '向东走'};
+  document.querySelectorAll('[data-move]').forEach(b => {
+   const label = directions[b.dataset.move];
+   if (label) b.setAttribute('aria-label', label);
+  });
  }
  function projection() {
   const w = host.clientWidth, h = host.clientHeight;

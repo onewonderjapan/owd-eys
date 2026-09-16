@@ -189,6 +189,53 @@ try {
   });
   check('bell: 真实按键走到铃前', arrived, JSON.stringify(nearState.position));
   check('bell: 触发提示出现', nearState.nearBell === true, `nearBell=${nearState.nearBell} area=${nearState.area?.id}`);
+
+  // Audio (B1): ambience runs on walk start, footfalls track real movement,
+  // idle is silent, and the HUD mute switch gates both ambience and steps.
+  // The muted walk uses KeyW (z decreasing — the approach direction toward the
+  // bell at z=-7.56) so the player stays inside the trigger radius for KeyE.
+  const audioAfterWalk = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 行走后脚步计数增长', (audioAfterWalk?.steps || 0) > 0, JSON.stringify(audioAfterWalk));
+  check('audio: 环境音随行走启动', audioAfterWalk?.on === true && audioAfterWalk?.ambience === true, JSON.stringify(audioAfterWalk));
+  const idleSteps = await page.evaluate(() => window.eys.state().walk.audio.steps);
+  await page.waitForTimeout(500);
+  const idleStepsAgain = await page.evaluate(() => window.eys.state().walk.audio.steps);
+  check('audio: 静止时脚步不增长', idleStepsAgain === idleSteps, `${idleSteps} -> ${idleStepsAgain}`);
+  await page.click('#walk-mute');
+  const mutedState = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 静音开关同时关掉环境音', mutedState?.muted === true && mutedState?.ambience === false, JSON.stringify(mutedState));
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(300);
+  await page.keyboard.up('KeyW');
+  await page.waitForTimeout(150);
+  const mutedSteps = await page.evaluate(() => window.eys.state().walk.audio.steps);
+  check('audio: 静音期间移动无声(计数不变)', mutedSteps === idleStepsAgain, `${idleStepsAgain} -> ${mutedSteps}`);
+  await page.click('#walk-mute');
+  const restoredAudio = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 恢复声音', restoredAudio?.muted === false && restoredAudio?.ambience === true, JSON.stringify(restoredAudio));
+
+  // Photo mode (B2): HUD hides (fan notice stays), Enter exports and auto-exits.
+  await page.click('#walk-photo');
+  const photoState = await page.evaluate(() => window.eys.state().walk.photo);
+  const controlsHidden = await page.locator('#walk-view-toggle').isHidden();
+  const barVisible = await page.locator('#walk-photo-bar').isVisible();
+  check('photo: 进入拍照并隐藏控件', photoState === true && controlsHidden && barVisible, `photo=${photoState} controlsHidden=${controlsHidden} bar=${barVisible}`);
+  const downloadPromise = page.waitForEvent('download', {timeout: 15000});
+  await page.keyboard.press('Enter');
+  const download = await downloadPromise.then(() => true).catch(() => false);
+  const photoAfter = await page.evaluate(() => window.eys.state().walk.photo);
+  check('photo: Enter 导出图片并自动退出', download === true && photoAfter === false, `download=${download} photo=${photoAfter}`);
+
+  // Dusk mood (B3): the applied background color must actually change and restore.
+  const bgBefore = await page.evaluate(() => window.eys.state().walk.duskBg);
+  await page.click('#walk-dusk');
+  const duskOn = await page.evaluate(() => window.eys.state().walk);
+  const duskPressed = await page.locator('#walk-dusk').getAttribute('aria-pressed');
+  check('dusk: 切换到黄昏', duskOn.dusk === true && duskPressed === 'true' && duskOn.duskBg !== bgBefore && duskOn.duskBg === '3d3654', `dusk=${duskOn.dusk} bg ${bgBefore}->${duskOn.duskBg}`);
+  await page.click('#walk-dusk');
+  const duskOff = await page.evaluate(() => window.eys.state().walk);
+  check('dusk: 切回原光照', duskOff.dusk === false && duskOff.duskBg === bgBefore, `dusk=${duskOff.dusk} bg=${duskOff.duskBg} want=${bgBefore}`);
+
   const promptVisible = await page.evaluate(() => {
     const el = document.querySelector('#immersion-prompt');
     return el ? !el.hidden : null;
@@ -444,6 +491,29 @@ try {
   }
   check('reuse: 连续5轮会话几何数不增长', leakCheck.geometriesBefore != null && leakCheck.geometriesAfter <= leakCheck.geometriesBefore + 2,
     JSON.stringify(leakCheck));
+
+  // N4: injected actor-GLB failure during preparing -> error phase -> the
+  // retry button recovers into a working session. Reuses this page, which is
+  // still standing at the bell after the leak-check rounds. Desktop only.
+  if (!MOBILE) {
+    let glbBlocked = true, abortedUrl = '';
+    await page.route('**/*.glb', route => {
+      if (glbBlocked) { glbBlocked = false; abortedUrl = route.request().url(); return route.abort(); }
+      return route.continue();
+    });
+    await page.keyboard.press('KeyE');
+    const errPhase = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'error', null, {timeout: 40000}).then(() => true).catch(() => false);
+    check('retry: 注入演员加载失败进入 error', errPhase === true, `aborted=${abortedUrl || 'none'}`);
+    const retryVisible = errPhase ? await page.locator('#immersion-retry').waitFor({state:'visible', timeout:10000}).then(()=>true).catch(()=>false) : false;
+    check('retry: 重试按钮可见', retryVisible === true, `visible=${retryVisible}`);
+    await page.click('#immersion-retry');
+    const ringed = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 60000}).then(() => true).catch(() => false);
+    const phaseNow = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
+    check('retry: 重试后完成加载进入鸣铃', ringed === true, `phase=${phaseNow}`);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000}).catch(() => {});
+    await page.unroute('**/*.glb');
+  }
 
   report.errors.push(...pageErrors.slice(0, 5));
   report.passed = report.checks.every(c => c.passed) && pageErrors.length === 0;
