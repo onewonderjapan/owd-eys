@@ -13,12 +13,13 @@ export const IMMERSION_CONFIG = Object.freeze({
   proxyName: 'immersion-bell',
   ringDuration: 1.2,
  }),
- // Second meeting entry: the octagonal fountain base at the plaza center
- // (collision-proxy centroid; the base is ~1.76 wide so stand next to it).
+ // Second meeting entry: the red emergency button on the square table at the
+ // center of the circular plaza (GLB mesh Plaza_|_circular_paving003_6).
+ // The table is ~1.5 wide, so stand beside it; no room gate (plaza zone).
  button: Object.freeze({
-  interaction: Object.freeze([10.44, -4.62]),
-  triggerDistance: 1.3,
-  room: null, // plaza is a zone, not a room - no room gate
+  interaction: Object.freeze([-0.72, -1.98]),
+  triggerDistance: 1.6,
+  room: null,
  }),
  meeting: Object.freeze({
   tableRadius: 1.10,

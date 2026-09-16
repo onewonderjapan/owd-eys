@@ -570,7 +570,7 @@ try {
   // Fountain button (second meeting trigger): walk from the bell to the plaza
   // fountain base, expect the button prompt, and start a session from there.
   if (!MOBILE) {
-    const btn = [10.44, -4.62];
+    const btn = [-0.72, -1.98];
     const finalPos = await driveToTarget(page, btn);
     const distBtn = finalPos ? Math.hypot(finalPos[0] - btn[0], finalPos[1] - btn[1]) : Infinity;
     check('button: 走到喷泉旁', distBtn < 1.28, `final=${finalPos ? finalPos.map(v => +v.toFixed(2)) : null} dist=${distBtn.toFixed(2)}`);
