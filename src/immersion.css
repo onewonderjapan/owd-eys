@@ -114,6 +114,9 @@
  top: max(54px, calc(env(safe-area-inset-top) + 44px));
  right: max(10px, env(safe-area-inset-right));
  display: flex;
+ flex-wrap: wrap;
+ justify-content: flex-end;
+ max-width: min(60vw, 460px);
  align-items: center;
  gap: 6px;
  font-size: 13px;
@@ -241,3 +244,11 @@
 @media (prefers-reduced-motion: reduce) {
  #immersion-fade { transition: none; }
 }
+
+/* E8: voted-out card does the v4.01-style body drop */
+#immersion-avatars button.dropped img,
+#immersion-avatars button.dropped {
+ transform: translateY(44px) rotate(58deg);
+ opacity: 0.3;
+}
+#immersion-avatars button.dropped { transition: transform 0.7s ease-in, opacity 0.7s ease-in; }

@@ -529,6 +529,37 @@ try {
   check('comfort: 静音切换可用', muted, `label=${await page.evaluate(() => document.querySelector('#immersion-mute')?.textContent)}`);
   // A8: five consecutive ring/cancel rounds must not grow scene resources.
   // sessions: rapid ring -> cancel; geometry/textures counters must not grow.
+  // STYLE env: verify an additional ejection stage end-to-end (self-demo path),
+  // screenshot the settled frame, then skip back to roam. Desktop only.
+  const EXTRA_STYLE = process.env.STYLE || '';
+  if (EXTRA_STYLE && !MOBILE) {
+    // ring the bell again first: style/self-demo/confirm only apply in a session.
+    // the previous section may have left the session on the finished screen
+    const wasFinished = await page.evaluate(() => window.eys?.state?.().walk?.immersion?.phase === 'finished');
+    if (wasFinished) {
+      await page.evaluate(() => document.querySelector('#immersion-return')?.click());
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', null, {timeout: 10000}).catch(() => {});
+    }
+    await page.keyboard.press('KeyE');
+    const votingReached = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'voting', null, {timeout: 40000}).then(() => true).catch(() => false);
+    await page.evaluate(s => document.querySelector('#immersion-style-' + s)?.click(), EXTRA_STYLE);
+    await page.evaluate(() => document.querySelector('#immersion-self-demo')?.click());
+    // confirm re-enables on the next UI render (RAF-paced) - wait for it
+    await page.waitForFunction(() => { const b = document.querySelector('#immersion-confirm'); return b && !b.disabled; }, null, {timeout: 5000}).catch(() => {});
+    await page.evaluate(() => document.querySelector('#immersion-confirm')?.click());
+    const reached = await page.waitForFunction(s => window.eys?.state?.().walk?.immersion?.phase === 'ejection' && window.eys?.state?.().walk?.immersion?.style === s, EXTRA_STYLE, {timeout: 30000}).then(() => true).catch(() => false);
+    await page.waitForTimeout(1600);
+    const diag = await page.evaluate(() => JSON.stringify(window.eys.state().walk.immersion).slice(0, 220));
+    console.log('STYLE-DIAG', EXTRA_STYLE, 'votingReached=', votingReached, 'diag=', diag);
+    await page.screenshot({path: path.join(root, 'reports', 'immersion', 'style-' + EXTRA_STYLE + '.png'), type: 'png'});
+    report.screenshots.push('style-' + EXTRA_STYLE + '.png');
+    check('style-' + EXTRA_STYLE + ': 进入对应出局舞台', reached === true, `style=${EXTRA_STYLE} reached=${reached}`);
+    await page.evaluate(() => document.querySelector('#immersion-skip')?.click());
+    await page.waitForFunction(() => ['finished', 'returning', 'roam'].includes(window.eys?.state?.().walk?.immersion?.phase), null, {timeout: 20000}).catch(() => {});
+    await page.evaluate(() => document.querySelector('#immersion-return')?.click());
+    await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', null, {timeout: 10000}).catch(() => {});
+  }
+
   let leakCheck = {geometriesBefore: null, geometriesAfter: null, rounds: 5};
   {
     leakCheck.geometriesBefore = await page.evaluate(() => window.eys.state().walk.memory?.geometries ?? null);

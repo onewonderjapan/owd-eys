@@ -44,6 +44,12 @@ export const IMMERSION_CONFIG = Object.freeze({
   // fire 7.5s = walk 1.7 + lift 1.2 + carry 1.4 + toss 1.0 + settle.
   water: 9.5,
   fire: 7.5,
+  space: 8.0,
+  quicksand: 8.5,
+  chandelier: 6.5,
+  boulder: 6.0,
+  bridge: 8.5,
+  flush: 6.5,
  }),
  // Discussion lines: the original scripted three stay first for continuity; each
  // session deterministically picks three distinct lines via pickSessionSpeeches.
@@ -55,7 +61,8 @@ export const IMMERSION_CONFIG = Object.freeze({
  rosterCandidates: Object.freeze(['cast.02', 'cast.03', 'cast.04', 'cast.05', 'cast.07', 'cast.08', 'cast.09', 'cast.10']),
  castSize: 8,
  maxConcurrentActorLoads: 2,
- styles: Object.freeze(['water', 'fire']),
+ styles: Object.freeze(['water', 'fire', 'space', 'quicksand', 'chandelier', 'boulder', 'bridge', 'flush']),
+ styleLabels: Object.freeze({water: '沉水', fire: '火堆', space: '星空', quicksand: '流沙', chandelier: '吊灯', boulder: '巨石', bridge: '断桥', flush: '冲水'}),
  defaultStyle: 'water',
  underwaterPitchRange: Object.freeze([-1.45, 1.10]),
  chainLinks: 28,

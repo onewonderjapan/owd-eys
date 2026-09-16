@@ -1,6 +1,8 @@
 // Runtime UI for the immersion session. Creates the #immersion-ui subtree once per page,
 // tolerates old HTML without any immersion nodes, and renders purely from state snapshots.
 // Vote counting and phase timing stay in the state machine; this module only displays.
+import {IMMERSION_CONFIG} from './immersion-config.js';
+
 export function ensureImmersionUi(host) {
  const existing = document.getElementById('immersion-ui');
  if (existing) {
@@ -62,8 +64,8 @@ export function ensureImmersionUi(host) {
  const styleLabel = document.createElement('span');
  styleLabel.textContent = '出局演出';
  stylePicker.appendChild(styleLabel);
- for (const [id, text] of [['style-water', '沉水'], ['style-fire', '火堆']]) {
-  buttonOf(stylePicker, id, text).setAttribute('aria-pressed', 'false');
+ for (const style of IMMERSION_CONFIG.styles) {
+  buttonOf(stylePicker, 'style-' + style, (IMMERSION_CONFIG.styleLabels || {})[style] || style).setAttribute('aria-pressed', 'false');
  }
 
  div('caption').setAttribute('role', 'status');
@@ -171,8 +173,10 @@ export function ensureImmersionUi(host) {
    const styleVisible = phase === 'discussion' || phase === 'voting';
    show('style-picker', styleVisible);
    if (styleVisible) {
-    made['style-water'].setAttribute('aria-pressed', String(state.style === 'water'));
-    made['style-fire'].setAttribute('aria-pressed', String(state.style === 'fire'));
+    for (const style of IMMERSION_CONFIG.styles) {
+     const b = made['style-' + style];
+     if (b) b.setAttribute('aria-pressed', String(state.style === style));
+    }
    }
    show('voting', phase === 'voting');
    if (phase === 'voting') {
@@ -186,6 +190,10 @@ export function ensureImmersionUi(host) {
    const show_text = (id, text) => setText(made[id], text);
    show('banner', phase === 'result');
    if (phase === 'result') {
+    if (state.targetId && !made['avatars'].querySelector(`[data-actor="${CSS.escape(state.targetId)}"]`)?.classList.contains('dropped')) {
+     const card = made['avatars'].querySelector(`[data-actor="${CSS.escape(state.targetId)}"]`);
+     if (card) card.classList.add('dropped'); // v4.01-style body-drop nod
+    }
     const target = extras.describeActor(state.targetId) || {};
     const votesForTarget = state.votes ? Object.values(state.votes).filter(v => v === state.targetId).length : 0;
     show_text('banner', state.selfDemo
@@ -239,8 +247,7 @@ export function ensureImmersionUi(host) {
  bind('mute', () => callbacks.muteToggle && callbacks.muteToggle());
  bind('skip', () => callbacks.skip && callbacks.skip());
  bind('leave', () => callbacks.cancel && callbacks.cancel());
- bind('style-water', () => callbacks.setStyle && callbacks.setStyle('water'));
- bind('style-fire', () => callbacks.setStyle && callbacks.setStyle('fire'));
+ for (const style of IMMERSION_CONFIG.styles) bind('style-' + style, () => callbacks.setStyle && callbacks.setStyle(style));
  bind('self-demo', () => callbacks.selfDemo && callbacks.selfDemo());
  bind('confirm', () => callbacks.confirm && callbacks.confirm());
  bind('replay', () => callbacks.replay && callbacks.replay());
