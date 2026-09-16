@@ -135,7 +135,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
  // ================================================================== WATER ===
  if (style === 'water') {
   scene.background = new THREE.Color('#0d3357');
-  scene.fog = new THREE.Fog('#0d3357', 3.0, 16);
+  scene.fog = new THREE.Fog('#0d3357', 9.0, 20);
   const domeGeo = take(new THREE.SphereGeometry(22, 20, 14));
   const domeCount = domeGeo.attributes.position.count;
   const tint = new Float32Array(domeCount * 3);
@@ -156,7 +156,7 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   const sun = new THREE.DirectionalLight('#bfe2ff', 1.35);
   sun.position.set(0.5, 8, 2.5);
   scene.add(sun);
-  scene.add(new THREE.HemisphereLight('#7fb4d8', '#04121f', 0.5));
+  scene.add(new THREE.HemisphereLight('#8fc0e2', '#0a1a2a', 0.95));
 
   const dock = props.instantiate('prop_dock');
   dock.position.set(-2.6, 0.02, 0);
@@ -480,10 +480,15 @@ export function createEjectionStage({actors, targetId, playerActorId, style, con
   fireLight.position.set(pitX, 0.55, 0);
   scene.add(fireLight);
 
-  scene.add(new THREE.HemisphereLight('#6b5847', '#120c08', 0.4));
-  const rim = new THREE.DirectionalLight('#8ea6c0', 0.35);
+  scene.add(new THREE.HemisphereLight('#7a6653', '#191009', 0.95));
+  const rim = new THREE.DirectionalLight('#8ea6c0', 0.7);
   rim.position.set(-3, 4, -4);
   scene.add(rim);
+  // Fire bounce: warm light from the pit onto the watchers' fronts so the
+  // crowd reads as solid feathered bodies, not ghostly shapes in the dark.
+  const bounce = new THREE.DirectionalLight('#d99a62', 0.6);
+  bounce.position.set(pitX, 1.6, 0.5);
+  scene.add(bounce);
 
   // Flames: gradient-textured planes rooted at the logs; no hard rectangle edges.
   flameTex = take(softFlameTexture());
