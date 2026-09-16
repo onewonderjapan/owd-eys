@@ -226,16 +226,15 @@ try {
   const photoAfter = await page.evaluate(() => window.eys.state().walk.photo);
   check('photo: Enter 导出图片并自动退出', download === true && photoAfter === false, `download=${download} photo=${photoAfter}`);
 
-  // Dusk mood (B3): toggles lights/background, exposes state, and reverts.
-  const bgBefore = await page.evaluate(() => document.querySelector('#viewport canvas') !== null);
+  // Dusk mood (B3): the applied background color must actually change and restore.
+  const bgBefore = await page.evaluate(() => window.eys.state().walk.duskBg);
   await page.click('#walk-dusk');
-  const duskOn = await page.evaluate(() => window.eys.state().walk.dusk);
+  const duskOn = await page.evaluate(() => window.eys.state().walk);
   const duskPressed = await page.locator('#walk-dusk').getAttribute('aria-pressed');
-  check('dusk: 切换到黄昏', duskOn === true && duskPressed === 'true', `dusk=${duskOn} pressed=${duskPressed}`);
+  check('dusk: 切换到黄昏', duskOn.dusk === true && duskPressed === 'true' && duskOn.duskBg !== bgBefore && duskOn.duskBg === '3d3654', `dusk=${duskOn.dusk} bg ${bgBefore}->${duskOn.duskBg}`);
   await page.click('#walk-dusk');
-  const duskOff = await page.evaluate(() => window.eys.state().walk.dusk);
-  check('dusk: 切回原光照', duskOff === false, `dusk=${duskOff}`);
-  void bgBefore;
+  const duskOff = await page.evaluate(() => window.eys.state().walk);
+  check('dusk: 切回原光照', duskOff.dusk === false && duskOff.duskBg === bgBefore, `dusk=${duskOff.dusk} bg=${duskOff.duskBg} want=${bgBefore}`);
 
   const promptVisible = await page.evaluate(() => {
     const el = document.querySelector('#immersion-prompt');
@@ -503,12 +502,12 @@ try {
       return route.continue();
     });
     await page.keyboard.press('KeyE');
-    const errPhase = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'error', {timeout: 40000}).then(() => true).catch(() => false);
+    const errPhase = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'error', null, {timeout: 40000}).then(() => true).catch(() => false);
     check('retry: 注入演员加载失败进入 error', errPhase === true, `aborted=${abortedUrl || 'none'}`);
     const retryVisible = errPhase ? await page.locator('#immersion-retry').waitFor({state:'visible', timeout:10000}).then(()=>true).catch(()=>false) : false;
     check('retry: 重试按钮可见', retryVisible === true, `visible=${retryVisible}`);
     await page.click('#immersion-retry');
-    const ringed = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', {timeout: 60000}).then(() => true).catch(() => false);
+    const ringed = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 60000}).then(() => true).catch(() => false);
     const phaseNow = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
     check('retry: 重试后完成加载进入鸣铃', ringed === true, `phase=${phaseNow}`);
     await page.keyboard.press('Escape');

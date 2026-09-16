@@ -24,14 +24,20 @@ export function createPropLibrary() {
     // truncated or corrupted GLB (partial cache, bad proxy) must fail here
     // with a clear message instead of dying later inside the parser.
     const url = new URL(config.url, document.baseURI).href;
-    const bytes = await (await fetch(url)).arrayBuffer();
+    const glbResponse = await fetch(url);
+    if (!glbResponse.ok) throw Error('道具包下载失败（' + glbResponse.status + '），请刷新重试');
+    const bytes = await glbResponse.arrayBuffer();
     if (config.bytes !== undefined && bytes.byteLength !== config.bytes)
      throw Error(`道具包字节数不符（${bytes.byteLength} ≠ ${config.bytes}），请刷新重试`);
-    if (config.sha256) {
+    if (config.sha256 && crypto?.subtle) {
      const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
       .map(b => b.toString(16).padStart(2, '0')).join('');
      if (digest !== config.sha256)
       throw Error('道具包校验失败（sha256 不匹配），请刷新重试');
+    } else if (config.sha256) {
+     // insecure context (plain http on a LAN IP): crypto.subtle is unavailable;
+     // the byte-count gate still runs, skip the digest instead of crashing
+     console.warn('immersion props: 非安全上下文，跳过 sha256 校验（仍校验字节数）');
     }
     const gltf = await new Promise((resolve, reject) => {
      new GLTFLoader().parse(bytes, '', resolve, reject);

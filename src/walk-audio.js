@@ -6,7 +6,7 @@ const STORAGE_KEY = 'goose.walk.audio';
 export function createWalkAudio() {
  let context = null, master = null, ambience = null;
  let muted = false, running = false, steps = 0;
- let stride = 0;
+ let stride = 0, suspendedForPause = false;
  try { muted = localStorage.getItem(STORAGE_KEY) === 'off'; } catch { /* private mode */ }
 
  function ensureContext() {
@@ -111,7 +111,7 @@ export function createWalkAudio() {
    muted = Boolean(value);
    try { localStorage.setItem(STORAGE_KEY, muted ? 'off' : 'on'); } catch { /* private mode */ }
    if (master) master.gain.value = muted ? 0 : 1;
-   if (running && context) {
+   if (running && context && !suspendedForPause) {
     if (muted) stopAmbience();
     else {
      if (context.state === 'suspended') context.resume().catch(() => {});
@@ -121,9 +121,11 @@ export function createWalkAudio() {
   },
   isMuted() { return muted; },
   pause() {
+   suspendedForPause = true;
    if (context && context.state === 'running') context.suspend().catch(() => {});
   },
   resume() {
+   suspendedForPause = false;
    if (context && context.state === 'suspended' && running) context.resume().catch(() => {});
   },
   state() {

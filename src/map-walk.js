@@ -1,11 +1,11 @@
 import * as THREE from 'three';
- import {createNavigation,createWalker} from './map-walk-simulation.js';
- import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
- import {createWalkView} from './map-walk-view.js';
- import {createPropLibrary} from './immersion-props.js';
- import {IMMERSION_CONFIG} from './immersion-config.js';
- import {createImmersionDirector} from './immersion-director.js';
- import {createWalkAudio} from './walk-audio.js';
+import {createNavigation,createWalker} from './map-walk-simulation.js';
+import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
+import {createWalkView} from './map-walk-view.js';
+import {createPropLibrary} from './immersion-props.js';
+import {IMMERSION_CONFIG} from './immersion-config.js';
+import {createImmersionDirector} from './immersion-director.js';
+import {createWalkAudio} from './walk-audio.js';
 
 // Explicit boundary between overview controls and the flat walking simulation.
 export function installMapWalk({data,root,scene,camera,controls,renderer,render,resize,host,highlight,getActor=()=> 'cast.14',describeActor=()=> null}){
@@ -29,17 +29,21 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  // lets the player keep looking around to compose, and exports the live frame.
  function enterPhoto(){
   if(!active||photoMode||(director&&director.busy))return;
-  clearInput();photoMode=true;
+  clearInput();info.hidden=true;$('#walk-help').hidden=true; // canLook() keys off these
+  photoMode=true;
   hud.classList.add('photo');host.classList.add('photo-frame');
   $('#walk-photo-bar').hidden=false;
+  syncPhotoButton();
   host.focus({preventScroll:true});
  }
  function exitPhoto(){
   if(!photoMode)return;photoMode=false;
   hud.classList.remove('photo');host.classList.remove('photo-frame');
   $('#walk-photo-bar').hidden=true;
+  syncPhotoButton();
   host.focus({preventScroll:true});
  }
+ function syncPhotoButton(){const b=$('#walk-photo');if(b)b.setAttribute('aria-pressed',String(photoMode));}
  function exportPhoto(){
   if(!photoMode)return;
   render();
@@ -102,6 +106,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  }
  function beginImmersion(){
   if(!director||director.busy||!walker)return;
+  exitPhoto(); // #immersion-ui is outside #walk-hud; a session must never start inside photo mode
   clearInput();view.unlock();
   const snap=view.snapshot();
   director.begin().then(accepted=>{
@@ -112,7 +117,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  let busyScaled=false;
  function updateBusyHud(busy){
   if(busy===busyHudHidden)return;busyHudHidden=busy;
-  for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt'))el.hidden=busy;
+  for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt,#walk-photo-bar'))el.hidden=busy;
  }
  function frameLoop(time){
   if(!active)return;const dt=Math.max(0,Math.min((time-last)/1000,.05))||0;last=time;
@@ -231,6 +236,6 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode,dusk});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }
