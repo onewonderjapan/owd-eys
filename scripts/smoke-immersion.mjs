@@ -24,6 +24,58 @@ try {
   nav = createNavigation(layout.layout, props);
 } catch { /* navigation-assisted pathing unavailable; fallback to manual waypoints */ }
 
+// Digital-twin keyboard driver: plan key presses on the twin (with a short
+// escape search for wall pockets), then send them as real keyboard input.
+// Used by the fountain-button section; returns the final walker position.
+async function driveToTarget(page, target, maxRounds = 900) {
+  const KEY_DIRS = {KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0]};
+  const speed = 2.35, frameDt = 0.05;
+  const stepTwin = (p, key) => { const [dx, dz] = KEY_DIRS[key]; return moveTwin(nav, p, [dx * speed * frameDt, dz * speed * frameDt]).position; };
+  const route = findPath(await page.evaluate(() => window.eys.state().walk.position), target);
+  if (!Array.isArray(route)) return null;
+  const arcOf = p => {
+   let arc = 0, bd = Infinity, bi = 0, bt = 0;
+   for (let s = 0; s < route.length - 1; s++) {
+    const ax = route[s][0], az = route[s][1], bx = route[s + 1][0], bz = route[s + 1][1];
+    const abx = bx - ax, abz = bz - az, len2 = abx * abx + abz * abz || 1e-9;
+    const t = Math.max(0, Math.min(1, ((p[0] - ax) * abx + (p[1] - az) * abz) / len2));
+    const d = Math.hypot(p[0] - (ax + abx * t), p[1] - (az + abz * t));
+    if (d < bd) { bd = d; bi = s; bt = t; }
+   }
+   for (let s = 0; s < bi; s++) arc += Math.hypot(route[s + 1][0] - route[s][0], route[s + 1][1] - route[s][1]);
+   return arc + bt * Math.hypot(route[bi + 1][0] - route[bi][0], route[bi + 1][1] - route[bi][1]);
+  };
+  let wp = 1;
+  for (let round = 0; round < maxRounds; round++) {
+   const twin = [...(await page.evaluate(() => window.eys.state().walk.position))];
+   if (Math.hypot(twin[0] - target[0], twin[1] - target[1]) < 1.25) return twin;
+   while (wp < route.length - 1 && Math.hypot(twin[0] - route[wp][0], twin[1] - route[wp][1]) < 0.5) wp++;
+   const goal = route[Math.min(wp, route.length - 1)];
+   const want = Math.abs(goal[0] - twin[0]) > Math.abs(goal[1] - twin[1])
+    ? (goal[0] > twin[0] ? 'KeyD' : 'KeyA')
+    : (goal[1] > twin[1] ? 'KeyS' : 'KeyW');
+   let plan = null, bestArc = arcOf(twin);
+   if (arcOf(stepTwin(twin, want)) > bestArc + 1e-4) plan = [want];
+   else {
+    const search = (pt, seq, depth) => {
+     if (depth === 0) return;
+     for (const k of Object.keys(KEY_DIRS)) {
+      const np = stepTwin(pt, k);
+      const a = arcOf(np);
+      if (a > bestArc + 1e-4) { bestArc = a; plan = [...seq, k]; }
+      search(np, [...seq, k], depth - 1);
+     }
+    };
+    search(twin, [], 6);
+   }
+   const keys = plan && plan.length ? plan.slice(0, 4) : [want];
+   for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) if (keys.includes(k)) await page.keyboard.down(k); else await page.keyboard.up(k);
+   await page.waitForTimeout(Math.max(60, keys.length * 45));
+   for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) await page.keyboard.up(k);
+  }
+  return await page.evaluate(() => window.eys.state().walk.position);
+}
+
 function lineOfSight(a, b, radius = 0.3) {
   if (!nav) return false;
   const dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -258,7 +310,7 @@ try {
   }
   const duringPrepare = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
   check('session: 按铃进入会话', Boolean(duringPrepare && duringPrepare !== 'roam'), `phase=${duringPrepare}`);
-  await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', {timeout: 30000}).catch(() => {});
+  await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 30000}).catch(() => {});
   const ringState = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
   check('session: 准备完成后鸣铃', ringState === 'ringing', `phase=${ringState}`);
 
@@ -513,6 +565,29 @@ try {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000}).catch(() => {});
     await page.unroute('**/*.glb');
+  }
+
+  // Fountain button (second meeting trigger): walk from the bell to the plaza
+  // fountain base, expect the button prompt, and start a session from there.
+  if (!MOBILE) {
+    const btn = [10.44, -4.62];
+    const finalPos = await driveToTarget(page, btn);
+    const distBtn = finalPos ? Math.hypot(finalPos[0] - btn[0], finalPos[1] - btn[1]) : Infinity;
+    check('button: 走到喷泉旁', distBtn < 1.28, `final=${finalPos ? finalPos.map(v => +v.toFixed(2)) : null} dist=${distBtn.toFixed(2)}`);
+    if (distBtn < 1.28) {
+      const promptShown = await page.waitForFunction(() => {
+        const el = document.querySelector('#immersion-prompt');
+        return el && el.hidden === false && el.textContent.includes('按下按钮');
+      }, null, {timeout: 10000}).then(() => true).catch(() => false);
+      const nearState = await page.evaluate(() => ({nearBell: window.eys.state().walk.nearBell, pos: window.eys.state().walk.position}));
+      check('button: 喷泉旁出现按钮提示', promptShown === true && nearState.nearBell === true, JSON.stringify(nearState).slice(0, 160));
+      await page.keyboard.press('KeyE');
+      const fromButton = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.busy, null, {timeout: 40000}).then(() => true).catch(() => false);
+      check('button: 按下按钮进入会议', fromButton === true, `busy=${fromButton}`);
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 30000}).catch(() => {});
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000}).catch(() => {});
+    }
   }
 
   report.errors.push(...pageErrors.slice(0, 5));

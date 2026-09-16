@@ -75,21 +75,30 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   }
  }
  function clearInput(){keys.clear();touches.clear();for(const b of document.querySelectorAll('[data-move]'))b.removeAttribute('data-down');if(walker)walker.state.moving=false;}
+ // Meeting triggers: the courthouse bell and the plaza fountain button.
+ // Returns the matched trigger (with a UI label) or null.
+ function meetingTrigger(){
+  if(!director||director.busy||!nav||!walker||paused)return null;
+  if(!propsLibrary.state().ready)return null;
+  if(!info.hidden||!$('#walk-help').hidden)return null;
+  const s=walker.state;
+  for(const t of [IMMERSION_CONFIG.bell,IMMERSION_CONFIG.button]){
+   const [ix,iz]=t.interaction;
+   if(Math.hypot(s.position[0]-ix,s.position[1]-iz)>t.triggerDistance)continue;
+   if(t.room){const room=nav.roomAt(s.position);if(!room||room.id!==t.room)continue;}
+   return t===IMMERSION_CONFIG.bell?{label:'按铃',action:' 按铃开会'}:{label:'按下按钮',action:' 按下按钮开会'};
+  }
+  return null;
+ }
  function nearBellPoint(){
-  if(!director||director.busy||!nav||!walker||paused)return false;
-  if(!propsLibrary.state().ready)return false;
-  if(!info.hidden||!$('#walk-help').hidden)return false;
-  const s=walker.state,[ix,iz]=IMMERSION_CONFIG.bell.interaction;
-  if(Math.hypot(s.position[0]-ix,s.position[1]-iz)>IMMERSION_CONFIG.bell.triggerDistance)return false;
-  const room=nav.roomAt(s.position);
-  return Boolean(room&&room.id===IMMERSION_CONFIG.bell.room);
+  return meetingTrigger()!==null;
  }
  function updateHud(){
   const s=walker.state;$('#walk-area').textContent=s.area.label;$('#walk-visited').textContent=`已到访 ${s.visited.size} / 11`;
   const near=s.near;prompt.hidden=!near;prompt.textContent=near?'入口 · '+near.label:'';
   $('#walk-inspect').disabled=s.area.kind!=='room'&&!near;
-  const bell=nearBellPoint();
-  director?.setNearBell(bell);
+  const trigger=meetingTrigger();
+  director?.setNearBell(trigger?trigger.label:null);
   director?.refresh();
  }
  function inspect(){

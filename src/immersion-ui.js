@@ -145,13 +145,15 @@ export function ensureImmersionUi(host) {
    const {phase} = state;
    const show = (id, visible) => { made[id].hidden = !visible; };
    const propsError = Boolean(extras.propsError);
-   const promptVisible = phase === 'roam' && (Boolean(extras.nearBell) || propsError) && extras.propsReady !== false;
+   const triggerLabel = extras.nearBell || null; // '按铃' | '按下按钮' | null
+   const promptVisible = phase === 'roam' && (Boolean(triggerLabel) || propsError) && extras.propsReady !== false;
    show('prompt', promptVisible);
    if (promptVisible) {
-    made['prompt-label'].childNodes.forEach(node => { if (node.nodeType === 3) node.textContent = propsError ? '会议道具加载失败' : ' 按铃开会'; });
+    const actionText = propsError ? '会议道具加载失败' : (triggerLabel === '按下按钮' ? ' 按下按钮开会' : ' 按铃开会');
+    made['prompt-label'].childNodes.forEach(node => { if (node.nodeType === 3) node.textContent = actionText; });
     const kbd = made['prompt-label'].querySelector('kbd');
     if (kbd) kbd.hidden = propsError;
-    made['prompt-bell'].textContent = propsError ? '重试' : '按铃';
+    made['prompt-bell'].textContent = propsError ? '重试' : (triggerLabel || '按铃');
    }
    show('preparing', phase === 'preparing');
    if (phase === 'preparing')

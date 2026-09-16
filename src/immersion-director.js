@@ -32,7 +32,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  let ringWings = null;
  let ejectionWings = null;
  let loadingProgress = null;
- let nearBell = false;
+ let nearBell = null;
  let endReason = null;
  let endNotified = false;
  let cues = new Set();
@@ -395,11 +395,21 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   const walker = getWalker && getWalker();
   const nav = getNavigation && getNavigation();
   if (!walker || !nav) return false;
-  const [ix, iz] = IMMERSION_CONFIG.bell.interaction;
   const [x, z] = walker.state.position;
-  if (Math.hypot(x - ix, z - iz) > IMMERSION_CONFIG.bell.triggerDistance) return false;
-  const room = nav.roomAt([x, z]);
-  if (!room || room.id !== IMMERSION_CONFIG.bell.room) return false;
+  // Accept ANY configured meeting trigger (courthouse bell or plaza fountain
+  // button); room-gated triggers only fire inside their room.
+  let atTrigger = false;
+  for (const t of [IMMERSION_CONFIG.bell, IMMERSION_CONFIG.button]) {
+   const [ix, iz] = t.interaction;
+   if (Math.hypot(x - ix, z - iz) > t.triggerDistance) continue;
+   if (t.room) {
+    const room = nav.roomAt([x, z]);
+    if (!room || room.id !== t.room) continue;
+   }
+   atTrigger = true;
+   break;
+  }
+  if (!atTrigger) return false;
   audio.unlock();
   playerActorId = (getActorId && getActorId()) || playerActorId;
   if (!playerActorId) return false;
@@ -492,7 +502,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    if (ejectionStage) ejectionStage.projection(width, height);
   },
   setNearBell(value) {
-   nearBell = Boolean(value);
+   nearBell = value || null; // trigger label ('按铃'/'按下按钮') or null
   },
   refresh() {
    renderUi(machine.snapshot());
