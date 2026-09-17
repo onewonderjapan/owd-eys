@@ -808,15 +808,23 @@ else if (style === 'quicksand') {
     a.player.rotation.y = Math.atan2(target.player.position.x - spot[0], target.player.position.z - spot[1]);
    }
   }
-  // camera stays on the rim - following the body down put the lens inside it
-  const camTrackSelf = [
-   [0, [2.6, 1.25, 2.3]], [sinkStart + 3, [2.5, 1.2, 2.2]], [8.5, [2.4, 1.15, 2.1]],
-  ];
-  const position = track(elapsed, isSelf ? camTrackSelf : [[0, [-1.9, 1.0, -1.3]], [8.5, [-1.9, 1.0, -1.3]]], eyePos);
-  const dx = target.player.position.x - position.x, dz = target.player.position.z - position.z;
-  const yaw = Math.atan2(-dx, -dz);
-  const pitch = elapsed > sinkSpan * 0.55 ? lerp(-0.35, 0.75, clamp01((elapsed - sinkSpan * 0.55) / (8.5 - sinkSpan * 0.55)))
-   : Math.atan2(target.player.position.y + 0.4 - position.y, Math.hypot(dx, dz));
+  // SELF = first person sinking: your eyes descend with the body while the
+  // watchers lean over the rim against the sky. NPC side keeps the spectator
+  // track.
+  const camTrackNpc = [[0, [-1.9, 1.0, -1.3]], [8.5, [-1.9, 1.0, -1.3]]];
+  const position = eyePos;
+  let yaw, pitch;
+  if (isSelf) {
+   const bx = lerp(-1.6, 0, walkK);
+   position.set(bx, 0.12 - depth * 1.05 + 0.42, 0);
+   yaw = Math.PI; // face the rim where the watchers lean in
+   pitch = lerp(0.05, 0.95, depth);
+  } else {
+   position.copy(track(elapsed, camTrackNpc, tmpVecA));
+   const dx = target.player.position.x - position.x, dz = target.player.position.z - position.z;
+   yaw = Math.atan2(-dx, -dz);
+   pitch = Math.atan2(target.player.position.y + 0.4 - position.y, Math.hypot(dx, dz));
+  }
   stage.trajectory.body = target.player.position.toArray();
   stage.trajectory.eye = position.toArray();
   camera.position.copy(position);
@@ -928,16 +936,33 @@ else if (style === 'chandelier') {
     a.player.rotation.y = Math.atan2(target.player.position.x - a.player.position.x, target.player.position.z - a.player.position.z);
    }
   }
-  const camTrackSelf = [[0, [1.85, 1.35, 1.85]], [impact, [1.6, 1.15, 1.6]], [6.5, [1.5, 0.9, 1.5]]];
-  const position = track(elapsed, isSelf ? camTrackSelf : [[0, [-1.85, 1.3, -1.7]], [6.5, [-1.85, 1.3, -1.7]]], eyePos);
-  const dx = target.player.position.x - position.x, dz = target.player.position.z - position.z;
+  // SELF = first person: you are walked under the chandelier, look up as it
+  // swings and drops, and the impact leaves you on the ground looking up at
+  // the ring and the falling petals. NPC side keeps the spectator track.
+  const camTrackNpc = [[0, [-1.85, 1.3, -1.7]], [impact, [-1.7, 1.15, -1.5]], [6.5, [-1.5, 0.95, -1.3]]];
+  const position = eyePos;
+  let yaw, pitch;
+  if (isSelf) {
+   const under = ease(clamp01(elapsed / 1.2));
+   position.set(lerp(-1.5, 0, under), elapsed < impact ? 0.45 + 0.1 * (1 - under)
+    : lerp(0.45, 0.16, ease(clamp01((elapsed - impact) / 0.8))), 0);
+   yaw = -Math.PI / 2; // facing +x, eyes on the chandelier
+   if (elapsed < 1.2) pitch = 0.08;
+   else if (elapsed < impact) pitch = lerp(0.12, 1.2, ease(clamp01((elapsed - 1.2) / (dropStart - 1.2))));
+   else pitch = lerp(1.25, 0.95, clamp01((elapsed - impact) / 1.5));
+  } else {
+   position.copy(track(elapsed, camTrackNpc, tmpVecA));
+   const dx = target.player.position.x - position.x, dz = target.player.position.z - position.z;
+   yaw = Math.atan2(-dx, -dz);
+   pitch = Math.atan2(target.player.position.y + 0.4 - position.y, Math.hypot(dx, dz));
+  }
   stage.trajectory.body = target.player.position.toArray();
   stage.trajectory.eye = position.toArray();
   camera.position.copy(position);
-  stage.baseYaw = Math.atan2(-dx, -dz);
-  stage.basePitch = elapsed < impact
-   ? Math.atan2(2.6 - position.y, Math.hypot(dx, dz)) * 0.7  // watch the swinging chandelier above
-   : -0.35;                                                   // then the petals on the floor
+  stage.baseYaw = yaw;
+  stage.basePitch = pitch;
+  if (elapsed >= impact && elapsed < impact + 0.16) scene.background.set('#000000');
+  else scene.background.set('#120d0a');
  };
 
  stage.diagnostics = () => ({trajectory: stage.trajectory});
@@ -1012,15 +1037,20 @@ else if (style === 'boulder') {
    a.player.position.set(Math.sin(id.length * 2.1) * 2.4, 0, Math.sign(id.length - 6) * 3.4);
    a.player.rotation.y = Math.atan2(boulder.position.x - a.player.position.x, 0 - a.player.position.z) * 0.3;
   }
-  const camTrackSelf = [[0, [0, 1.3, -4.6]], [flatten, [0.4, 1.1, -3.6]], [6.0, [1.0, 1.2, -3.2]]];
+  // SELF = the target's eyes: stand in the lane, watch the boulder grow as it
+  // closes, then after the flatten watch your own paper-goose body drift off.
+  if (isSelf && elapsed >= flatten + 0.15 && !target.player.visible) target.player.visible = true;
+  const camTrackSelf = [[0, [0, 1.02, 0]], [flatten, [0, 1.02, 0]], [flatten + 0.3, [0, 1.0, 0.45]], [6.0, [0.55, 0.95, 1.35]]];
   const position = track(elapsed, isSelf ? camTrackSelf : [[0, [0, 1.25, 4.6]], [6.0, [0, 1.25, 4.6]]], eyePos);
-  const look = elapsed > flatten ? target.player.position : {x: boulder.position.x, y: 1.0, z: 0};
+  const look = (isSelf && elapsed >= flatten) ? target.player.position : {x: boulder.position.x, y: 1.0, z: 0};
   const dx = look.x - position.x, dz = (look.z || 0) - position.z;
   stage.trajectory.body = target.player.position.toArray();
   stage.trajectory.eye = position.toArray();
   camera.position.copy(position);
-  stage.baseYaw = Math.atan2(-dx, -dz);
-  stage.basePitch = elapsed < flatten ? Math.atan2(1.0 - position.y, Math.hypot(dx, dz)) : -0.2;
+  if (elapsed >= flatten && elapsed < flatten + 0.14) scene.background.set('#ffffff');
+  else scene.background.set('#1a1610');
+  stage.baseYaw = Math.abs(dx) + Math.abs(dz) < 0.15 ? Math.PI / 2 : Math.atan2(-dx, -dz);
+  stage.basePitch = elapsed < flatten ? Math.atan2(1.0 - position.y, Math.hypot(dx, dz) || 1) * 0.8 : -0.15;
  };
 
  stage.diagnostics = () => ({trajectory: stage.trajectory});

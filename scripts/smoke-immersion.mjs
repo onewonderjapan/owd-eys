@@ -592,7 +592,18 @@ try {
     await page.keyboard.press('KeyE');
     const errPhase = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'error', null, {timeout: 40000}).then(() => true).catch(() => false);
     check('retry: 注入演员加载失败进入 error', errPhase === true, `aborted=${abortedUrl || 'none'}`);
+    if (errPhase) await page.evaluate(() => window.dispatchEvent(new Event('focus'))); // headless focus flake: resume renders
     const retryVisible = errPhase ? await page.locator('#immersion-retry').waitFor({state:'visible', timeout:10000}).then(()=>true).catch(()=>false) : false;
+    if (!retryVisible) {
+      const dbg = await page.evaluate(() => JSON.stringify({
+        phase: window.eys.state().walk.immersion?.phase,
+        uiHidden: document.querySelector('#immersion-ui')?.hidden ?? 'no-ui',
+        panelHidden: document.querySelector('#immersion-error-panel')?.hidden ?? 'no-panel',
+        retryBtn: (() => { const b = document.querySelector('#immersion-retry'); return b ? {hidden: b.hidden, disabled: b.disabled, box: b.getBoundingClientRect().toJSON()} : 'missing'; })(),
+        raf: window.eys.state().walk?.drawCalls ?? null,
+      }));
+      console.log('N4-DIAG', dbg);
+    }
     check('retry: 重试按钮可见', retryVisible === true, `visible=${retryVisible}`);
     await page.click('#immersion-retry');
     const ringed = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 60000}).then(() => true).catch(() => false);
