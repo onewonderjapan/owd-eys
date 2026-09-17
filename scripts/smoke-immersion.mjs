@@ -548,12 +548,17 @@ try {
     await page.waitForFunction(() => { const b = document.querySelector('#immersion-confirm'); return b && !b.disabled; }, null, {timeout: 5000}).catch(() => {});
     await page.evaluate(() => document.querySelector('#immersion-confirm')?.click());
     const reached = await page.waitForFunction(s => window.eys?.state?.().walk?.immersion?.phase === 'ejection' && window.eys?.state?.().walk?.immersion?.style === s, EXTRA_STYLE, {timeout: 30000}).then(() => true).catch(() => false);
-    await page.waitForTimeout(1600);
     const diag = await page.evaluate(() => JSON.stringify(window.eys.state().walk.immersion).slice(0, 220));
     console.log('STYLE-DIAG', EXTRA_STYLE, 'votingReached=', votingReached, 'diag=', diag);
-    await page.screenshot({path: path.join(root, 'reports', 'immersion', 'style-' + EXTRA_STYLE + '.png'), type: 'png'});
-    report.screenshots.push('style-' + EXTRA_STYLE + '.png');
     check('style-' + EXTRA_STYLE + ': 进入对应出局舞台', reached === true, `style=${EXTRA_STYLE} reached=${reached}`);
+    // capture the whole performance: one frame per ~1.2s of stage time
+    for (let shot = 1; shot <= 6; shot++) {
+      await page.waitForTimeout(1200);
+      await page.screenshot({path: path.join(root, 'reports', 'immersion', `style-${EXTRA_STYLE}-${shot}.png`), type: 'png'});
+      report.screenshots.push(`style-${EXTRA_STYLE}-${shot}.png`);
+      const ph = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
+      if (ph !== 'ejection') break;
+    }
     await page.evaluate(() => document.querySelector('#immersion-skip')?.click());
     await page.waitForFunction(() => ['finished', 'returning', 'roam'].includes(window.eys?.state?.().walk?.immersion?.phase), null, {timeout: 20000}).catch(() => {});
     await page.evaluate(() => document.querySelector('#immersion-return')?.click());
