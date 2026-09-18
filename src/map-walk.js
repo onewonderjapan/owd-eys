@@ -127,6 +127,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  let busyScaled=false;
  function updateBusyHud(busy){
   if(busy===busyHudHidden)return;busyHudHidden=busy;
+  walkAudio.setDucked(busy);
   for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt,#walk-photo-bar'))el.hidden=busy;
  }
  function frameLoop(time){

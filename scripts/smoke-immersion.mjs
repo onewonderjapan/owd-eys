@@ -313,6 +313,8 @@ try {
   await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 30000}).catch(() => {});
   const ringState = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
   check('session: 准备完成后鸣铃', ringState === 'ringing', `phase=${ringState}`);
+  const duckedAudio = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 演出期间行走音被压低', duckedAudio?.ducked === true && duckedAudio?.on === true, JSON.stringify(duckedAudio));
 
   // During the ring the player must not keep walking; freeze check via keys.
   await page.keyboard.down('KeyW');
@@ -335,6 +337,8 @@ try {
   check('restore: 无位置漂移记录', (after.drift ?? 0) < 1e-4 || after.drift == null, `drift=${after.drift}`);
   const singleSession = await page.evaluate(() => window.eys.state().walk.immersion?.sessionId);
   check('session: 取消后会话回到roam', await page.evaluate(() => window.eys.state().walk.immersion?.phase) === 'roam', `sessionId=${singleSession}`);
+  const restoredDuck = await page.evaluate(() => window.eys.state().walk.audio);
+  check('audio: 演出结束后压低解除', restoredDuck?.ducked === false && restoredDuck?.ambience === true, JSON.stringify(restoredDuck));
 
   // ---------------------------------------------------------------- P2/P3/P4/P5
   // From the bell, drive the whole meeting through the real state machine and capture

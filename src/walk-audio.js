@@ -6,15 +6,28 @@ const STORAGE_KEY = 'goose.walk.audio';
 export function createWalkAudio() {
  let context = null, master = null, ambience = null;
  let muted = false, running = false, steps = 0;
- let stride = 0, suspendedForPause = false;
+ let stride = 0, suspendedForPause = false, ducked = false;
  try { muted = localStorage.getItem(STORAGE_KEY) === 'off'; } catch { /* private mode */ }
+
+ // Master gain: mute wins, then ducking (meeting/ejection performances) sits
+ // the ambience and footfalls at a low bed level instead of cutting them.
+ const DUCK_GAIN = 0.18;
+ function applyGain() {
+  if (!master || !context) return;
+  const target = muted ? 0 : (ducked ? DUCK_GAIN : 1);
+  if (context.state === 'running') {
+   try { master.gain.setTargetAtTime(target, context.currentTime, 0.08); return; }
+   catch { /* fall through to direct set */ }
+  }
+  master.gain.value = target;
+ }
 
  function ensureContext() {
   if (context) return context;
   try {
    context = new (window.AudioContext || window.webkitAudioContext)();
    master = context.createGain();
-   master.gain.value = muted ? 0 : 1;
+   master.gain.value = muted ? 0 : (ducked ? DUCK_GAIN : 1);
    master.connect(context.destination);
   } catch {
    context = null;
@@ -110,7 +123,7 @@ export function createWalkAudio() {
   setMuted(value) {
    muted = Boolean(value);
    try { localStorage.setItem(STORAGE_KEY, muted ? 'off' : 'on'); } catch { /* private mode */ }
-   if (master) master.gain.value = muted ? 0 : 1;
+   applyGain();
    if (running && context && !suspendedForPause) {
     if (muted) stopAmbience();
     else {
@@ -120,6 +133,14 @@ export function createWalkAudio() {
    }
   },
   isMuted() { return muted; },
+  // Busy (meeting/ejection performance) beds the walk audio down instead of
+  // muting it; full level returns when the performance ends.
+  setDucked(value) {
+   const next = Boolean(value);
+   if (next === ducked) return;
+   ducked = next;
+   applyGain();
+  },
   pause() {
    suspendedForPause = true;
    if (context && context.state === 'running') context.suspend().catch(() => {});
@@ -129,7 +150,7 @@ export function createWalkAudio() {
    if (context && context.state === 'suspended' && running) context.resume().catch(() => {});
   },
   state() {
-   return {on: running, muted, steps, ambience: Boolean(ambience)};
+   return {on: running, muted, ducked, steps, ambience: Boolean(ambience)};
   },
  };
 }
