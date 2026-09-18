@@ -17,6 +17,10 @@ const label = process.argv[3] || 'immersion';
 const simModule = await import('../src/map-walk-simulation.js').catch(() => ({}));
 const {createNavigation} = simModule;
 const moveTwin = simModule.moveCircle || ((p, d) => [p[0] + d[0], p[1] + d[1]]);
+// Button-table coordinates come from the config, never hardcoded (it is the
+// same source the walk reads).
+const cfgModule = await import('../src/immersion-config.js').catch(() => null);
+const BTN_INTERACT = cfgModule?.IMMERSION_CONFIG ? [...cfgModule.IMMERSION_CONFIG.button.interaction] : [-0.72, -1.98];
 let nav = null;
 try {
   const layout = JSON.parse(readFileSync(new URL('../src/map-scene.json', import.meta.url), 'utf8'));
@@ -618,6 +622,52 @@ try {
     await page.unroute('**/*.glb');
   }
 
+  // B7 flicker (design-flicker.md): approaching the emergency-button table dips
+  // the lights once and restores them exactly. Assertions use trigger `count`,
+  // so they stay race-free against the 2.2s window.
+  const lights0 = await page.evaluate(() => window.eys.state().walk.lights);
+  const flick0 = await page.evaluate(() => window.eys.state().walk.flicker);
+  const flickFinal = await driveToTarget(page, BTN_INTERACT);
+  const distFlick = flickFinal ? Math.hypot(flickFinal[0] - BTN_INTERACT[0], flickFinal[1] - BTN_INTERACT[1]) : Infinity;
+  check('flicker: 走近应急桌进入触发半径', distFlick < 2.1, `final=${flickFinal ? flickFinal.map(v => +v.toFixed(2)) : null} dist=${distFlick.toFixed(2)}`);
+  const flickDone = await page.waitForFunction(() => {
+    const f = window.eys?.state?.().walk?.flicker;
+    return f && f.count > 0 && !f.active;
+  }, null, {timeout: 15000}).then(() => true).catch(() => false);
+  const flickAfter = await page.evaluate(() => window.eys.state().walk.flicker);
+  check('flicker: 靠近触发一次并完整结束', flickDone === true && flickAfter.count === flick0.count + 1, JSON.stringify(flickAfter));
+  const lightsRestored = await page.evaluate(() => window.eys.state().walk.lights);
+  check('flicker: 灯光逐灯精确还原', JSON.stringify(lightsRestored) === JSON.stringify(lights0), `${JSON.stringify(lights0)} -> ${JSON.stringify(lightsRestored)}`);
+  await page.waitForTimeout(1200);
+  const flickStill = await page.evaluate(() => window.eys.state().walk.flicker);
+  check('flicker: 半径内不重复触发(武装解除)', flickStill.count === flick0.count + 1 && flickStill.active === false, JSON.stringify(flickStill));
+
+  // reduced-motion (desktop): the event must switch to one calm dim-and-return.
+  if (!MOBILE) {
+    const rpage = await browser.newPage({viewport: walkViewport});
+    const rErrors = [];
+    rpage.on('pageerror', e => rErrors.push(String(e && e.message || e).slice(0, 200)));
+    await rpage.emulateMedia({reducedMotion: 'reduce'});
+    await rpage.goto(url, {waitUntil: 'networkidle'});
+    await rpage.click('#character-grid button:nth-child(3)');
+    await rpage.click('#walk-enter');
+    await rpage.waitForFunction(() => window.eys?.state?.().walk?.active, {timeout: 40000});
+    await rpage.waitForTimeout(2500);
+    const rFinal = await driveToTarget(rpage, BTN_INTERACT);
+    const rDist = rFinal ? Math.hypot(rFinal[0] - BTN_INTERACT[0], rFinal[1] - BTN_INTERACT[1]) : Infinity;
+    const rDone = await rpage.waitForFunction(() => {
+      const f = window.eys?.state?.().walk?.flicker;
+      return f && f.count > 0 && !f.active;
+    }, null, {timeout: 20000}).then(() => true).catch(() => false);
+    const rFlick = await rpage.evaluate(() => window.eys.state().walk.flicker);
+    check('flicker: reduced-motion 走近触发且走reduced分支', rDone === true && rDist < 2.1 && rFlick.lastReduced === true, `dist=${rDist.toFixed(2)} flick=${JSON.stringify(rFlick)}`);
+    check('flicker: reduced-motion 单次平缓压暗(≈0.7)', rFlick.lastMin !== null && rFlick.lastMin > 0.62 && rFlick.lastMin <= 0.73, `lastMin=${rFlick.lastMin}`);
+    const rLights = await rpage.evaluate(() => window.eys.state().walk.lights);
+    check('flicker: reduced-motion 灯光还原', JSON.stringify(rLights) === JSON.stringify(lights0), `${JSON.stringify(lights0)} -> ${JSON.stringify(rLights)}`);
+    check('flicker: reduced-motion 无页面错误', rErrors.length === 0, rErrors.join('; ').slice(0, 160));
+    await rpage.close();
+  }
+
   // Fountain button (second meeting trigger): walk from the bell to the plaza
   // fountain base, expect the button prompt, and start a session from there.
   if (!MOBILE) {
@@ -635,6 +685,8 @@ try {
       await page.keyboard.press('KeyE');
       const fromButton = await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.busy, null, {timeout: 40000}).then(() => true).catch(() => false);
       check('button: 按下按钮进入会议', fromButton === true, `busy=${fromButton}`);
+      const flickBusy = await page.evaluate(() => window.eys.state().walk.flicker);
+      check('flicker: 会议期间不触发', flickBusy.active === false && flickBusy.count === flick0.count + 1, JSON.stringify(flickBusy));
       await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 30000}).catch(() => {});
       await page.keyboard.press('Escape');
       await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000}).catch(() => {});

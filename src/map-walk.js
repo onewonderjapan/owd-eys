@@ -60,6 +60,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  // scene) and restore when leaving walk so the main page is untouched.
  function setDusk(next){
   if(next===dusk)return;dusk=next;
+  stopFlicker(); // never snapshot flicker-dimmed intensities as the dusk baseline
   if(next){
    duskSaved={bg:scene.background&&scene.background.isColor?scene.background.getHex():null,hemis:[],dirls:[]};
    for(const o of scene.children){
@@ -73,6 +74,36 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    for(const d of duskSaved.dirls){d.o.color.setHex(d.color);d.o.intensity=d.intensity;}
    duskSaved=null;
   }
+ }
+ // B7 flicker (design-flicker.md): approaching the emergency-button table dips
+ // the top-level lights and restores them exactly. Intensity-only; no light or
+ // prop objects are created or destroyed; never runs during busy.
+ let flickerSaved=null,flickerT=0,flickerArmed=true,flickerCount=0,flickerMin=1,flickerReduced=false;
+ const flickerLights=()=>scene.children.filter(o=>o.isHemisphereLight||o.isDirectionalLight);
+ function startFlicker(){
+  if(flickerSaved)return;
+  flickerSaved=flickerLights().map(o=>({o,intensity:o.intensity}));
+  flickerT=0;flickerMin=1;flickerReduced=reduced;
+ }
+ function updateFlicker(dt){
+  if(!flickerSaved)return;
+  flickerT+=dt;
+  const f=IMMERSION_CONFIG.flicker,u=Math.min(1,flickerT/f.duration);
+  const k=reduced
+   ?1-Math.sin(Math.PI*u)*(1-f.reducedFloor) // one calm dim-and-return, no oscillation
+   :1-(0.5-0.5*Math.cos(u*Math.PI*2*f.dips))*(1-f.floor);
+  flickerMin=Math.min(flickerMin,k);
+  for(const s of flickerSaved)s.o.intensity=s.intensity*k;
+  if(u>=1){stopFlicker();flickerArmed=false;flickerCount++;}
+ }
+ function stopFlicker(){
+  if(!flickerSaved)return;
+  for(const s of flickerSaved)s.o.intensity=s.intensity;
+  flickerSaved=null;
+ }
+ function flickerState(){
+  return flickerSaved?{active:true,t:+flickerT.toFixed(2),duration:IMMERSION_CONFIG.flicker.duration,count:flickerCount,lastMin:null,lastReduced:flickerReduced}
+   :{active:false,t:0,duration:IMMERSION_CONFIG.flicker.duration,count:flickerCount,lastMin:flickerCount?+flickerMin.toFixed(3):null,lastReduced:flickerReduced};
  }
  function clearInput(){keys.clear();touches.clear();for(const b of document.querySelectorAll('[data-move]'))b.removeAttribute('data-down');if(walker)walker.state.moving=false;}
  // Meeting triggers: the courthouse bell and the plaza fountain button.
@@ -134,6 +165,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(!active)return;const dt=Math.max(0,Math.min((time-last)/1000,.05))||0;last=time;
   if(director&&director.busy){
    updateBusyHud(true);
+   stopFlicker();flickerArmed=false; // performances own the lights; disarm until the player leaves
    if(avatar)avatar.player.visible=false;
    // The ejection stage draws the full cast plus effects; render at 1x during the
    // performance and restore the walk ratio on the roam path below.
@@ -147,6 +179,12 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   const values=new Set([...keys,...touches.values()]);const x=Number(values.has('KeyD')||values.has('ArrowRight'))-Number(values.has('KeyA')||values.has('ArrowLeft')),z=Number(values.has('KeyS')||values.has('ArrowDown'))-Number(values.has('KeyW')||values.has('ArrowUp'));
   const s=walker.step(photoMode||paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
   walkAudio.frame(dt,s.moving,s.distance);
+  if(!paused){
+   const fb=IMMERSION_CONFIG.flicker,bi2=IMMERSION_CONFIG.button.interaction,dBtn=Math.hypot(s.position[0]-bi2[0],s.position[1]-bi2[1]);
+   if(flickerSaved)updateFlicker(dt);
+   else if(flickerArmed&&!photoMode&&dBtn<fb.radius)startFlicker();
+   if(!flickerArmed&&!flickerSaved&&dBtn>fb.radius+fb.rearmGap)flickerArmed=true;
+  }
   avatar.player.position.set(s.position[0],nav.heightAt(s.position),s.position[1]);
   const angle=Math.atan2(Math.sin(s.heading-avatar.visual.rotation.y),Math.cos(s.heading-avatar.visual.rotation.y));avatar.visual.rotation.y+=angle*Math.min(1,dt*18);
   avatar.model.rotation.z=!reduced&&s.moving?Math.sin(s.distance*15)*.045:0;
@@ -194,7 +232,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function stop(){
   if(!active)return;active=false;
   if(director&&director.busy)director.cancel('stop');
-  walkAudio.stop();exitPhoto();setDusk(false);syncDuskButton();
+  walkAudio.stop();exitPhoto();setDusk(false);syncDuskButton();stopFlicker();
   immersionSnapshot=null;updateBusyHud(false);
   clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
   for(const [o,visible] of saved.visible)o.visible=visible;highlight.visible=saved.highlight;
@@ -248,6 +286,6 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }

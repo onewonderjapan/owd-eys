@@ -21,6 +21,16 @@ export const IMMERSION_CONFIG = Object.freeze({
   triggerDistance: 1.6,
   room: null,
  }),
+ // B7 light-flicker mood event: approaching the emergency-button table dips the
+ // town lights twice (slow cosine, never a strobe) then restores them exactly.
+ flicker: Object.freeze({
+  radius: 2.1,        // trigger distance from the button table
+  rearmGap: 1.0,      // must leave radius+rearmGap before re-arming
+  duration: 2.2,      // seconds per trigger
+  dips: 2,            // gentle bright-dim cycles inside the window
+  floor: 0.55,        // dimmest intensity factor
+  reducedFloor: 0.7,  // reduced-motion: one calm dip instead of oscillation
+ }),
  meeting: Object.freeze({
   tableRadius: 1.10,
   tableTopY: 0.72,
