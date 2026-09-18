@@ -2,7 +2,7 @@
   "schema_version": 1,
   "feature_id": "eys-pov-immersion",
   "prepared_on": "2026-09-13",
-  "updated_at": "2026-09-16",
+  "updated_at": "2026-09-19",
   "status": "released",
   "execution_started": true,
   "executor": "ZCode",
@@ -329,7 +329,7 @@
     "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
     "本文件记录本地候选完成，不代表已发布或已部署。"
   ],
-  "next_action": "v1.3.0 live at https://eys.onewonder.co.jp/ (releases/1.3.0, remote verify PASS). Repo now open source (MIT code + fan-work asset NOTICE).",
+  "next_action": "overnight-20260919 branch (not merged): F1 walk-audio ducking during busy + shared footfall buffer + ui textContent diff guards + dusk saves every hemisphere light; F2 B7 emergency-table flicker event (design-flicker.md, exact-restore, reduced-motion calm variant; smoke 59/59 desktop + 48/48 mobile); F4 E7 jail-tie design page. web_wardrobe: A1 body closeup tool (closeup_body.mjs, 9 shots + compare page under docs/material_lab/a1-body-closeup/). Next: user reviews A1 page and merges.",
   "blockers": [],
   "deviations": [
     {
