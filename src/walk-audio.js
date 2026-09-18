@@ -72,16 +72,21 @@ export function createWalkAudio() {
 
  // One footfall: short bandpass noise burst, pitch/volume jitter to avoid a
  // machine-gun loop. Same numeric rhythm as the visual bob (s.distance*15).
+ // The white-noise tail is one shared buffer; each step only pays for a new
+ // source/filter/gain chain, not a fresh ~16KB allocation.
+ let footfallBuffer = null;
  function footfall() {
   if (muted || !context || context.state !== 'running') return;
   try {
    const t0 = context.currentTime + 0.005;
    const duration = 0.09;
    const frames = Math.max(1, Math.floor(context.sampleRate * duration));
-   const buffer = context.createBuffer(1, frames, context.sampleRate);
-   const data = buffer.getChannelData(0);
-   for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
-   const source = context.createBufferSource(); source.buffer = buffer;
+   if (!footfallBuffer || footfallBuffer.sampleRate !== context.sampleRate) {
+    footfallBuffer = context.createBuffer(1, frames, context.sampleRate);
+    const data = footfallBuffer.getChannelData(0);
+    for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
+   }
+   const source = context.createBufferSource(); source.buffer = footfallBuffer;
    const filter = context.createBiquadFilter();
    filter.type = 'bandpass'; filter.Q.value = 0.9;
    const f0 = 700 * (0.92 + Math.random() * 0.16);
