@@ -152,23 +152,23 @@ export function ensureImmersionUi(host) {
    show('prompt', promptVisible);
    if (promptVisible) {
     const actionText = propsError ? '会议道具加载失败' : (triggerLabel === '按下按钮' ? ' 按下按钮开会' : ' 按铃开会');
-    made['prompt-label'].childNodes.forEach(node => { if (node.nodeType === 3) node.textContent = actionText; });
+    made['prompt-label'].childNodes.forEach(node => { if (node.nodeType === 3 && node.textContent !== actionText) node.textContent = actionText; });
     const kbd = made['prompt-label'].querySelector('kbd');
     if (kbd) kbd.hidden = propsError;
-    made['prompt-bell'].textContent = propsError ? '重试' : (triggerLabel || '按铃');
+    setText(made['prompt-bell'], propsError ? '重试' : (triggerLabel || '按铃'));
    }
    show('preparing', phase === 'preparing');
    if (phase === 'preparing')
-    made['preparing-text'].textContent = extras.progress
+    setText(made['preparing-text'], extras.progress
      ? `正在准备会议 ${extras.progress.done}/${extras.progress.total}`
-     : '正在准备会议…';
+     : '正在准备会议…');
    show('error-panel', phase === 'error');
-   if (phase === 'error') made['error-text'].textContent = state.error || '未知错误';
+   if (phase === 'error') setText(made['error-text'], state.error || '未知错误');
    const showChrome = state.busy && phase !== 'preparing' && phase !== 'error';
    show('topbar', showChrome);
    if (showChrome) {
     show('skip', ['ringing', 'seating', 'discussion', 'result', 'ejection'].includes(phase));
-    made['mute'].textContent = extras.muted ? '取消静音' : '静音';
+    setText(made['mute'], extras.muted ? '取消静音' : '静音');
    }
    const styleVisible = phase === 'discussion' || phase === 'voting';
    show('style-picker', styleVisible);
@@ -180,11 +180,11 @@ export function ensureImmersionUi(host) {
    }
    show('voting', phase === 'voting');
    if (phase === 'voting') {
-    made['vote-hint'].textContent = state.selfDemo
+    setText(made['vote-hint'], state.selfDemo
      ? '演示：全部NPC将投给你，确认后生效'
      : state.selectedId
       ? `将投出：${(extras.describeActor(state.selectedId) || {}).label || state.selectedId}`
-      : '选择一位NPC，或体验自己被投出';
+      : '选择一位NPC，或体验自己被投出');
     made['confirm'].disabled = !state.selectedId;
    }
    const show_text = (id, text) => setText(made[id], text);

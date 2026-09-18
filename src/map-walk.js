@@ -61,15 +61,15 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function setDusk(next){
   if(next===dusk)return;dusk=next;
   if(next){
-   duskSaved={bg:scene.background&&scene.background.isColor?scene.background.getHex():null,hemi:null,dirls:[]};
+   duskSaved={bg:scene.background&&scene.background.isColor?scene.background.getHex():null,hemis:[],dirls:[]};
    for(const o of scene.children){
-    if(o.isHemisphereLight){duskSaved.hemi={o,color:o.color.getHex(),ground:o.groundColor.getHex(),intensity:o.intensity};o.color.set('#7d6aa8');o.groundColor.set('#4a3f3d');o.intensity*=.85;}
+    if(o.isHemisphereLight){duskSaved.hemis.push({o,color:o.color.getHex(),ground:o.groundColor.getHex(),intensity:o.intensity});o.color.set('#7d6aa8');o.groundColor.set('#4a3f3d');o.intensity*=.85;}
     else if(o.isDirectionalLight){duskSaved.dirls.push({o,color:o.color.getHex(),intensity:o.intensity});o.color.set('#ffb26b');o.intensity*=.7;}
    }
    if(duskSaved.bg!==null)scene.background.set('#3d3654');
   }else if(duskSaved){
    if(duskSaved.bg!==null&&scene.background&&scene.background.isColor)scene.background.setHex(duskSaved.bg);
-   if(duskSaved.hemi){duskSaved.hemi.o.color.setHex(duskSaved.hemi.color);duskSaved.hemi.o.groundColor.setHex(duskSaved.hemi.ground);duskSaved.hemi.o.intensity=duskSaved.hemi.intensity;}
+   for(const h of duskSaved.hemis){h.o.color.setHex(h.color);h.o.groundColor.setHex(h.ground);h.o.intensity=h.intensity;}
    for(const d of duskSaved.dirls){d.o.color.setHex(d.color);d.o.intensity=d.intensity;}
    duskSaved=null;
   }
