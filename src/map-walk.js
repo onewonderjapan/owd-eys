@@ -152,6 +152,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(!director||director.busy||!walker)return;
   exitPhoto(); // #immersion-ui is outside #walk-hud; a session must never start inside photo mode
   clearInput();view.unlock();
+  npcs?.setHidden(true); // townsfolk step off before the bell finishes ringing; the busy branch keeps this true
   const snap=view.snapshot();
   director.begin().then(accepted=>{
    if(accepted)immersionSnapshot=snap;
@@ -226,7 +227,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    walkAudio.start();syncMuteButton();
   // B4 townsfolk: loading starts once the player avatar is ready; the module owns
   // its own avatars exclusively and releases them all in stop().
-  if(!npcs)npcs=createWalkNpcs({scene,nav,config:WALK_NPC_CONFIG,getPlayerPosition:()=>walker?[...walker.state.position]:null,getPlayerActor:()=>avatar?.actorId,isMobile:()=>host.clientWidth<700||matchMedia('(pointer: coarse)').matches,reducedMotion:reduced,camera,host});
+  if(!npcs)npcs=createWalkNpcs({scene,nav,config:WALK_NPC_CONFIG,getPlayerPosition:()=>walker?[...walker.state.position]:null,getPlayerActor:()=>avatar?.actorId,isMobile:()=>matchMedia('(pointer: coarse)').matches||(host.clientWidth||innerWidth)<700,reducedMotion:reduced,camera,host});
   npcs.start();
    document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
    view.sync();view.update(walker.state.position,nav.heightAt(walker.state.position));

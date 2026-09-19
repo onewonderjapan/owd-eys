@@ -42,8 +42,12 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   else{
    const player=getPlayerPosition?.();
    const near=player?Math.hypot(npc.position[0]-player[0],npc.position[1]-player[1])<config.avoidPlayerRadius:false;
-   if(near)npc.moving=false; // wait in place; never shove the player walker
-   else{
+   if(near){
+    npc.moving=false; // wait in place; never shove the player walker
+    npc.avoidT=(npc.avoidT||0)+dt;
+    if(npc.avoidT>1.2){npc.avoidT=0;npc.route=null;} // waited long enough: stroll somewhere else
+   }else{
+    npc.avoidT=0;
     if(!npc.route)chooseTarget(npc);
     if(npc.route){
      const wp=npc.route[Math.min(npc.wp,npc.route.length-1)];

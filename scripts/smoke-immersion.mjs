@@ -32,7 +32,7 @@ try {
 // Digital-twin keyboard driver: plan key presses on the twin (with a short
 // escape search for wall pockets), then send them as real keyboard input.
 // Used by the fountain-button section; returns the final walker position.
-async function driveToTarget(page, target, maxRounds = 900) {
+async function driveToTarget(page, target, maxRounds = 900, arriveDist = 1.25) {
   const KEY_DIRS = {KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0]};
   const speed = 2.35, frameDt = 0.05;
   const stepTwin = (p, key) => { const [dx, dz] = KEY_DIRS[key]; return moveTwin(nav, p, [dx * speed * frameDt, dz * speed * frameDt]).position; };
@@ -53,7 +53,7 @@ async function driveToTarget(page, target, maxRounds = 900) {
   let wp = 1;
   for (let round = 0; round < maxRounds; round++) {
    const twin = [...(await page.evaluate(() => window.eys.state().walk.position))];
-   if (Math.hypot(twin[0] - target[0], twin[1] - target[1]) < 1.25) return twin;
+   if (Math.hypot(twin[0] - target[0], twin[1] - target[1]) < arriveDist) return twin;
    while (wp < route.length - 1 && Math.hypot(twin[0] - route[wp][0], twin[1] - route[wp][1]) < 0.5) wp++;
    const goal = route[Math.min(wp, route.length - 1)];
    const want = Math.abs(goal[0] - twin[0]) > Math.abs(goal[1] - twin[1])
@@ -637,6 +637,115 @@ try {
       await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 30000}).catch(() => {});
       await page.keyboard.press('Escape');
       await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000}).catch(() => {});
+    }
+  }
+
+  // ---------------------------------------------------------------- B4 walk NPCs
+  // Townsfolk wander with speech bubbles (design-npc-wander.md). Fresh page so
+  // load timing is measured from a clean walk start; every variable here is
+  // npc-prefixed to avoid top-of-script name collisions.
+  {
+    const NPC_CFG = cfgModule?.WALK_NPC_CONFIG || null;
+    const NPC_POOL = NPC_CFG ? [...NPC_CFG.bubble.pool] : [];
+    const NPC_EXPECT = NPC_CFG ? (MOBILE ? NPC_CFG.mobileCount : NPC_CFG.count) : 0;
+    const BELL_INTERACT = cfgModule?.IMMERSION_CONFIG ? [...cfgModule.IMMERSION_CONFIG.bell.interaction] : [9.12, -7.56];
+    const npcPage = await browser.newPage({viewport: finalViewport});
+    const npcErrors = [];
+    npcPage.on('pageerror', e => npcErrors.push(String(e && e.message || e).slice(0, 200)));
+    await npcPage.goto(url, {waitUntil: 'networkidle'});
+    await npcPage.click('#character-grid button:nth-child(3)');
+    await npcPage.click('#walk-enter');
+    await npcPage.waitForFunction(() => window.eys?.state?.().walk?.active, {timeout: 40000});
+    const npcMemBefore = await npcPage.evaluate(() => { const s = window.eys.state().walk; return {drawCalls: s.drawCalls, memory: s.memory}; });
+    const npcLoadedOk = await npcPage.waitForFunction(exp => window.eys?.state?.().walk?.npcs?.loaded === exp, NPC_EXPECT, {timeout: 60000}).then(() => true).catch(() => false);
+    const npcStateNow = await npcPage.evaluate(() => window.eys.state().walk.npcs);
+    check('npc: 常驻镇民按平台配置加载数量', npcLoadedOk === true, `expect=${NPC_EXPECT} got=${JSON.stringify(npcStateNow)}`);
+    // 3s sampling: every townsperson stays collision-free, at least one moves.
+    const npcSamples = [];
+    let npcBubbleSeen = null;
+    for (let i = 0; i < 7; i++) {
+      const snap = await npcPage.evaluate(() => { const n = window.eys.state().walk.npcs; return n ? {loaded: n.loaded, hidden: n.hidden, list: n.npcs.map(m => ({actor: m.actor, position: [...m.position], moving: m.moving, bubble: m.bubble}))} : null; });
+      if (snap) {
+        npcSamples.push(snap);
+        const withBubble = snap.list.find(m => m.bubble);
+        if (withBubble && !npcBubbleSeen) npcBubbleSeen = withBubble.bubble;
+      }
+      await npcPage.waitForTimeout(500);
+    }
+    const npcAllFree = npcSamples.length > 0 && npcSamples.every(s => s.list.every(m => nav ? nav.collision(m.position) === null : true));
+    const npcMoved = npcSamples.some(s => s.list.some(m => m.moving)) ||
+      npcSamples.some((s, i) => i > 0 && s.list.some((m, j) => {
+        const prev = npcSamples[i - 1].list[j];
+        return prev && prev.actor === m.actor && Math.hypot(prev.position[0] - m.position[0], prev.position[1] - m.position[1]) > 0.05;
+      }));
+    check('npc: 3秒采样全员站在可走区域', npcAllFree, `samples=${npcSamples.length} perSample=${npcSamples.map(s => s.list.length).join(',')}`);
+    check('npc: 3秒采样内至少一位在移动', npcMoved === true, npcMoved ? 'observed moving/position delta' : 'all idle');
+    // A bubble within 20s of the sampling start, drawn from the config pool.
+    if (!npcBubbleSeen) {
+      await npcPage.waitForFunction(pool => {
+        const n = window.eys?.state?.().walk?.npcs;
+        return !!n && n.npcs.some(m => m.bubble);
+      }, NPC_POOL, {timeout: 20000}).catch(() => {});
+      npcBubbleSeen = await npcPage.evaluate(() => {
+        const n = window.eys?.state?.().walk?.npcs;
+        const m = n && n.npcs.find(x => x.bubble);
+        return m ? m.bubble : null;
+      });
+    }
+    check('npc: 20秒内出现气泡且文案来自固定池', typeof npcBubbleSeen === 'string' && NPC_POOL.includes(npcBubbleSeen), `bubble=${JSON.stringify(npcBubbleSeen)} pool=${NPC_POOL.length}`);
+    // Photo mode: townsfolk stay visible, the bubble layer must hide and restore.
+    const npcLayer = () => npcPage.evaluate(() => { const el = document.querySelector('#walk-npc-bubbles'); return el ? {present: true, hidden: el.hidden, display: getComputedStyle(el).display} : {present: false}; });
+    await npcPage.click('#walk-photo');
+    const npcPhotoState = await npcPage.evaluate(() => window.eys.state().walk.photo);
+    const npcLayerInPhoto = await npcLayer();
+    check('npc: 拍照模式气泡层隐藏', npcPhotoState === true && npcLayerInPhoto.present === true && npcLayerInPhoto.hidden === true, JSON.stringify(npcLayerInPhoto));
+    await npcPage.click('#walk-photo-exit');
+    const npcLayerAfterPhoto = await npcLayer();
+    check('npc: 退出拍照气泡层还原', npcLayerAfterPhoto.present === true && npcLayerAfterPhoto.hidden === false, JSON.stringify(npcLayerAfterPhoto));
+    // Bell meeting: townsfolk must hide during the performance and return after.
+    const npcFinal = await driveToTarget(npcPage, BELL_INTERACT, 900, 0.8);
+    const npcBellDist = npcFinal ? Math.hypot(npcFinal[0] - BELL_INTERACT[0], npcFinal[1] - BELL_INTERACT[1]) : Infinity;
+    check('npc: 走到铃交互半径内', npcBellDist < 0.95, `dist=${npcBellDist.toFixed(2)} final=${npcFinal ? npcFinal.map(v => +v.toFixed(2)) : null}`);
+    await npcPage.keyboard.press('KeyE');
+    const npcBusy = await npcPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.busy, null, {timeout: 40000}).then(() => true).catch(() => false);
+    const npcHiddenDuring = await npcPage.evaluate(() => window.eys.state().walk.npcs);
+    check('npc: 演出期间镇民整体隐藏', npcBusy === true && npcHiddenDuring?.hidden === true, `busy=${npcBusy} npcs=${JSON.stringify({hidden: npcHiddenDuring?.hidden, loaded: npcHiddenDuring?.loaded})}`);
+    await npcPage.keyboard.press('Escape');
+    await npcPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', {timeout: 10000}).catch(() => {});
+    await npcPage.waitForTimeout(500);
+    const npcHiddenAfter = await npcPage.evaluate(() => window.eys.state().walk.npcs);
+    check('npc: 回到漫游镇民恢复且加载数不变', npcHiddenAfter?.hidden === false && npcHiddenAfter?.loaded === NPC_EXPECT, JSON.stringify({hidden: npcHiddenAfter?.hidden, loaded: npcHiddenAfter?.loaded}));
+    // Info (never a failure): drawCalls, 2s RAF count, renderer memory before/after load.
+    const npcMemAfter = await npcPage.evaluate(() => { const s = window.eys.state().walk; return {drawCalls: s.drawCalls, memory: s.memory}; });
+    const npcRaf2s = await npcPage.evaluate(() => new Promise(res => { let c = 0; const t0 = performance.now(); const loop = () => { c++; if (performance.now() - t0 < 2000) requestAnimationFrame(loop); else res(c); }; requestAnimationFrame(loop); }));
+    check('npc: 性能信息(信息项,不判失败)', true, JSON.stringify({drawCallsBefore: npcMemBefore.drawCalls, drawCallsAfter: npcMemAfter.drawCalls, raf2s: npcRaf2s, memoryBefore: npcMemBefore.memory, memoryAfter: npcMemAfter.memory}));
+    check('npc: 无页面错误', npcErrors.length === 0, npcErrors.join('; ').slice(0, 160));
+    await npcPage.close();
+
+    // reduced-motion (desktop): bubble elements carry no transition animation.
+    if (!MOBILE && NPC_CFG) {
+      const npcRPage = await browser.newPage({viewport: walkViewport});
+      const npcRErrors = [];
+      npcRPage.on('pageerror', e => npcRErrors.push(String(e && e.message || e).slice(0, 200)));
+      await npcRPage.emulateMedia({reducedMotion: 'reduce'});
+      await npcRPage.goto(url, {waitUntil: 'networkidle'});
+      await npcRPage.click('#character-grid button:nth-child(3)');
+      await npcRPage.click('#walk-enter');
+      await npcRPage.waitForFunction(() => window.eys?.state?.().walk?.active, {timeout: 40000});
+      const npcRBubble = await npcRPage.waitForFunction(() => {
+        const n = window.eys?.state?.().walk?.npcs;
+        return !!n && n.npcs.some(m => m.bubble);
+      }, null, {timeout: 30000}).then(() => true).catch(() => false);
+      const npcRStyle = await npcRPage.evaluate(() => {
+        const el = [...document.querySelectorAll('#walk-npc-bubbles > div')].find(b => b.style.display !== 'none') || document.querySelector('#walk-npc-bubbles > div');
+        if (!el) return null;
+        const cs = getComputedStyle(el);
+        return {transitionDuration: cs.transitionDuration, transitionProperty: cs.transitionProperty, animationDuration: cs.animationDuration};
+      });
+      const npcRNoTransition = npcRStyle !== null && npcRStyle.transitionDuration.split(',').every(v => parseFloat(v) === 0) && npcRStyle.animationDuration.split(',').every(v => parseFloat(v) === 0);
+      check('npc: reduced-motion 气泡无过渡动画', npcRBubble === true && npcRNoTransition, `bubble=${npcRBubble} style=${JSON.stringify(npcRStyle)}`);
+      check('npc: reduced-motion 无页面错误', npcRErrors.length === 0, npcRErrors.join('; ').slice(0, 160));
+      await npcRPage.close();
     }
   }
 
