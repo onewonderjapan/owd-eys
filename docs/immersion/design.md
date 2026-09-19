@@ -18,7 +18,7 @@ HUD 使用简短的「体验模式 · NPC 演出」，避免把脚本 NPC 展示
 
 ## 2. 参考证据与改编边界
 
-完整图片在 [研究画廊](C:/3d/eys/reference_research/immersion_20260913/index.html)。官方素材仅作参考，不复制到生产 `src/`、资产清单或部署包。
+完整图片在 [研究画廊](<workspace>/reference_research/immersion_20260913/index.html)。官方素材仅作参考，不复制到生产 `src/`、资产清单或部署包。
 
 | 参考 | 已看到的内容 | 本次采用 | 不能据此声称 |
 | --- | --- | --- | --- |

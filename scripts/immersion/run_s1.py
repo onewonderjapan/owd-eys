@@ -4,8 +4,11 @@ Only ever launches build_props_blender.py against an empty scene; it never opens
 overwrites existing character source files. Retries reuse the same run_id and skip work
 when the remote completion marker (asset-report.json) already exists, unless --force.
 
-Usage (from W2, Windows Python):
-  python scripts/immersion/run_s1.py --run-id <id> [--force] [--timeout 2400]
+Host settings (SSH target, SMB share host, remote user) come from the environment;
+see .env.example. Nothing about the build host is hard-coded here.
+
+Usage (Windows Python, from the repository root):
+  python -X utf8 scripts/immersion/run_s1.py --run-id <id> [--force] [--timeout 2400]
 """
 import argparse
 import json
@@ -19,13 +22,37 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-# machine-specific locations: every one is env-overridable so the pipeline
-# survives a LAN/host move without code edits
-ARCHIVE = Path(os.environ.get('EYS_IMMERSION_ARCHIVE', r'C:\3d\eys\immersion_assets'))
-SMB_SHARE = Path(os.environ.get('EYS_IMMERSION_SHARE', r'\\172.72.0.1\Home\outbox\eys-immersion'))
-REMOTE_BASE = os.environ.get('EYS_IMMERSION_HOME', '/home/baibai/outbox/eys-immersion')
-RUNTIME = os.environ.get('EYS_IMMERSION_RUNTIME', '/home/baibai/outbox/codex-3d-atelier/runtime/usr')
-SSH = r'C:\Windows\System32\OpenSSH\ssh.exe'
+REPO_ROOT = HERE.parents[1]
+
+
+def env(name, default=None):
+    value = (os.environ.get(name) or '').strip()
+    return value or default
+
+
+def derived(name, template, source):
+    """Env var, or a value derived from the build-host settings; never a baked-in host."""
+    value = env(name)
+    if value:
+        return value
+    base = env(source)
+    if not base:
+        raise SystemExit(
+            f'Set {name}, or set {source} so it can be derived. '
+            'Copy .env.example to .env and fill in the build-host settings.')
+    return template.format(base)
+
+
+# Machine-specific locations. Nothing here is pinned to one LAN or account: the
+# share host and the remote user come from the environment (see .env.example).
+ARCHIVE = Path(env('EYS_IMMERSION_ARCHIVE') or REPO_ROOT / '.cache' / 'immersion_assets')
+SMB_SHARE = Path(derived('EYS_IMMERSION_SHARE', r'\\{}\Home\outbox\eys-immersion', 'EYS_S1_HOST'))
+REMOTE_BASE = derived('EYS_IMMERSION_HOME', '/home/{}/outbox/eys-immersion', 'EYS_S1_USER')
+RUNTIME = derived('EYS_IMMERSION_RUNTIME', '/home/{}/outbox/codex-3d-atelier/runtime/usr', 'EYS_S1_USER')
+SSH_TARGET = env('EYS_S1_SSH_TARGET', 's1')
+# Windows' own OpenSSH: the MSYS ssh bundled with Git Bash mangles ~ expansion
+# when the Windows home directory contains non-ASCII characters.
+SSH = env('EYS_SSH_BINARY', r'C:\Windows\System32\OpenSSH\ssh.exe')
 BUILD_SCRIPT = HERE / 'build_props_blender.py'
 
 PARSER = argparse.ArgumentParser()
@@ -52,7 +79,7 @@ def journal(status, extra=None):
 
 
 def ssh_run(command, timeout, log_path=None):
-    result = subprocess.run([SSH, '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', 's1', command],
+    result = subprocess.run([SSH, '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', SSH_TARGET, command],
                             capture_output=True, text=True, timeout=timeout + 60)
     if log_path:
         log_path.write_text((result.stdout or '') + (result.stderr or ''), encoding='utf-8', newline='\n')
@@ -77,13 +104,13 @@ def main():
                   f'--out {shlex.quote(REMOTE_DIR)} --run-id {shlex.quote(RUN_ID)}')
     log_path = ARCHIVE_DIR / 's1-build.log'
     journal('started', {'remote_cmd': remote_cmd, 'remote_dir': REMOTE_DIR, 'log': str(log_path)})
-    print('[RUN] blender on s1; log ->', log_path, flush=True)
+    print(f'[RUN] blender on {SSH_TARGET}; log ->', log_path, flush=True)
     started = time.time()
     try:
         result = ssh_run(remote_cmd, OPTS.timeout, log_path)
     except subprocess.TimeoutExpired:
         journal('timeout', {'after_seconds': round(time.time() - started)})
-        print('[TIMEOUT] remote blender exceeded --timeout; inspect via: ssh s1 ls ' + REMOTE_DIR)
+        print(f'[TIMEOUT] remote blender exceeded --timeout; inspect via: ssh {SSH_TARGET} ls ' + REMOTE_DIR)
         return 3
     elapsed = round(time.time() - started)
     if result.returncode != 0:

@@ -15,7 +15,7 @@
 新增 `src/`：immersion-config / immersion-state / immersion-props / immersion-actors / immersion-meeting / immersion-ejection / immersion-director / immersion-ui / immersion-audio / immersion-look / immersion.css / immersion-assets.json。
 修改 `src/`：main.js（renderTarget 渲染）、map-walk.js（导演接入、铃判定、busy 冻结、HUD 隐藏、恢复）、map-walk-view.js（snapshot/restore/canChange 门控）。
 新增脚本：`scripts/test-immersion.mjs`、`scripts/smoke-immersion.mjs`、`scripts/immersion/{build_props_blender.py,run_s1.py,import_assets.py,check_props.mjs,props_browser.mjs}`。
-资产：`.cache/assets/2ccadcd4….glb`（按内容哈希），`assets-manifest.json` **仅追加 1 条**，源 `.blend` 与渲染图归档于 `C:\3d\eys\immersion_assets\20260913T160211Z-e1f2\`。
+资产：`.cache/assets/2ccadcd4….glb`（按内容哈希），`assets-manifest.json` **仅追加 1 条**，源 `.blend` 与渲染图归档于 `<workspace>/immersion_assets\20260913T160211Z-e1f2\`。
 未改动：地图/碰撞 JSON、角色与装备 GLB、rig-contract、发布脚本、WAF/CDN/DNS（未部署）。
 
 ## 3. 检查结果（最终 1.2.0 构建）

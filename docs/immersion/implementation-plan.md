@@ -6,7 +6,7 @@
 
 **架构：** 一个 renderer、一个行走 RAF，额外 Scene 和 PerspectiveCamera 由会话导演提供渲染目标；漫游状态冻结，结束时恢复。纯状态机处理阶段与票数，UI、角色包装、布景、音频分开。不得引入 React、R3F、Phaser、物理引擎、在线 AI 或新依赖。
 
-**已核对的技术栈：** 原生 ES Modules / Three.js 0.180.0 / Playwright 1.55.0 / Node.js；项目版本 1.1.1，衣橱 4.3.28，地图 map_reference_v2。详细实测基线在 [baseline.json](baseline.json)。下述 `src/`、`scripts/` 相对路径均以 `C:\3d\eys\owd-eys` 为根。
+**已核对的技术栈：** 原生 ES Modules / Three.js 0.180.0 / Playwright 1.55.0 / Node.js；项目版本 1.1.1，衣橱 4.3.28，地图 map_reference_v2。详细实测基线在 [baseline.json](baseline.json)。下述 `src/`、`scripts/` 相对路径均以 `<repo>` 为根。
 
 **参考修订：** 用户已经提供沉水图片。P4必须先读 [water-reference.md](water-reference.md)，水下构图以该图为准；不要继续沿用早期「沉水待补图」的候选状态。
 

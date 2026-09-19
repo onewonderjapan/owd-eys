@@ -158,7 +158,9 @@ check('manifest: 相对P0快照只追加且旧记录不变', () => {
   assert.equal(added.length, 1, `exactly one new asset, got ${added.length}`);
   assert.equal(added[0].path, `assets/${immersion.sha256}.glb`);
   assert.equal(immersion.pack_id, 'eys-immersion-props-v1');
-  assert.ok(!JSON.stringify(immersion).includes('172.72'), 'no private hosts in public json');
+  // any bare IPv4 literal, not one hard-coded LAN address, so the guard itself
+  // carries no internal host and still catches a new one
+  assert.ok(!/\b\d{1,3}(?:\.\d{1,3}){3}\b/.test(JSON.stringify(immersion)), 'no private hosts in public json');
   assert.ok(!JSON.stringify(immersion).includes('.blend'), 'no blend path in public json');
 });
 

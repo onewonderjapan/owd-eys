@@ -1,8 +1,8 @@
 你是 ZCode，本次沿用 GLM-Flash，执行今晚的 EYS POV 沉浸体验施工。
 
-工作目录：C:\3d\eys\owd-eys。
-先读 C:\3d\eys\owd-eys\docs\immersion\START_HERE.md，
-再读 C:\Users\蔡瀛杰\.codex\skills\eys-pov-immersion\SKILL.md。
+工作目录：<repo>。
+先读 START_HERE.md，
+再读 <user-home>/.codex\skills\eys-pov-immersion\SKILL.md。
 按 design.md（1.2）、blender-assets-plan.md、water-reference.md、implementation-plan.md 和 progress.json 执行；官方及项目技能的具体路径在资产计划中，必须按职责使用。
 
 目标：完成按铃 → 玩家与7位NPC围坐圆桌 → 发言和投票 → 沉水/火堆出局 → 返回原位置的本地可玩闭环。覆盖自己POV与NPC旁观，不增加地图或联机系统。

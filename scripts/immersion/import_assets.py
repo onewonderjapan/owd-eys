@@ -17,7 +17,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-ARCHIVE = Path(os.environ.get('EYS_IMMERSION_ARCHIVE', r'C:\3d\eys\immersion_assets'))
+# Local archive of S1 deliveries; override with EYS_IMMERSION_ARCHIVE (see .env.example).
+ARCHIVE = Path((os.environ.get('EYS_IMMERSION_ARCHIVE') or '').strip() or ROOT / '.cache' / 'immersion_assets')
 CACHE_ASSETS = ROOT / '.cache' / 'assets'
 ASSETS_MANIFEST = ROOT / 'assets-manifest.json'
 IMMERSION_JSON = ROOT / 'src' / 'immersion-assets.json'

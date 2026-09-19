@@ -2,9 +2,9 @@
 
 状态：用户已补图，水下构图已确认。此页优先于早期「沉水待补动作截图」记录；设计与施工计划已同步更新。画面来自用户提供的游戏参考，原始地图、版本及完整动作时序仍未据此确认。
 
-![用户提供的沉水参考](C:/3d/eys/reference_research/immersion_20260913/user-water-sinking.jpg)
+![用户提供的沉水参考](<workspace>/reference_research/immersion_20260913/user-water-sinking.jpg)
 
-原附件：[Photo 1.jpg](C:/3d/.codex-remote-attachments/01a06f7e-4f9d-7373-8d39-35286f14d9b4/84433c67-781f-456c-b186-94dbe988d2b3/1-Photo-1.jpg)。研究副本按原字节保存，身份信息与校验见 [图片记录](C:/3d/eys/reference_research/immersion_20260913/user-water-sinking.json)。图片只用于本地设计参考，不加入运行时公开包。
+原附件：[Photo 1.jpg](<attachments>/01a06f7e-4f9d-7373-8d39-35286f14d9b4/84433c67-781f-456c-b186-94dbe988d2b3/1-Photo-1.jpg)。研究副本按原字节保存，身份信息与校验见 [图片记录](<workspace>/reference_research/immersion_20260913/user-water-sinking.json)。图片只用于本地设计参考，不加入运行时公开包。
 
 ## 原图中可以确认的内容
 

@@ -6,9 +6,9 @@
 
 | 工作 | 已核对的本机 skill |
 | --- | --- |
-| Blender资产清理、GLB导出、优化与网页验证 | [OpenAI web-3d-asset-pipeline](C:/Users/蔡瀛杰/.codex/plugins/cache/openai-curated-remote/game-studio/0.1.2/skills/web-3d-asset-pipeline/SKILL.md) |
-| POV镜头、状态/渲染分离、输入与HUD | [OpenAI three-webgl-game](C:/Users/蔡瀛杰/.codex/plugins/cache/openai-curated-remote/game-studio/0.1.2/skills/three-webgl-game/SKILL.md) |
-| 保留角色本体、服装身份与坐标契约 | [项目定制 blender-reference-wardrobe](C:/Users/蔡瀛杰/.codex/skills/blender-reference-wardrobe/SKILL.md) |
+| Blender资产清理、GLB导出、优化与网页验证 | [OpenAI web-3d-asset-pipeline](<user-home>/.codex/plugins/cache/openai-curated-remote/game-studio/0.1.2/skills/web-3d-asset-pipeline/SKILL.md) |
+| POV镜头、状态/渲染分离、输入与HUD | [OpenAI three-webgl-game](<user-home>/.codex/plugins/cache/openai-curated-remote/game-studio/0.1.2/skills/three-webgl-game/SKILL.md) |
+| 保留角色本体、服装身份与坐标契约 | [项目定制 blender-reference-wardrobe](<user-home>/.codex/skills/blender-reference-wardrobe/SKILL.md) |
 
 官方来源：[资产 skill](https://github.com/openai/plugins/blob/main/plugins/game-studio/skills/web-3d-asset-pipeline/SKILL.md)、[插件作者声明](https://github.com/openai/plugins/blob/main/plugins/game-studio/.codex-plugin/plugin.json)。Blender项目skill只借用参考还原、身份和坐标纪律，不触发新皮肤、全装备入库或公开下载流程。
 
@@ -36,16 +36,16 @@ ZCode按文件路径读skill即可，不需要识别Codex的插件调用语法�
 
 ## S1制作与W2归档
 
-W2正本：`C:\3d\eys\owd-eys`。以下是本轮要创建的目录/文件约定，不代表已经生成：
+W2正本：`<repo>`。以下是本轮要创建的目录/文件约定，不代表已经生成：
 
 - 可提交的源脚本：`scripts/immersion/build_props_blender.py`、`scripts/immersion/run_s1.py`、`scripts/immersion/import_assets.py`、`scripts/immersion/check_props.mjs`。
-- W2本轮资产归档：`C:\3d\eys\immersion_assets\<run_id>\`，保存 `.blend`、原始/优化GLB、渲染图、日志和报告，原始文件不覆盖。
-- S1产出目录：`~/outbox/eys-immersion/<run_id>/`；SMB收集目录：`\\172.72.0.1\Home\outbox\eys-immersion\<run_id>\`。`run_id`用实际UTC时间＋短编号生成，第一次写入progress后续接复用；不能每次重试都丢失原任务身份。
+- W2本轮资产归档：`<workspace>/immersion_assets\<run_id>\`，保存 `.blend`、原始/优化GLB、渲染图、日志和报告，原始文件不覆盖。
+- S1产出目录：`~/outbox/eys-immersion/<run_id>/`；SMB收集目录：`\\<build-host>\Home\outbox\eys-immersion\<run_id>\`。`run_id`用实际UTC时间＋短编号生成，第一次写入progress后续接复用；不能每次重试都丢失原任务身份。
 - 管理记录与施工文档只在W2维护。S1运行日志属于生成证据，可随产物带回。
 
-已存在的参考运行器：[web_wardrobe/material_lab/run_s1.py](C:/3d/eys/web_wardrobe/material_lab/run_s1.py)。只参考其ssh/SMB及Blender环境配置：它会打开历史角色文件并使用旧日期目录，**不能原样拿来运行本轮**。新薄启动器传独立脚本、输出目录和日志，启动空场景/本轮候选文件，不打开或覆盖旧角色源。
+已存在的参考运行器：[web_wardrobe/material_lab/run_s1.py](<workspace>/web_wardrobe/material_lab/run_s1.py)。只参考其ssh/SMB及Blender环境配置：它会打开历史角色文件并使用旧日期目录，**不能原样拿来运行本轮**。新薄启动器传独立脚本、输出目录和日志，启动空场景/本轮候选文件，不打开或覆盖旧角色源。
 
-P0A开始时只读核实 `ssh s1`、SMB、S1实际home、Blender二进制与版本。旧运行器中的 `/home/baibai/outbox/codex-3d-atelier/runtime/usr/bin/blender` 仅为候选位置，须先确认存在；不能以Windows的blender.exe替代S1执行。用参数数组和正确远端shell引用，设置 `--python-exit-code 1`。脚本应可按run_id识别既有产物和完成记录；长任务立即记录远端PID/命令、日志路径，在ZCode中断后仍能查明状态。
+P0A开始时只读核实 `ssh s1`、SMB、S1实际home、Blender二进制与版本。旧运行器中的 `/home/<user>/outbox/codex-3d-atelier/runtime/usr/bin/blender` 仅为候选位置，须先确认存在；不能以Windows的blender.exe替代S1执行。用参数数组和正确远端shell引用，设置 `--python-exit-code 1`。脚本应可按run_id识别既有产物和完成记录；长任务立即记录远端PID/命令、日志路径，在ZCode中断后仍能查明状态。
 
 模型构造、Blender渲染、烘焙和批量资产优化均在S1；W2做源脚本编写、哈希核对、SMB收集、清单接入、网页构建和浏览器验收。不调用付费生成服务，也不安装额外模型/MCP作为隐含前置条件。
 

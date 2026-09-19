@@ -72,13 +72,13 @@
         ".cache/assets/2ccadcd4dd560764eea8cde989edf6301277a2d3fdbefa9805daa8b20d634181.glb",
         "assets-manifest.json",
         "src/immersion-assets.json",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/"
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/"
       ],
       "checks": [
         {
           "command": "ssh s1 核实 Blender 运行时",
           "result": "passed",
-          "evidence": "Windows OpenSSH + s1(spark-410a, aarch64)；/home/baibai/outbox/codex-3d-atelier/runtime/usr/bin/blender = Blender 4.0.2；SMB \\\\172.72.0.1\\Home\\outbox 可写。注意：Git Bash 自带 MSYS ssh 对非ASCII主目录~展开乱码，必须用 /c/Windows/System32/OpenSSH/ssh.exe（run_s1.py 已固化）。"
+          "evidence": "Windows OpenSSH + s1(<build-host>, aarch64)；/home/<user>/outbox/codex-3d-atelier/runtime/usr/bin/blender = Blender 4.0.2；SMB \\\\<build-host>\\Home\\outbox 可写。注意：Git Bash 自带 MSYS ssh 对非ASCII主目录~展开乱码，必须用 /c/Windows/System32/OpenSSH/ssh.exe（run_s1.py 已固化）。"
         },
         {
           "command": "python scripts/immersion/run_s1.py --run-id 20260913T160211Z-e1f2 --force",
@@ -107,21 +107,21 @@
         }
       ],
       "evidence": [
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/immersion-props.blend",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/immersion-props.glb",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/asset-report.json",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/props_furniture.png",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/props_stages.png",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/bell_pivot_detail.png",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/chair_seat_detail.png",
-        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/chain_stone_detail.png",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/immersion-props.blend",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/immersion-props.glb",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/asset-report.json",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/props_furniture.png",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/props_stages.png",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/bell_pivot_detail.png",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/chair_seat_detail.png",
+        "<workspace>/immersion_assets/20260913T160211Z-e1f2/chain_stone_detail.png",
         "reports/immersion/props-browser.png",
         "reports/immersion/props-check.json"
       ],
       "notes": [
-        "run_id=20260913T160211Z-e1f2 复用于全部重试；W2归档C:/3d/eys/immersion_assets/<run_id>/，S1产出/home/baibai/outbox/eys-immersion/<run_id>/。",
+        "run_id=20260913T160211Z-e1f2 复用于全部重试；W2归档<workspace>/immersion_assets/<run_id>/，S1产出/home/<user>/outbox/eys-immersion/<run_id>/。",
         "脚本迭代期间s1-build.log被覆盖，最终版为通过版；asset-report.json每次构建重写，最终hash以W2归档为准。",
-        "asset_run: status=completed, run_id=20260913T160211Z-e1f2, blender=4.0.2 aarch64, output=C:/3d/eys/immersion_assets/20260913T160211Z-e1f2, report=asset-report.json。",
+        "asset_run: status=completed, run_id=20260913T160211Z-e1f2, blender=4.0.2 aarch64, output=<workspace>/immersion_assets/20260913T160211Z-e1f2, report=asset-report.json。",
         "rig-contract.js未改动——列入changed_files系笔误更正：本轮未修改该文件。"
       ]
     },
@@ -362,8 +362,8 @@
   "asset_run": {
     "status": "completed",
     "run_id": "20260913T160211Z-e1f2",
-    "blender": "4.0.2 aarch64 (spark-410a)",
-    "output_directory": "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2",
+    "blender": "4.0.2 aarch64 (<build-host>)",
+    "output_directory": "<workspace>/immersion_assets/20260913T160211Z-e1f2",
     "report": "asset-report.json"
   }
 }

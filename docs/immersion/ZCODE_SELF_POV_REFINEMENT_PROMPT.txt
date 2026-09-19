@@ -1,13 +1,13 @@
 你是 ZCode，沿用 GLM-Flash。本轮在已有 EYS 1.2.0 实现上精修“自己被票出”的 POV。用户已经确定范围，请直接施工，不重做需求访谈，不从零重造功能。
 
-工作目录：C:\3d\eys\owd-eys
+工作目录：<repo>
 
 先读以下文件和对应实际截图：
-1. C:\3d\eys\owd-eys\.design\self-ejection-pov\DESIGN_REVIEW.md
-2. C:\3d\eys\owd-eys\.design\self-ejection-pov\capture.json
-3. C:\Users\蔡瀛杰\.codex\skills\eys-pov-immersion\SKILL.md
-4. C:\3d\eys\owd-eys\docs\immersion\water-reference.md
-5. C:\3d\eys\owd-eys\docs\immersion\progress.json 和 implementation-report.md
+1. ../../.design/self-ejection-pov/DESIGN_REVIEW.md
+2. ../../.design/self-ejection-pov/capture.json
+3. <user-home>/.codex\skills\eys-pov-immersion\SKILL.md
+4. water-reference.md
+5. progress.json 和 implementation-report.md
 
 审查基线：2026-09-14，feature/pov-immersion，package 1.2.0，HEAD 87d47c1ff1044e56fa134c0f5e1ec9cbd0c084f1；主要实现尚未提交，先检查当前 git status/diff 和 review-baseline.json。当前首轮 P0/P0A/P1–P6 已有流程 PASS，但这次新增视觉审查为 needs_refinement。保留既有修改和已通过结论；若源码已前进，逐项核实 R1–R5 是否仍存在，不回退到审查版本。START_HERE 中原今晚施工 prompt 是历史首轮说明，本轮以本提示词为准。
 
@@ -26,7 +26,7 @@ F2：修正水下链石的真实连接与低头构图（R2）
 - 当前上锚点 X 写死 sinkX，而玩家初段 X=0。把上端绑定到身体实际局部绑点，下端绑定导出 GLB 的 chain_anchor，updateWorldMatrix 后获取世界坐标。抬起、抛出、水下三个阶段都不能脱节。
 - 28 个实例链节的尺寸和节距要匹配真实链长；避免挤成黑色团块。复用 InstancedMesh，每帧更新矩阵，不每帧创建几何/材质。
 - 当前眼位几乎在链石正上方，近端遮住远端。调整身前绑点、石块相对前方的少量偏置、链节粗细和弱轮廓光，使低头约 60–75° 即能读到“身体下缘 → 一段长链 → 下方独立灰石”。不需要强迫用户转到极限角度，不用放大石块贴脚，不改成 NPC 旁观镜头。
-- 保持深蓝留白、石块低于鹅、整体慢沉；用户参考 C:\3d\eys\reference_research\immersion_20260913\user-water-sinking.jpg 不显示海床，不增加撞底场面。
+- 保持深蓝留白、石块低于鹅、整体慢沉；用户参考 <workspace>/reference_research\immersion_20260913\user-water-sinking.jpg 不显示海床，不增加撞底场面。
 - 修复现有诊断的同值比较：真实模型上下锚点与实际首末链节端点分别测量，不可由同一个数组互相赋值后宣称误差为零。仅针对该不变量补必要检查，覆盖抬起/抛出/水下各一时刻；沿用 ≤0.03 项目单位容差，解释端点定义。
 
 F3：让托举、抛出、投入火堆成为连续动作（R3）

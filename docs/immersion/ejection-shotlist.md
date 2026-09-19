@@ -5,7 +5,7 @@
 > 1.4.0 上线;E7 监狱平票仍按本文件定位单独排期。
 
 日期:2026-09-16。目标:在已上线的沉水/火堆之外,扩充出局时的 POV 演出池。
-参考图:`C:/3d/eys/reference_research/ejection_pool_20260916/`(11 张官方实机帧,来源与
+参考图:`<workspace>/reference_research/ejection_pool_20260916/`(11 张官方实机帧,来源与
 分级见同目录 `sources.json`);更早的调研:`../immersion_20260913/ejection-sources.json`。
 
 ## 已上线(基线)

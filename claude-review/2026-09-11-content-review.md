@@ -16,9 +16,9 @@
 1. **CloudFront 缓存策略真值不在仓内** — infra/site.yaml:62-63 — DefaultCacheBehavior 只引用外部 CachePolicyId / ResponseHeadersPolicyId，模板不定义 TTL；docs/ACCESS_PROTECTION.md:24 称该自定义策略 MinTTL 0 — 边缘是否尊重源站 `no-cache` 完全取决于这条仓外配置，控制台一改即可复发「旧 HTML + 新脚本」事故，且 Git 无法审计。
 2. **发布链路绑定单台 Windows 机** — scripts/smoke-entry-recovery.mjs:11 硬编码 Edge 可执行路径且无环境变量覆盖；scripts/publish.py:19-20 强制要求其产出报告与当前构建哈希一致 — 换机/CI 无法发布；smoke.mjs:6、smoke-first-person.mjs:7 虽有 CHROME_PATH 覆盖，默认值同为本机路径。
 3. **基础设施标识符四处明文重复** — scripts/publish.py:7、scripts/verify-remote.mjs:31、infra/site.yaml:16/65/89、docs/DEPLOYMENT.md:3/19 — 桶名、账号 ID、分发 ID、Hosted Zone ID 各写一份（非密钥，私有仓可接受）— 多处易漂移；若仓库转公开或 fork 需先清理。
-4. **部署使用名为 `onewonder.root` 的 AWS profile** — scripts/publish.py:5、docs/DEPLOYMENT.md:9 — 若该 profile 对应 root 凭证，与最小权限原则冲突，也无法按项目审计【是否 root 凭证未核实】。
+4. **部署使用名为 `<privileged-profile>` 的 AWS profile** — scripts/publish.py:5、docs/DEPLOYMENT.md:9 — 若该 profile 对应 root 凭证，与最小权限原则冲突，也无法按项目审计【是否 root 凭证未核实】。
 5. **旧 HTML 兼容只有 1.0.0 一份样本** — scripts/fixtures/index-1.0.0.html、scripts/smoke-entry-recovery.mjs:8,17 — 回归只覆盖 1.0.0 HTML；1.1.0 HTML 无样本。src/map-walk-view.js:6-8,15-18,68 对 `#walk-view-toggle`/`#walk-reticle` 做了空值保护，但 `.walk-key-hint`（:7,:17）未保护 — 现有两版 HTML 都含该元素，风险低但缺防线。
-6. **私有路径检查有盲区** — scripts/check-build.mjs:9 — 正则只匹配 `X:\`（双反斜杠）、`/home/`、`172.72.0.x`、`.codex/`，不匹配 `C:/` 正斜杠形式（docs/DEPLOYMENT.md:36 正是这种写法）— 源工作区路径若以正斜杠泄入 dist 不会被拦。
+6. **私有路径检查有盲区** — scripts/check-build.mjs:9 — 正则只匹配 `X:\`（双反斜杠）、`/home/`、单一写死的内网 IP、`.codex/`，不匹配 `C:/` 正斜杠形式（docs/DEPLOYMENT.md:36 正是这种写法）— 源工作区路径若以正斜杠泄入 dist 不会被拦。
 7. **文档衣橱版本不一致** — docs/IMPLEMENTATION.md:5 写 4.3.27；src/assets/manifest.json 实际 version 4.3.28，README.md:23、docs/DEPLOYMENT.md:30 亦为 4.3.28 — 读者按 IMPLEMENTATION 校验会误判。
 8. **每次发布全量失效 `/*`** — scripts/publish.py:49 — HTML 与根别名已 no-cache、releases/ 与哈希资产不可变，全量失效属冗余；每月超免费路径数后计费【费用口径未核实】。
 9. **缓存判定表达式 `or`/`and` 混排无括号** — scripts/publish.py:27 — 按 Python 优先级恰好得到预期语义（releases/** 或 assets/*.glb|png → immutable，其余 → no-cache），但可读性差、易被误改。
@@ -38,7 +38,7 @@
 
 ### P1（本月）
 - 将桶名/分发 ID/账号 ID 收敛到单一来源（如 infra/ 输出或 `.env.example` + 读取环境变量），publish.py / verify-remote.mjs / docs 引用它（对应发现 3）。
-- 为发布新建最小权限 IAM 身份（S3 PutObject/HeadObject 限 `out/*` + cloudfront:CreateInvalidation 限该分发），替换 `onewonder.root` profile（对应发现 4）。
+- 为发布新建最小权限 IAM 身份（S3 PutObject/HeadObject 限 `out/*` + cloudfront:CreateInvalidation 限该分发），替换 `<privileged-profile>` profile（对应发现 4）。
 - 在 scripts/fixtures/ 增加 index-1.1.0.html 样本并纳入 smoke-entry-recovery 循环；`.walk-key-hint` 加空值保护（对应发现 5）。
 - 修正 docs/IMPLEMENTATION.md:5 的 4.3.27 → 4.3.28（对应发现 7）。
 
@@ -55,7 +55,7 @@
 
 ## 未核实
 - 线上 CloudFront 缓存策略实际 MinTTL/DefaultTTL/MaxTTL 与响应头策略内容（仓内只有 ID，见 infra/site.yaml:62-63）。
-- `onewonder.root` profile 是否为 AWS root 凭证。
+- `<privileged-profile>` profile 是否为 AWS root 凭证。
 - 1.1.0 版 HTML 与 1.1.1 脚本的组合是否可进入地图（无 fixture）。
 - 每次 `/*` 失效的实际月度费用。
 - docs/DEPLOYMENT.md:21,36,44 所述上传数量、公网 SHA256 校验结果（依赖忽略目录 reports/，仓内无回执）。
