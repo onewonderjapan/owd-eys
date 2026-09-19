@@ -1,369 +1,369 @@
 {
- "schema_version": 1,
- "feature_id": "eys-pov-immersion",
- "prepared_on": "2026-09-13",
- "updated_at": "2026-09-20",
- "status": "released",
- "execution_started": true,
- "executor": "ZCode",
- "current_stage": "P6",
- "completed_stages": [
-  "P0",
-  "P0A",
-  "P1",
-  "P2",
-  "P3",
-  "P4",
-  "P5",
-  "P6"
- ],
- "baseline": "baseline.json",
- "design": "design.md",
- "plan": "implementation-plan.md",
- "preview_url": "http://127.0.0.1:8870/",
- "candidate_version": "1.2.0",
- "actual_version": "1.3.0",
- "build_sha256": null,
- "publishing_authorized": true,
- "stages": [
-  {
-   "id": "P0",
-   "title": "基线、接口与状态机",
-   "status": "passed",
-   "changed_files": [
-    "src/immersion-config.js",
-    "src/immersion-state.js",
-    "scripts/test-immersion.mjs",
-    "reports/immersion/inputs/assets-manifest.pre-p0.json",
-    "reports/immersion/p0-test-immersion.json"
-   ],
-   "checks": [
+  "schema_version": 1,
+  "feature_id": "eys-pov-immersion",
+  "prepared_on": "2026-09-13",
+  "updated_at": "2026-09-20",
+  "status": "released",
+  "execution_started": true,
+  "executor": "ZCode",
+  "current_stage": "P6",
+  "completed_stages": [
+    "P0",
+    "P0A",
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6"
+  ],
+  "baseline": "baseline.json",
+  "design": "design.md",
+  "plan": "implementation-plan.md",
+  "preview_url": "http://127.0.0.1:8870/",
+  "candidate_version": "1.2.0",
+  "actual_version": "1.3.0",
+  "build_sha256": null,
+  "publishing_authorized": true,
+  "stages": [
     {
-     "command": "git status --short && git rev-parse HEAD",
-     "result": "passed",
-     "evidence": "HEAD=87d47c1ff1044e56fa134c0f5e1ec9cbd0c084f1 与baseline一致；仅README.md已有修改（保留）与docs/immersion/未跟踪；baseline.json 17个文件SHA256全部匹配"
+      "id": "P0",
+      "title": "基线、接口与状态机",
+      "status": "passed",
+      "changed_files": [
+        "src/immersion-config.js",
+        "src/immersion-state.js",
+        "scripts/test-immersion.mjs",
+        "reports/immersion/inputs/assets-manifest.pre-p0.json",
+        "reports/immersion/p0-test-immersion.json"
+      ],
+      "checks": [
+        {
+          "command": "git status --short && git rev-parse HEAD",
+          "result": "passed",
+          "evidence": "HEAD=87d47c1ff1044e56fa134c0f5e1ec9cbd0c084f1 与baseline一致；仅README.md已有修改（保留）与docs/immersion/未跟踪；baseline.json 17个文件SHA256全部匹配"
+        },
+        {
+          "command": "node scripts/test-immersion.mjs",
+          "result": "passed",
+          "evidence": "reports/immersion/p0-test-immersion.json：27项passed/0 failed，含状态机事件表、8票计算、自己演示分离、暂停不推进、重播保留target/style、27位玩家roster、bell代理叠加后room04无碰撞、地图/碰撞/清单哈希未变"
+        }
+      ],
+      "evidence": [
+        "reports/immersion/p0-test-immersion.json",
+        "reports/immersion/inputs/assets-manifest.pre-p0.json"
+      ],
+      "notes": [
+        "本地分支 feature/pov-immersion（自main 87d47c1创建），未推送。",
+        "初始assets-manifest快照存reports/immersion/inputs/assets-manifest.pre-p0.json，供P0A/P6只追加校验。",
+        "状态机snapshot在计划固定字段外附加reducedMotion/busy两个纯数据字段，供导演与诊断使用。"
+      ]
     },
     {
-     "command": "node scripts/test-immersion.mjs",
-     "result": "passed",
-     "evidence": "reports/immersion/p0-test-immersion.json：27项passed/0 failed，含状态机事件表、8票计算、自己演示分离、暂停不推进、重播保留target/style、27位玩家roster、bell代理叠加后room04无碰撞、地图/碰撞/清单哈希未变"
+      "id": "P0A",
+      "title": "Blender道具、GLB接入与验证",
+      "status": "passed",
+      "changed_files": [
+        "scripts/immersion/build_props_blender.py",
+        "scripts/immersion/run_s1.py",
+        "scripts/immersion/import_assets.py",
+        "scripts/immersion/check_props.mjs",
+        "scripts/immersion/props_browser.mjs",
+        ".cache/assets/2ccadcd4dd560764eea8cde989edf6301277a2d3fdbefa9805daa8b20d634181.glb",
+        "assets-manifest.json",
+        "src/immersion-assets.json",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/"
+      ],
+      "checks": [
+        {
+          "command": "ssh s1 核实 Blender 运行时",
+          "result": "passed",
+          "evidence": "Windows OpenSSH + s1(spark-410a, aarch64)；/home/baibai/outbox/codex-3d-atelier/runtime/usr/bin/blender = Blender 4.0.2；SMB \\\\172.72.0.1\\Home\\outbox 可写。注意：Git Bash 自带 MSYS ssh 对非ASCII主目录~展开乱码，必须用 /c/Windows/System32/OpenSSH/ssh.exe（run_s1.py 已固化）。"
+        },
+        {
+          "command": "python scripts/immersion/run_s1.py --run-id 20260913T160211Z-e1f2 --force",
+          "result": "passed",
+          "evidence": "S1全部自检PASS（blend可重开、GLB七根节点、root变换归零、pivots存在、无压缩扩展、材质8份、bounds合理）；渲染5张。迭代3次修复：桌面顶盖绕序、展示副本继承hide_render、bell bounds双重父变换、链节轴向（长轴glTF Y）、椅子前方+Z、火坑木柴入地。"
+        },
+        {
+          "command": "python scripts/immersion/import_assets.py --run-id 20260913T160211Z-e1f2",
+          "result": "passed",
+          "evidence": "hash核对通过；GLB按SHA256缓存.cache/assets/2ccadcd4….glb；assets-manifest仅追加1条且旧记录与P0快照一致；src/immersion-assets.json写入pack eys-immersion-props-v1。"
+        },
+        {
+          "command": "node scripts/immersion/check_props.mjs",
+          "result": "passed",
+          "evidence": "reports/immersion/props-check.json：7项passed（哈希一致、无Draco/Meshopt/KTX2、七根+三挂点、根变换归零、挂点父子、glTF Y-up轴向尺寸、清单只追加）。"
+        },
+        {
+          "command": "node scripts/immersion/props_browser.mjs",
+          "result": "passed",
+          "evidence": "reports/immersion/props-browser.png + props-browser.json：真实GLTFLoader加载，7根节点尺寸与Blender导出一致，直立无黑块。修复：harness需importmap、相机Vector3.length()。"
+        },
+        {
+          "command": "npx --no-install @gltf-transform/cli --version",
+          "result": "passed",
+          "evidence": "glTF Transform未安装：按资产计划记录优化项未运行，保留可加载无压缩GLB（300812 bytes，无需解码器扩展）。"
+        }
+      ],
+      "evidence": [
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/immersion-props.blend",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/immersion-props.glb",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/asset-report.json",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/props_furniture.png",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/props_stages.png",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/bell_pivot_detail.png",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/chair_seat_detail.png",
+        "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/chain_stone_detail.png",
+        "reports/immersion/props-browser.png",
+        "reports/immersion/props-check.json"
+      ],
+      "notes": [
+        "run_id=20260913T160211Z-e1f2 复用于全部重试；W2归档C:/3d/eys/immersion_assets/<run_id>/，S1产出/home/baibai/outbox/eys-immersion/<run_id>/。",
+        "脚本迭代期间s1-build.log被覆盖，最终版为通过版；asset-report.json每次构建重写，最终hash以W2归档为准。",
+        "asset_run: status=completed, run_id=20260913T160211Z-e1f2, blender=4.0.2 aarch64, output=C:/3d/eys/immersion_assets/20260913T160211Z-e1f2, report=asset-report.json。",
+        "rig-contract.js未改动——列入changed_files系笔误更正：本轮未修改该文件。"
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "导演接入、铃与退出恢复",
+      "status": "passed",
+      "changed_files": [
+        "src/immersion-director.js",
+        "src/immersion-props.js",
+        "src/immersion-actors.js",
+        "src/immersion-meeting.js",
+        "src/immersion-ejection.js",
+        "src/immersion-ui.js",
+        "src/immersion.css",
+        "src/immersion-audio.js",
+        "src/immersion-look.js",
+        "src/map-walk.js",
+        "src/map-walk-view.js",
+        "src/main.js",
+        "scripts/smoke-immersion.mjs"
+      ],
+      "checks": [
+        {
+          "command": "node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion",
+          "result": "passed",
+          "evidence": "bell-near.png + immersion.json：真实键盘走到铃、提示、E进入会话、busy冻结、Esc恢复delta=0"
+        }
+      ],
+      "evidence": [
+        "reports/immersion/bell-near.png",
+        "reports/immersion/immersion.json"
+      ],
+      "notes": [
+        "冒烟脚本采用导航数据BFS+手工门通道尾段与数字孪生(moveCircle)选键，全部通过真实键盘输入驱动，无传送/调试入口。",
+        "修复过程中确认并修复：immersion-ui三个动态元素未注册made表(prompt-label/vote-hint/preparing-text/error-text)、releaseAll误传player、导演dispatch包装器保证事件驱动阶段跳转触发enterPhase。",
+        "旧HTML缺新元素时ensureImmersionUi运行时注入CSS与DOM，已验证。"
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "演员、坐姿和眼高圆桌",
+      "status": "passed",
+      "changed_files": [
+        "src/immersion-actors.js",
+        "src/immersion-meeting.js",
+        "src/immersion-config.js"
+      ],
+      "checks": [
+        {
+          "command": "smoke-immersion meeting 阶段断言 + harness调参",
+          "result": "passed",
+          "evidence": "meeting-pov.png（真实流程，6NPC脸+字幕+风格选择器）、meeting-seats-debug.png（8椅坐姿/脚部朝桌）、meeting-mobile.png；cast.03玩家与7NPC（含大头饰cast.05、帽子cast.02）走查"
+        }
+      ],
+      "evidence": [
+        "reports/immersion/meeting-pov.png",
+        "reports/immersion/meeting-seats-debug.png",
+        "reports/immersion/meeting-mobile.png"
+      ],
+      "notes": [
+        "座位半径1.62→1.48（设计±15%内）；走路标记圈在演出副本隐藏；会议灯按物理光照单位调亮"
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "发言、投票与结果",
+      "status": "passed",
+      "changed_files": [
+        "src/immersion-ui.js",
+        "src/immersion-state.js"
+      ],
+      "checks": [
+        {
+          "command": "smoke-immersion vote 阶段断言",
+          "result": "passed",
+          "evidence": "7头像+确认禁用、aria-pressed单选、玩家不可选、选A再选B只有B、风格锁定、双确认一次、横幅「橙色本体」被投出（4票）与machine票数一致；voting.png/vote-result.png"
+        }
+      ],
+      "evidence": [
+        "reports/immersion/voting.png",
+        "reports/immersion/vote-result.png"
+      ],
+      "notes": []
+    },
+    {
+      "id": "P4",
+      "title": "沉水两种视角",
+      "status": "passed",
+      "changed_files": [
+        "src/immersion-ejection.js"
+      ],
+      "checks": [
+        {
+          "command": "smoke-immersion water 分支",
+          "result": "passed",
+          "evidence": "water-npc.png（鹅上/链中/石下同帧，深蓝留白，对照用户参考）、water-self.png、water-self-look-down.png（拖动低头见链石）"
+        },
+        {
+          "command": "water-link-integrity.json",
+          "result": "passed",
+          "evidence": "reports/immersion/water-link-integrity.json：2.4/3.6/4.8s三时刻链上下端与目标/石块锚点误差≤0.03"
+        }
+      ],
+      "evidence": [
+        "reports/immersion/water-npc.png",
+        "reports/immersion/water-self.png",
+        "reports/immersion/water-self-look-down.png",
+        "reports/immersion/water-link-integrity.json"
+      ],
+      "notes": [
+        "修复链节compose向量别名（gooseAnchor被tmpVec复用污染导致链错位）；NPC水下为固定平视观演镜头，陪同鹅留岸上"
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "火堆两种视角、音频与舒适度",
+      "status": "passed",
+      "changed_files": [
+        "src/immersion-ejection.js",
+        "src/immersion-audio.js",
+        "src/map-walk.js"
+      ],
+      "checks": [
+        {
+          "command": "smoke-immersion fire/comfort/reuse 阶段断言",
+          "result": "passed",
+          "evidence": "fire-npc.png（目标在石圈火焰中）、fire-self.png（抬起）+fire-self-lit.png（火光投火）、静音切换、连续5轮ring/cancel几何数不增长"
+        }
+      ],
+      "evidence": [
+        "reports/immersion/fire-npc.png",
+        "reports/immersion/fire-self.png",
+        "reports/immersion/fire-self-lit.png",
+        "reports/immersion/fire-start.png"
+      ],
+      "notes": [
+        "音频cue合成、用户手势解锁、阶段阈值单次触发；无头环境无法验证听感（记录为限制）",
+        "演出期间漫游HUD（方向盘/查看/操作/状态）隐藏，非官方声明保留"
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "集成验收与本地交付",
+      "status": "passed",
+      "changed_files": [
+        "package.json",
+        "package-lock.json",
+        "docs/immersion/implementation-report.md",
+        "scripts/smoke-immersion.mjs",
+        "scripts/test-immersion.mjs"
+      ],
+      "checks": [
+        {
+          "command": "npm run build && npm test",
+          "result": "passed",
+          "evidence": "156 files / EYS_PACKAGE_PASS；页面pin releases/1.2.0"
+        },
+        {
+          "command": "node scripts/test-immersion.mjs",
+          "result": "passed",
+          "evidence": "28/28（含assets-manifest只追加校验）"
+        },
+        {
+          "command": "node scripts/immersion/check_props.mjs",
+          "result": "passed",
+          "evidence": "7/7"
+        },
+        {
+          "command": "node scripts/smoke.mjs / smoke-first-person.mjs / smoke-entry-recovery.mjs",
+          "result": "passed",
+          "evidence": "immersion-base / immersion-first-person / immersion-entry 全PASS（旧漫游兼容）"
+        },
+        {
+          "command": "node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion",
+          "result": "passed",
+          "evidence": "32/32 全链（桌面1440×960）"
+        },
+        {
+          "command": "MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion-mobile",
+          "result": "passed",
+          "evidence": "32/32 移动竖屏全链（390×844）"
+        },
+        {
+          "command": "src UTF-8/LF/私人路径检查",
+          "result": "passed",
+          "evidence": "新模块无BOM/CR，无私人路径与.blend路径进入src"
+        }
+      ],
+      "evidence": [
+        "docs/immersion/implementation-report.md",
+        "reports/immersion/immersion.json",
+        "reports/immersion/immersion-mobile.json"
+      ],
+      "notes": [
+        "glTF Transform优化未运行（本机未安装，按计划记录保留无压缩GLB）。",
+        "WebGL context loss未自动化模拟；prefers-reduced-motion代码路径完整未单独截图验证。",
+        "dist/__props_harness.html与dist/__meeting_harness.html为一次性调参页（gitignored，不在src）。"
+      ]
     }
-   ],
-   "evidence": [
-    "reports/immersion/p0-test-immersion.json",
-    "reports/immersion/inputs/assets-manifest.pre-p0.json"
-   ],
-   "notes": [
-    "本地分支 feature/pov-immersion（自main 87d47c1创建），未推送。",
-    "初始assets-manifest快照存reports/immersion/inputs/assets-manifest.pre-p0.json，供P0A/P6只追加校验。",
-    "状态机snapshot在计划固定字段外附加reducedMotion/busy两个纯数据字段，供导演与诊断使用。"
-   ]
-  },
-  {
-   "id": "P0A",
-   "title": "Blender道具、GLB接入与验证",
-   "status": "passed",
-   "changed_files": [
-    "scripts/immersion/build_props_blender.py",
-    "scripts/immersion/run_s1.py",
-    "scripts/immersion/import_assets.py",
-    "scripts/immersion/check_props.mjs",
-    "scripts/immersion/props_browser.mjs",
-    ".cache/assets/2ccadcd4dd560764eea8cde989edf6301277a2d3fdbefa9805daa8b20d634181.glb",
-    "assets-manifest.json",
-    "src/immersion-assets.json",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/"
-   ],
-   "checks": [
+  ],
+  "known_limits": [
+    "官方火堆图的具体地图与触发条件未核实，本功能按改编演出实现。",
+    "沉水水下构图按water-reference.md用户参考实现；入水时序为项目改编。",
+    "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
+    "本文件记录本地候选完成，不代表已发布或已部署。"
+  ],
+  "next_action": "overnight-20260920 branch pushed (not merged; includes 0919): F1 B4 walk-NPC townsfolk (findPath/pickWanderTarget sunk into src, src/walk-npcs.js + bubbles, busy-hidden/photo-no-bubble, desktop smoke 72/72 + mobile 59/59, P0 35/35); F2/F3 web_wardrobe tools committed locally (a2-coats-closeup 54 shots; mix-intersection-audit 50 groups/476 pairs ray-parity 0 unstable, 27 suspected -> A4 list); F4 hygiene (scripts/dev/) + README/START_HERE refresh; F5 design-pov-gear.md. Morning: read C:/3d/eys/REPORT_FLASH_20260920.md, review 8870 + web_wardrobe pages, merge branch, rebuild + five gates, publish 1.5.0.",
+  "blockers": [],
+  "deviations": [
     {
-     "command": "ssh s1 核实 Blender 运行时",
-     "result": "passed",
-     "evidence": "Windows OpenSSH + s1(spark-410a, aarch64)；/home/baibai/outbox/codex-3d-atelier/runtime/usr/bin/blender = Blender 4.0.2；SMB \\\\172.72.0.1\\Home\\outbox 可写。注意：Git Bash 自带 MSYS ssh 对非ASCII主目录~展开乱码，必须用 /c/Windows/System32/OpenSSH/ssh.exe（run_s1.py 已固化）。"
+      "found_in": "用户自查反馈（cast.14 体验 POV 黑屏）",
+      "root_cause": "自身POV相机被放置在玩家自己的鹅头内部：按铃阶段相机在漫游模型眼位（模型可见），自己沉水/火堆相机骑在目标眼位（目标模型可见）；鹅体材质双面渲染，头部内表面糊满画面。",
+      "fix": "按铃与全部busy期间隐藏漫游模型；自身出局分支隐藏目标整身模型（按设计仅保留画面下缘POV翅膀与锁链/火光的身体联系），NPC旁观与会议不受影响。",
+      "verified": "ACTOR=cast.14 全链32/32（ring-pov.png按铃可见金铃、water-self.png翅膀+链+石、fire-self.png火光+翅膀）+ 默认链32/32回归。"
     },
     {
-     "command": "python scripts/immersion/run_s1.py --run-id 20260913T160211Z-e1f2 --force",
-     "result": "passed",
-     "evidence": "S1全部自检PASS（blend可重开、GLB七根节点、root变换归零、pivots存在、无压缩扩展、材质8份、bounds合理）；渲染5张。迭代3次修复：桌面顶盖绕序、展示副本继承hide_render、bell bounds双重父变换、链节轴向（长轴glTF Y）、椅子前方+Z、火坑木柴入地。"
-    },
-    {
-     "command": "python scripts/immersion/import_assets.py --run-id 20260913T160211Z-e1f2",
-     "result": "passed",
-     "evidence": "hash核对通过；GLB按SHA256缓存.cache/assets/2ccadcd4….glb；assets-manifest仅追加1条且旧记录与P0快照一致；src/immersion-assets.json写入pack eys-immersion-props-v1。"
-    },
-    {
-     "command": "node scripts/immersion/check_props.mjs",
-     "result": "passed",
-     "evidence": "reports/immersion/props-check.json：7项passed（哈希一致、无Draco/Meshopt/KTX2、七根+三挂点、根变换归零、挂点父子、glTF Y-up轴向尺寸、清单只追加）。"
-    },
-    {
-     "command": "node scripts/immersion/props_browser.mjs",
-     "result": "passed",
-     "evidence": "reports/immersion/props-browser.png + props-browser.json：真实GLTFLoader加载，7根节点尺寸与Blender导出一致，直立无黑块。修复：harness需importmap、相机Vector3.length()。"
-    },
-    {
-     "command": "npx --no-install @gltf-transform/cli --version",
-     "result": "passed",
-     "evidence": "glTF Transform未安装：按资产计划记录优化项未运行，保留可加载无压缩GLB（300812 bytes，无需解码器扩展）。"
+      "found_in": "用户反馈（沉水体验调优）",
+      "change": "①水演出改为\"被众人抬起→抬向水面→抛出\"三段时间线（0-1.3s抬起晃动、1.3-2.4s弧线抛出、2.4s入水），护送鹅站位前移使自身POV与旁观都能看到被架住；②水下加入8尾绕柱环游的低多边形鱼（共享几何/材质，仅水下可见）；③下沉速度放缓（落差0.44/3.2s并带轻微浮沉，原0.58/3.2s）。",
+      "verified": "默认链32/32回归；water-self.png（被护送鹅架起视角）、water-npc.png（鹅+链+石+鱼群）、water-self-look-down.png（鱼群+链节）。"
     }
-   ],
-   "evidence": [
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/immersion-props.blend",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/immersion-props.glb",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/asset-report.json",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/props_furniture.png",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/props_stages.png",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/bell_pivot_detail.png",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/chair_seat_detail.png",
-    "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2/chain_stone_detail.png",
-    "reports/immersion/props-browser.png",
-    "reports/immersion/props-check.json"
-   ],
-   "notes": [
-    "run_id=20260913T160211Z-e1f2 复用于全部重试；W2归档C:/3d/eys/immersion_assets/<run_id>/，S1产出/home/baibai/outbox/eys-immersion/<run_id>/。",
-    "脚本迭代期间s1-build.log被覆盖，最终版为通过版；asset-report.json每次构建重写，最终hash以W2归档为准。",
-    "asset_run: status=completed, run_id=20260913T160211Z-e1f2, blender=4.0.2 aarch64, output=C:/3d/eys/immersion_assets/20260913T160211Z-e1f2, report=asset-report.json。",
-    "rig-contract.js未改动——列入changed_files系笔误更正：本轮未修改该文件。"
-   ]
-  },
-  {
-   "id": "P1",
-   "title": "导演接入、铃与退出恢复",
-   "status": "passed",
-   "changed_files": [
-    "src/immersion-director.js",
-    "src/immersion-props.js",
-    "src/immersion-actors.js",
-    "src/immersion-meeting.js",
-    "src/immersion-ejection.js",
-    "src/immersion-ui.js",
-    "src/immersion.css",
-    "src/immersion-audio.js",
-    "src/immersion-look.js",
-    "src/map-walk.js",
-    "src/map-walk-view.js",
-    "src/main.js",
-    "scripts/smoke-immersion.mjs"
-   ],
-   "checks": [
+  ],
+  "design_revision": "1.2",
+  "reference_updates": [
     {
-     "command": "node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion",
-     "result": "passed",
-     "evidence": "bell-near.png + immersion.json：真实键盘走到铃、提示、E进入会话、busy冻结、Esc恢复delta=0"
+      "id": "06",
+      "source": "user_attachment",
+      "spec": "water-reference.md",
+      "image_sha256": "e001a6f2054a322b7ec04e7e56434c176e64c7db34ea626f8c82f38ec937b3b3",
+      "visual_status": "confirmed",
+      "execution_status": "not_started",
+      "scope": "water composition and P4 acceptance"
     }
-   ],
-   "evidence": [
-    "reports/immersion/bell-near.png",
-    "reports/immersion/immersion.json"
-   ],
-   "notes": [
-    "冒烟脚本采用导航数据BFS+手工门通道尾段与数字孪生(moveCircle)选键，全部通过真实键盘输入驱动，无传送/调试入口。",
-    "修复过程中确认并修复：immersion-ui三个动态元素未注册made表(prompt-label/vote-hint/preparing-text/error-text)、releaseAll误传player、导演dispatch包装器保证事件驱动阶段跳转触发enterPhase。",
-    "旧HTML缺新元素时ensureImmersionUi运行时注入CSS与DOM，已验证。"
-   ]
-  },
-  {
-   "id": "P2",
-   "title": "演员、坐姿和眼高圆桌",
-   "status": "passed",
-   "changed_files": [
-    "src/immersion-actors.js",
-    "src/immersion-meeting.js",
-    "src/immersion-config.js"
-   ],
-   "checks": [
-    {
-     "command": "smoke-immersion meeting 阶段断言 + harness调参",
-     "result": "passed",
-     "evidence": "meeting-pov.png（真实流程，6NPC脸+字幕+风格选择器）、meeting-seats-debug.png（8椅坐姿/脚部朝桌）、meeting-mobile.png；cast.03玩家与7NPC（含大头饰cast.05、帽子cast.02）走查"
-    }
-   ],
-   "evidence": [
-    "reports/immersion/meeting-pov.png",
-    "reports/immersion/meeting-seats-debug.png",
-    "reports/immersion/meeting-mobile.png"
-   ],
-   "notes": [
-    "座位半径1.62→1.48（设计±15%内）；走路标记圈在演出副本隐藏；会议灯按物理光照单位调亮"
-   ]
-  },
-  {
-   "id": "P3",
-   "title": "发言、投票与结果",
-   "status": "passed",
-   "changed_files": [
-    "src/immersion-ui.js",
-    "src/immersion-state.js"
-   ],
-   "checks": [
-    {
-     "command": "smoke-immersion vote 阶段断言",
-     "result": "passed",
-     "evidence": "7头像+确认禁用、aria-pressed单选、玩家不可选、选A再选B只有B、风格锁定、双确认一次、横幅「橙色本体」被投出（4票）与machine票数一致；voting.png/vote-result.png"
-    }
-   ],
-   "evidence": [
-    "reports/immersion/voting.png",
-    "reports/immersion/vote-result.png"
-   ],
-   "notes": []
-  },
-  {
-   "id": "P4",
-   "title": "沉水两种视角",
-   "status": "passed",
-   "changed_files": [
-    "src/immersion-ejection.js"
-   ],
-   "checks": [
-    {
-     "command": "smoke-immersion water 分支",
-     "result": "passed",
-     "evidence": "water-npc.png（鹅上/链中/石下同帧，深蓝留白，对照用户参考）、water-self.png、water-self-look-down.png（拖动低头见链石）"
-    },
-    {
-     "command": "water-link-integrity.json",
-     "result": "passed",
-     "evidence": "reports/immersion/water-link-integrity.json：2.4/3.6/4.8s三时刻链上下端与目标/石块锚点误差≤0.03"
-    }
-   ],
-   "evidence": [
-    "reports/immersion/water-npc.png",
-    "reports/immersion/water-self.png",
-    "reports/immersion/water-self-look-down.png",
-    "reports/immersion/water-link-integrity.json"
-   ],
-   "notes": [
-    "修复链节compose向量别名（gooseAnchor被tmpVec复用污染导致链错位）；NPC水下为固定平视观演镜头，陪同鹅留岸上"
-   ]
-  },
-  {
-   "id": "P5",
-   "title": "火堆两种视角、音频与舒适度",
-   "status": "passed",
-   "changed_files": [
-    "src/immersion-ejection.js",
-    "src/immersion-audio.js",
-    "src/map-walk.js"
-   ],
-   "checks": [
-    {
-     "command": "smoke-immersion fire/comfort/reuse 阶段断言",
-     "result": "passed",
-     "evidence": "fire-npc.png（目标在石圈火焰中）、fire-self.png（抬起）+fire-self-lit.png（火光投火）、静音切换、连续5轮ring/cancel几何数不增长"
-    }
-   ],
-   "evidence": [
-    "reports/immersion/fire-npc.png",
-    "reports/immersion/fire-self.png",
-    "reports/immersion/fire-self-lit.png",
-    "reports/immersion/fire-start.png"
-   ],
-   "notes": [
-    "音频cue合成、用户手势解锁、阶段阈值单次触发；无头环境无法验证听感（记录为限制）",
-    "演出期间漫游HUD（方向盘/查看/操作/状态）隐藏，非官方声明保留"
-   ]
-  },
-  {
-   "id": "P6",
-   "title": "集成验收与本地交付",
-   "status": "passed",
-   "changed_files": [
-    "package.json",
-    "package-lock.json",
-    "docs/immersion/implementation-report.md",
-    "scripts/smoke-immersion.mjs",
-    "scripts/test-immersion.mjs"
-   ],
-   "checks": [
-    {
-     "command": "npm run build && npm test",
-     "result": "passed",
-     "evidence": "156 files / EYS_PACKAGE_PASS；页面pin releases/1.2.0"
-    },
-    {
-     "command": "node scripts/test-immersion.mjs",
-     "result": "passed",
-     "evidence": "28/28（含assets-manifest只追加校验）"
-    },
-    {
-     "command": "node scripts/immersion/check_props.mjs",
-     "result": "passed",
-     "evidence": "7/7"
-    },
-    {
-     "command": "node scripts/smoke.mjs / smoke-first-person.mjs / smoke-entry-recovery.mjs",
-     "result": "passed",
-     "evidence": "immersion-base / immersion-first-person / immersion-entry 全PASS（旧漫游兼容）"
-    },
-    {
-     "command": "node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion",
-     "result": "passed",
-     "evidence": "32/32 全链（桌面1440×960）"
-    },
-    {
-     "command": "MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion-mobile",
-     "result": "passed",
-     "evidence": "32/32 移动竖屏全链（390×844）"
-    },
-    {
-     "command": "src UTF-8/LF/私人路径检查",
-     "result": "passed",
-     "evidence": "新模块无BOM/CR，无私人路径与.blend路径进入src"
-    }
-   ],
-   "evidence": [
-    "docs/immersion/implementation-report.md",
-    "reports/immersion/immersion.json",
-    "reports/immersion/immersion-mobile.json"
-   ],
-   "notes": [
-    "glTF Transform优化未运行（本机未安装，按计划记录保留无压缩GLB）。",
-    "WebGL context loss未自动化模拟；prefers-reduced-motion代码路径完整未单独截图验证。",
-    "dist/__props_harness.html与dist/__meeting_harness.html为一次性调参页（gitignored，不在src）。"
-   ]
+  ],
+  "model": "GLM-Flash",
+  "plan_updated_on": "2026-09-14",
+  "asset_plan": "blender-assets-plan.md",
+  "asset_run": {
+    "status": "completed",
+    "run_id": "20260913T160211Z-e1f2",
+    "blender": "4.0.2 aarch64 (spark-410a)",
+    "output_directory": "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2",
+    "report": "asset-report.json"
   }
- ],
- "known_limits": [
-  "官方火堆图的具体地图与触发条件未核实，本功能按改编演出实现。",
-  "沉水水下构图按water-reference.md用户参考实现；入水时序为项目改编。",
-  "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
-  "本文件记录本地候选完成，不代表已发布或已部署。"
- ],
- "next_action": "overnight-20260920 branch pushed (not merged; includes 0919): F1 B4 walk-NPC townsfolk (findPath/pickWanderTarget sunk into src, src/walk-npcs.js + bubbles, busy-hidden/photo-no-bubble, desktop smoke 72/72 + mobile 59/59, P0 35/35); F2/F3 web_wardrobe tools committed locally (a2-coats-closeup 54 shots; mix-intersection-audit 50 groups/476 pairs ray-parity 0 unstable, 27 suspected -> A4 list); F4 hygiene (scripts/dev/) + README/START_HERE refresh; F5 design-pov-gear.md. Morning: read C:/3d/eys/REPORT_FLASH_20260920.md, review 8870 + web_wardrobe pages, merge branch, rebuild + five gates, publish 1.5.0.",
- "blockers": [],
- "deviations": [
-  {
-   "found_in": "用户自查反馈（cast.14 体验 POV 黑屏）",
-   "root_cause": "自身POV相机被放置在玩家自己的鹅头内部：按铃阶段相机在漫游模型眼位（模型可见），自己沉水/火堆相机骑在目标眼位（目标模型可见）；鹅体材质双面渲染，头部内表面糊满画面。",
-   "fix": "按铃与全部busy期间隐藏漫游模型；自身出局分支隐藏目标整身模型（按设计仅保留画面下缘POV翅膀与锁链/火光的身体联系），NPC旁观与会议不受影响。",
-   "verified": "ACTOR=cast.14 全链32/32（ring-pov.png按铃可见金铃、water-self.png翅膀+链+石、fire-self.png火光+翅膀）+ 默认链32/32回归。"
-  },
-  {
-   "found_in": "用户反馈（沉水体验调优）",
-   "change": "①水演出改为\"被众人抬起→抬向水面→抛出\"三段时间线（0-1.3s抬起晃动、1.3-2.4s弧线抛出、2.4s入水），护送鹅站位前移使自身POV与旁观都能看到被架住；②水下加入8尾绕柱环游的低多边形鱼（共享几何/材质，仅水下可见）；③下沉速度放缓（落差0.44/3.2s并带轻微浮沉，原0.58/3.2s）。",
-   "verified": "默认链32/32回归；water-self.png（被护送鹅架起视角）、water-npc.png（鹅+链+石+鱼群）、water-self-look-down.png（鱼群+链节）。"
-  }
- ],
- "design_revision": "1.2",
- "reference_updates": [
-  {
-   "id": "06",
-   "source": "user_attachment",
-   "spec": "water-reference.md",
-   "image_sha256": "e001a6f2054a322b7ec04e7e56434c176e64c7db34ea626f8c82f38ec937b3b3",
-   "visual_status": "confirmed",
-   "execution_status": "not_started",
-   "scope": "water composition and P4 acceptance"
-  }
- ],
- "model": "GLM-Flash",
- "plan_updated_on": "2026-09-14",
- "asset_plan": "blender-assets-plan.md",
- "asset_run": {
-  "status": "completed",
-  "run_id": "20260913T160211Z-e1f2",
-  "blender": "4.0.2 aarch64 (spark-410a)",
-  "output_directory": "C:/3d/eys/immersion_assets/20260913T160211Z-e1f2",
-  "report": "asset-report.json"
- }
 }
