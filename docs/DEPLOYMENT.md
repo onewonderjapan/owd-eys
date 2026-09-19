@@ -83,3 +83,9 @@ GitHub 源码仓库**为公开仓库**（`onewonderjapan/owd-eys`）。因此：
 本地及公网均通过三项定向检查：旧 HTML 搭配兼容脚本、地图下载一次 503 后重试、角色模型下载一次 503 后重试。公网桌面与手机第一人称检查通过，HTTP 缓存头、版本路径及 9 项文件 SHA256 校验通过。发布 131 个文件，37 个上传、94 个复用，缓存失效完成。角色模型维持 4.3.28，访问控制及 DNS 未变动。
 
 现有防护与低成本选项见 [ACCESS_PROTECTION.md](ACCESS_PROTECTION.md)。详细检查结果保存在忽略目录 `reports/incident/` 和 `reports/production/`。
+
+## 1.2.0 – 1.4.2（2026-09-15 ~ 09-17）
+
+这几版没有基础设施、DNS 或访问控制变更，发布流程与上表一致（构建 → 本地冒烟 → `scripts/publish.py` 上传 → 缓存失效 → 公网校验）。
+各版本的功能改动见 [CHANGELOG.md](../CHANGELOG.md)；沉浸演出的镜头清单与实施记录见 [docs/immersion/](immersion/)。
+
