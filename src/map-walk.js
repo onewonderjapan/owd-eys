@@ -3,7 +3,8 @@ import {createNavigation,createWalker} from './map-walk-simulation.js';
 import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
 import {createWalkView} from './map-walk-view.js';
 import {createPropLibrary} from './immersion-props.js';
-import {IMMERSION_CONFIG} from './immersion-config.js';
+import {IMMERSION_CONFIG,WALK_NPC_CONFIG} from './immersion-config.js';
+import {createWalkNpcs} from './walk-npcs.js';
 import {createImmersionDirector} from './immersion-director.js';
 import {createWalkAudio} from './walk-audio.js';
 
@@ -12,7 +13,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  const $=s=>document.querySelector(s),keys=new Set(),touches=new Map();
  const enter=$('#walk-enter'),exit=$('#walk-exit'),hud=$('#walk-hud'),info=$('#walk-info'),prompt=$('#walk-prompt');
  let nav,walker,avatar,loading=false,active=false,paused=false,failure=null,saved=null,raf=0,last=0,frame=0;
- let director=null,propsStarted=false,immersionSnapshot=null;
+ let director=null,propsStarted=false,immersionSnapshot=null,npcs=null;
  let photoMode=false,dusk=false,duskSaved=null;
  const propsLibrary=createPropLibrary();
  const walkAudio=createWalkAudio();
@@ -34,6 +35,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   photoMode=true;
   hud.classList.add('photo');host.classList.add('photo-frame');
   $('#walk-photo-bar').hidden=false;
+  npcs?.setBubblesHidden(true); // photo mode keeps townsfolk visible but caption-free
   syncPhotoButton();
   host.focus({preventScroll:true});
  }
@@ -41,6 +43,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(!photoMode)return;photoMode=false;
   hud.classList.remove('photo');host.classList.remove('photo-frame');
   const bar=$('#walk-photo-bar');if(bar)bar.hidden=true;
+  npcs?.setBubblesHidden(false);
   syncPhotoButton();
   host.focus({preventScroll:true});
  }
@@ -159,13 +162,14 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function updateBusyHud(busy){
   if(busy===busyHudHidden)return;busyHudHidden=busy;
   walkAudio.setDucked(busy);
-  for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt,#walk-photo-bar'))el.hidden=busy;
+  for(const el of document.querySelectorAll('.walk-pad,.walk-bottom,.walk-actions,.walk-status,#walk-prompt,#walk-photo-bar,#walk-npc-bubbles'))el.hidden=busy;
  }
  function frameLoop(time){
   if(!active)return;const dt=Math.max(0,Math.min((time-last)/1000,.05))||0;last=time;
   if(director&&director.busy){
    updateBusyHud(true);
    stopFlicker();flickerArmed=false; // performances own the lights; disarm until the player leaves
+   npcs?.setHidden(true); // the cast owns the stage; townsfolk step out until roam returns
    if(avatar)avatar.player.visible=false;
    // The ejection stage draws the full cast plus effects; render at 1x during the
    // performance and restore the walk ratio on the roam path below.
@@ -175,6 +179,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   }
   if(busyScaled){busyScaled=false;renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));resize();}
   updateBusyHud(false);
+  npcs?.setHidden(false);
   if(avatar&&!avatar.player.visible)avatar.player.visible=true;
   const values=new Set([...keys,...touches.values()]);const x=Number(values.has('KeyD')||values.has('ArrowRight'))-Number(values.has('KeyA')||values.has('ArrowLeft')),z=Number(values.has('KeyS')||values.has('ArrowDown'))-Number(values.has('KeyW')||values.has('ArrowUp'));
   const s=walker.step(photoMode||paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
@@ -191,6 +196,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   avatar.visual.position.y=!reduced&&s.moving?Math.abs(Math.sin(s.distance*15))*.025:0;
   const aim=new THREE.Vector3(s.position[0],.2,s.position[1]);target.lerp(aim,1-Math.exp(-dt*12));camera.position.copy(target).add(offset);camera.lookAt(target);
   view.update(s.position,nav.heightAt(s.position));
+  if(!paused)npcs?.update(dt); // pause (blur) freezes townsfolk by simply not ticking them
   if(++frame%3===0)updateHud();render();raf=requestAnimationFrame(frameLoop);
  }
  function projection(){if(!active)return false;const w=host.clientWidth,h=host.clientHeight,width=w/h<1?8.5:12.5;camera.left=-width/2;camera.right=width/2;camera.top=width*h/w/2;camera.bottom=-camera.top;camera.zoom=1;camera.updateProjectionMatrix();view.projection();director?.projection(w,h);return true;}
@@ -218,6 +224,10 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    root.traverse(o=>{if(o.userData.map_category==='characters'){saved.visible.push([o,o.visible]);o.visible=false;}});
    controls.enabled=false;active=true;paused=false;clearInput();avatar.player.visible=true;
    walkAudio.start();syncMuteButton();
+  // B4 townsfolk: loading starts once the player avatar is ready; the module owns
+  // its own avatars exclusively and releases them all in stop().
+  if(!npcs)npcs=createWalkNpcs({scene,nav,config:WALK_NPC_CONFIG,getPlayerPosition:()=>walker?[...walker.state.position]:null,getPlayerActor:()=>avatar?.actorId,isMobile:()=>host.clientWidth<700||matchMedia('(pointer: coarse)').matches,reducedMotion:reduced,camera,host});
+  npcs.start();
    document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
    view.sync();view.update(walker.state.position,nav.heightAt(walker.state.position));
    // Roam renders the full town (205k triangles, no LOD); 1x keeps the frame budget
@@ -233,6 +243,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(!active)return;active=false;
   if(director&&director.busy)director.cancel('stop');
   walkAudio.stop();exitPhoto();setDusk(false);syncDuskButton();stopFlicker();
+  npcs?.stop();npcs=null; // exit walk: townsfolk and their bubble layer go with it
   immersionSnapshot=null;updateBusyHud(false);
   clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
   for(const [o,visible] of saved.visible)o.visible=visible;highlight.visible=saved.highlight;
@@ -286,6 +297,6 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }

@@ -79,6 +79,26 @@ export const IMMERSION_CONFIG = Object.freeze({
  limits: Object.freeze({flameRings: 9, flameLayers: 2, bubbles: 6, escorts: 2}),
 });
 
+// B4 walk-NPC townsfolk: roaming extras for free roam. Speech lines are local
+// ambient chatter and must never overlap the meeting speechPool above.
+export const WALK_NPC_CONFIG = Object.freeze({
+ count: 4,            // desktop townsfolk
+ mobileCount: 2,      // phone townsfolk
+ speed: 1.4,          // stroll speed, units/second (slower than the player's 2.35)
+ pauseRange: Object.freeze([1.5, 4.0]),
+ avoidPlayerRadius: 0.9,  // wait in place instead of shoving through the player
+ spawnMinDistance: 3.0,
+ bubble: Object.freeze({
+  duration: 2.8,
+  cooldown: Object.freeze([6, 14]),
+  pool: Object.freeze([
+   '今天广场的风真舒服。', '码头的木箱又堆高了。', '酒馆说晚上有新烤饼。',
+   '礼拜堂的钟声真稳。', '河边的芦苇黄了一半。', '散步有助于思考人生。',
+   '理发店的椅子总是空的。', '仓库的木桶又滚到路中间了。',
+  ]),
+ }),
+});
+
 // Player always sits at seat 0; the seven NPCs come from the fixed candidate order.
 export function selectRoster(playerActorId) {
  if (typeof playerActorId !== 'string' || !playerActorId) throw new Error('缺少玩家角色ID');
