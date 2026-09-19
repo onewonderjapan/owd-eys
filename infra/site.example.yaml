@@ -1,6 +1,51 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: EYS noncommercial fan-work static playground, same private-S3 and CloudFront pattern as pet.onewonder.co.jp.
+Description: EYS noncommercial fan-work static playground - private S3 origin behind CloudFront (OAC), optional Route 53 alias.
+
+# Template shipped with the repository. Every account-specific identifier is a
+# parameter, so no bucket name, certificate ARN or hosted zone id is committed.
+# Supply the real values at deploy time, e.g. from a local .env (see .env.example):
+#
+#   aws cloudformation deploy \
+#     --profile "$EYS_AWS_PROFILE" --region ap-northeast-1 \
+#     --stack-name owd-eys --template-file infra/site.example.yaml \
+#     --parameter-overrides \
+#       SiteDomainName="$EYS_SITE_DOMAIN" \
+#       SiteBucketName="$EYS_S3_BUCKET" \
+#       AcmCertificateArn="$EYS_ACM_CERT_ARN" \
+#       HostedZoneId="$EYS_HOSTED_ZONE_ID" \
+#       CachePolicyId="$EYS_CF_CACHE_POLICY_ID" \
+#       ResponseHeadersPolicyId="$EYS_CF_RESPONSE_HEADERS_POLICY_ID" \
+#       PublishDns=false
+#
+# Keep any copy that has real values baked in as infra/site.local.yaml - that
+# name is gitignored.
 Parameters:
+  SiteDomainName:
+    Type: String
+    Description: Public host name served by the distribution, e.g. eys.example.com
+  SiteBucketName:
+    Type: String
+    Description: Private S3 bucket holding the published build under the out/ prefix
+  AcmCertificateArn:
+    Type: String
+    Description: ACM certificate ARN in us-east-1 covering SiteDomainName
+    AllowedPattern: '^arn:aws[a-zA-Z-]*:acm:us-east-1:\d{12}:certificate/.+$'
+  HostedZoneId:
+    Type: String
+    Default: ''
+    Description: Route 53 hosted zone id for SiteDomainName; required only when PublishDns=true
+  CachePolicyId:
+    Type: String
+    Default: 658327ea-f89d-4fab-a63d-7e88639e58f6
+    Description: >-
+      CloudFront cache policy. Default is the AWS managed CachingOptimized policy;
+      override with your own policy id if the site reuses a shared custom policy.
+  ResponseHeadersPolicyId:
+    Type: String
+    Default: 67f7725c-6f97-4210-82d7-5512b31e9d03
+    Description: >-
+      CloudFront response headers policy. Default is the AWS managed SecurityHeadersPolicy;
+      override with your own policy id if the site reuses a shared custom policy.
   PublishDns:
     Type: String
     Default: 'false'
@@ -13,7 +58,7 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      BucketName: onewonder-eys-566601428909
+      BucketName: !Ref SiteBucketName
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -32,7 +77,7 @@ Resources:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-        Name: onewonder-eys-oac
+        Name: !Sub '${AWS::StackName}-oac'
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -42,27 +87,27 @@ Resources:
       DistributionConfig:
         Enabled: true
         IPV6Enabled: true
-        Comment: eys.onewonder.co.jp - noncommercial Goose Goose Duck fan playground
-        Aliases: [eys.onewonder.co.jp]
+        Comment: !Sub '${SiteDomainName} - noncommercial Goose Goose Duck fan playground'
+        Aliases: [!Ref SiteDomainName]
         DefaultRootObject: index.html
         HttpVersion: http2and3
         PriceClass: PriceClass_200
         Origins:
-          - Id: onewonder-eys-s3
+          - Id: site-s3-origin
             DomainName: !GetAtt SiteBucket.RegionalDomainName
             OriginPath: /out
             OriginAccessControlId: !GetAtt OriginAccess.Id
             S3OriginConfig: {OriginAccessIdentity: ''}
         DefaultCacheBehavior:
-          TargetOriginId: onewonder-eys-s3
+          TargetOriginId: site-s3-origin
           ViewerProtocolPolicy: redirect-to-https
           AllowedMethods: [GET, HEAD]
           CachedMethods: [GET, HEAD]
           Compress: true
-          CachePolicyId: 0c3a60d0-24cd-41ce-85c9-87bbe0717564
-          ResponseHeadersPolicyId: a4818ae3-d1b4-4c61-b55c-ff98a459a672
+          CachePolicyId: !Ref CachePolicyId
+          ResponseHeadersPolicyId: !Ref ResponseHeadersPolicyId
         ViewerCertificate:
-          AcmCertificateArn: arn:aws:acm:us-east-1:566601428909:certificate/b3c65f6e-c447-4ddf-a17b-d11f2ade4cbd
+          AcmCertificateArn: !Ref AcmCertificateArn
           SslSupportMethod: sni-only
           MinimumProtocolVersion: TLSv1.2_2021
         Restrictions:
@@ -74,7 +119,7 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: OnlyEysCloudFrontReadsPublishedFiles
+          - Sid: OnlyThisCloudFrontReadsPublishedFiles
             Effect: Allow
             Principal: {Service: cloudfront.amazonaws.com}
             Action: s3:GetObject
@@ -86,11 +131,12 @@ Resources:
     Type: AWS::Route53::RecordSet
     Condition: Publish
     Properties:
-      HostedZoneId: Z049829035FWZ7KYTMXD4
-      Name: eys.onewonder.co.jp.
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Sub '${SiteDomainName}.'
       Type: A
       AliasTarget:
         DNSName: !GetAtt Distribution.DomainName
+        # Fixed CloudFront alias zone id, identical in every account.
         HostedZoneId: Z2FDTNDATAQYW2
         EvaluateTargetHealth: false
 Outputs:
@@ -101,4 +147,4 @@ Outputs:
   CloudFrontDomain:
     Value: !GetAtt Distribution.DomainName
   SiteUrl:
-    Value: https://eys.onewonder.co.jp/
+    Value: !Sub 'https://${SiteDomainName}/'

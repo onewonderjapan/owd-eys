@@ -4,6 +4,11 @@ dist/
 reports/
 *.tfstate*
 .env*
+!.env.example
 *.pem
 *.key
 __pycache__/
+# Infrastructure templates with real account identifiers baked in.
+# The committed template is infra/site.example.yaml (all values parameterised).
+infra/site.yaml
+infra/site.local.yaml

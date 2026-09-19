@@ -1,12 +1,34 @@
-"""Upload a verified build to the dedicated EYS prefix; never delete old objects."""
-from pathlib import Path
-import argparse,subprocess,json,hashlib,mimetypes,concurrent.futures
+"""Upload a verified build to the dedicated EYS prefix; never delete old objects.
 
-parser=argparse.ArgumentParser();parser.add_argument('--profile',default='onewonder.root');parser.add_argument('--apply',action='store_true');args=parser.parse_args()
+Target identifiers are never hard-coded: the bucket, distribution, account and
+AWS CLI profile all come from the environment (see .env.example). Missing values
+are a hard error, so a build can never be pushed at a guessed or inherited target.
+"""
+from pathlib import Path
+import argparse,subprocess,json,hashlib,os,concurrent.futures
+
+def required(name,flag_hint=''):
+    value=(os.environ.get(name) or '').strip()
+    if not value:
+        hint=f' (or pass {flag_hint})' if flag_hint else ''
+        raise SystemExit(f'Missing {name}{hint}. Copy .env.example to .env and fill it in; see docs/DEPLOYMENT.md.')
+    return value
+
+parser=argparse.ArgumentParser()
+# No default profile on purpose: an implicit administrator/root profile is exactly
+# what we do not want a publish script to fall back to.
+parser.add_argument('--profile',default=None,help='AWS CLI profile; defaults to $EYS_AWS_PROFILE, required either way')
+parser.add_argument('--apply',action='store_true')
+args=parser.parse_args()
+profile=(args.profile or '').strip() or required('EYS_AWS_PROFILE','--profile')
 root=Path(__file__).resolve().parents[1];build=json.loads((root/'reports/build.json').read_text(encoding='utf-8'))
-bucket='onewonder-eys-566601428909';distribution='E23UO5CSFQ0BWM';account='566601428909'
+account=required('EYS_AWS_ACCOUNT_ID')
+bucket=required('EYS_S3_BUCKET')
+distribution=required('EYS_CF_DISTRIBUTION_ID')
+region=(os.environ.get('EYS_S3_REGION') or 'ap-northeast-1').strip()
+if not (account.isdigit() and len(account)==12):raise SystemExit('EYS_AWS_ACCOUNT_ID must be the 12-digit AWS account id.')
 def aws(*cmd):
-    p=subprocess.run(['aws',*cmd,'--profile',args.profile,'--output','json','--no-cli-pager'],capture_output=True,text=True,encoding='utf-8')
+    p=subprocess.run(['aws',*cmd,'--profile',profile,'--output','json','--no-cli-pager'],capture_output=True,text=True,encoding='utf-8')
     if p.returncode:raise RuntimeError(p.stderr.strip())
     return json.loads(p.stdout) if p.stdout.strip() else {}
 assert aws('sts','get-caller-identity')['Account']==account
@@ -38,7 +60,7 @@ def upload(row):
     cache='public,max-age=31536000,immutable' if name.startswith('releases/') or name.startswith('assets/') and suffix in {'.glb','.png'} else 'no-cache,max-age=0,must-revalidate'
     immutable=cache.startswith('public,max-age=31536000')
     key='out/'+name
-    existing=subprocess.run(['aws','s3api','head-object','--bucket',bucket,'--key',key,'--region','ap-northeast-1','--profile',args.profile,'--output','json','--no-cli-pager'],capture_output=True,text=True,encoding='utf-8')
+    existing=subprocess.run(['aws','s3api','head-object','--bucket',bucket,'--key',key,'--region',region,'--profile',profile,'--output','json','--no-cli-pager'],capture_output=True,text=True,encoding='utf-8')
     if existing.returncode==0:
         head=json.loads(existing.stdout)
         matches=head['ContentLength']==row['bytes'] and head.get('Metadata',{}).get('sha256')==row['sha256']
@@ -51,8 +73,8 @@ def upload(row):
     elif '(404)' not in existing.stderr and 'Not Found' not in existing.stderr:
         raise RuntimeError(existing.stderr.strip())
     # aws s3api uses SHA256 request checksums and the full-file metadata receipt.
-    aws('s3api','put-object','--bucket',bucket,'--key',key,'--body',str(p),'--content-type',kind,'--cache-control',cache,'--metadata','sha256='+row['sha256'],'--checksum-algorithm','SHA256','--region','ap-northeast-1')
-    head=aws('s3api','head-object','--bucket',bucket,'--key',key,'--region','ap-northeast-1')
+    aws('s3api','put-object','--bucket',bucket,'--key',key,'--body',str(p),'--content-type',kind,'--cache-control',cache,'--metadata','sha256='+row['sha256'],'--checksum-algorithm','SHA256','--region',region)
+    head=aws('s3api','head-object','--bucket',bucket,'--key',key,'--region',region)
     assert head['ContentLength']==row['bytes'] and head['Metadata']['sha256']==row['sha256'],name
     return {'path':name,'action':'uploaded'}
 rows=build['files'];uploaded=[]

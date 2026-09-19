@@ -3,7 +3,14 @@ import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import assert from 'node:assert/strict';
 
-const url = new URL(process.argv[2] || 'https://eys.onewonder.co.jp/');
+// Site and bucket identifiers come from the environment (see .env.example) so no
+// account-specific value is committed; a missing one is a clear error, not a guess.
+function required(name) {
+  const value = (process.env[name] || '').trim();
+  if (!value) throw new Error(`Missing ${name}. Copy .env.example to .env and fill it in; see docs/DEPLOYMENT.md.`);
+  return value;
+}
+const url = new URL(process.argv[2] || `https://${required('EYS_SITE_DOMAIN')}/`);
 const build = JSON.parse(await fs.readFile('reports/build.json', 'utf8'));
 const scene = JSON.parse(await fs.readFile('dist/map-scene.json', 'utf8'));
 const manifest = JSON.parse(await fs.readFile('dist/assets/manifest.json', 'utf8'));
@@ -28,7 +35,8 @@ assert(html.includes('src="' + build.release_path + '/main.js"'));
 const redirect = await fetch(new URL('http://' + url.host + '/'), {redirect: 'manual'});
 assert([301, 302, 307, 308].includes(redirect.status));
 assert.equal(redirect.headers.get('location'), url.href);
-const privateOrigin = 'https://onewonder-eys-566601428909.s3.ap-northeast-1.amazonaws.com/out/index.html';
+const bucketRegion = (process.env.EYS_S3_REGION || 'ap-northeast-1').trim();
+const privateOrigin = `https://${required('EYS_S3_BUCKET')}.s3.${bucketRegion}.amazonaws.com/out/index.html`;
 const anonymous = await fetch(privateOrigin);
 assert.equal(anonymous.status, 403, 'S3 must require CloudFront OAC');
 const report = {
