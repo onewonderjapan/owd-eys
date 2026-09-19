@@ -1,10 +1,16 @@
 # ZCode（GLM-Flash）施工入口：POV 会议与出局体验
 
-> **2026-09-15 精修轮状态（S3 完成）**：首轮 P0–P6 已完成（1.2.0 本地候选）。其后的「自身出局 POV 精修」经三段续接会话：S1 搭出 F1–F5 初版（遗留 6 项问题）；S2 修复全部遗留并重验；**S3 按用户脚本重排演出时间线**——水 9.5s 六拍（全员走来→举起→携行→岸边停顿→扔下→看着岸上的鹅缓慢下沉，默认视线逐拍编排）、火 6.3s 五拍（含行进列），时长集中在 immersion-config.js。最终验证：cast.14 水/火 0 失败 0 pageerror、NPC 主冒烟 32/32、REDUCE_MOTION 与 cast.02 专项 PASS、build+npm test 通过。详见 [self-pov-refinement-report.md](self-pov-refinement-report.md) 与 [self-pov-refinement-progress.json](self-pov-refinement-progress.json)。本地体验入口不变：`npm start` → http://127.0.0.1:8870/ 。后续以报告「剩余项」续接，不要按首轮 prompt 重做。
+> **当前状态（2026-09-20 复核）**：公网 **1.4.2 已发布**（2026-09-17）。后续功能排期按
+> `C:/3d/eys/PLAN.md` **阶段 B** 推进；跨夜施工用自包含任务书系列 `C:/3d/eys/PLAN_FLASH_*.md`
+> （每夜一份任务书 + 对应 REPORT，当前最新 `PLAN_FLASH_20260920.md`）。**状态正本是
+> [progress.json](progress.json)**，每次只更新一行纪要；本文件其余段落均为历史记录，不再维护。
+> 夜间基线（2026-09-20）：纯逻辑 35 项、桌面冒烟 72 项、手机冒烟 59 项，全绿。
 
-状态：~~精修尚未施工~~ → **精修三段会话已完成（含用户脚本时间线），本地候选待用户验收画面。** 更新：2026-09-15。施工正本：`C:\3d\eys\owd-eys`。
+> 【历史 · 2026-09-15 精修轮】**2026-09-15 精修轮状态（S3 完成）**：首轮 P0–P6 已完成（1.2.0 本地候选）。其后的「自身出局 POV 精修」经三段续接会话：S1 搭出 F1–F5 初版（遗留 6 项问题）；S2 修复全部遗留并重验；**S3 按用户脚本重排演出时间线**——水 9.5s 六拍（全员走来→举起→携行→岸边停顿→扔下→看着岸上的鹅缓慢下沉，默认视线逐拍编排）、火 6.3s 五拍（含行进列），时长集中在 immersion-config.js。最终验证：cast.14 水/火 0 失败 0 pageerror、NPC 主冒烟 32/32、REDUCE_MOTION 与 cast.02 专项 PASS、build+npm test 通过。详见 [self-pov-refinement-report.md](self-pov-refinement-report.md) 与 [self-pov-refinement-progress.json](self-pov-refinement-progress.json)。本地体验入口不变：`npm start` → http://127.0.0.1:8870/ 。后续以报告「剩余项」续接，不要按首轮 prompt 重做。
 
-## 当前入口：自身 POV 精修
+【历史 · 2026-09-15】状态：~~精修尚未施工~~ → **精修三段会话已完成（含用户脚本时间线），本地候选待用户验收画面。** 更新：2026-09-15。施工正本：`C:\3d\eys\owd-eys`。
+
+## 【历史】当前入口：自身 POV 精修
 
 用户本轮要求 review 自己被票出的场景，并给 ZCode 精修 prompt。已基于本地真实流程新拍桌面/平板/手机尺寸共 16 张图，发现翅膀悬浮与竖屏裁切、低头链石难读、火堆眼位跳变和效果占位问题。
 
@@ -17,7 +23,7 @@
 
 **已补沉水参考图：** 先看 [water-reference.md](water-reference.md)。水下画面采用鹅在上、长链连接下方石块、深蓝留白；设计1.2与P4已同步，早期待补图描述已由这份更新替代。
 
-## 历史首轮启动提示词（本轮不使用）
+## 【历史】历史首轮启动提示词（本轮不使用）
 
 直接复制下面这段，纯文本版见 [ZCODE_TONIGHT_PROMPT.txt](ZCODE_TONIGHT_PROMPT.txt)。本轮包含本地施工与S1道具制作；此处仅准备提示词，没有创建定时任务或启动ZCode。
 
