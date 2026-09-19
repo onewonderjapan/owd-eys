@@ -15,7 +15,8 @@ const url = process.argv[2] || 'http://127.0.0.1:8870/';
 const label = process.argv[3] || 'immersion';
 
 const simModule = await import('../src/map-walk-simulation.js').catch(() => ({}));
-const {createNavigation} = simModule;
+// findPath lives in src (shared with the walk NPCs); nav is passed per call.
+const {createNavigation, findPath} = simModule;
 const moveTwin = simModule.moveCircle || ((p, d) => [p[0] + d[0], p[1] + d[1]]);
 // Button-table coordinates come from the config, never hardcoded (it is the
 // same source the walk reads).
@@ -35,7 +36,7 @@ async function driveToTarget(page, target, maxRounds = 900) {
   const KEY_DIRS = {KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0]};
   const speed = 2.35, frameDt = 0.05;
   const stepTwin = (p, key) => { const [dx, dz] = KEY_DIRS[key]; return moveTwin(nav, p, [dx * speed * frameDt, dz * speed * frameDt]).position; };
-  const route = findPath(await page.evaluate(() => window.eys.state().walk.position), target);
+  const route = findPath(nav, await page.evaluate(() => window.eys.state().walk.position), target);
   if (!Array.isArray(route)) return null;
   const arcOf = p => {
    let arc = 0, bd = Infinity, bi = 0, bt = 0;
@@ -80,60 +81,6 @@ async function driveToTarget(page, target, maxRounds = 900) {
   return await page.evaluate(() => window.eys.state().walk.position);
 }
 
-function lineOfSight(a, b, radius = 0.3) {
-  if (!nav) return false;
-  const dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
-  const steps = Math.max(1, Math.ceil(dist / 0.1));
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    if (nav.collision([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], radius)) return false;
-  }
-  return true;
-}
-
-function findPath(from, to, step = 0.22) {
-  if (!nav) return null;
-  const key = p => `${Math.round(p[0] / step)},${Math.round(p[1] / step)}`;
-  const start = [...from], goal = [...to];
-  const open = new Map([[key(start), {p: start, g: 0, f: Math.hypot(goal[0] - start[0], goal[1] - start[1]), parent: null}]]);
-  const closed = new Set();
-  let best = null, bestDist = Infinity;
-  while (open.size) {
-    let currentKey = null, currentNode = null;
-    for (const [k, node] of open) if (!currentNode || node.f < currentNode.f) { currentNode = node; currentKey = k; }
-    open.delete(currentKey);
-    closed.add(currentKey);
-    const d = Math.hypot(goal[0] - currentNode.p[0], goal[1] - currentNode.p[1]);
-    if (d < bestDist) { bestDist = d; best = currentNode; }
-    if (d < 0.4) { best = currentNode; break; }
-    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
-      if (!dx && !dz) continue;
-      const np = [currentNode.p[0] + dx * step, currentNode.p[1] + dz * step];
-      const k = key(np);
-      if (closed.has(k) || nav.collision(np, 0.26)) continue;
-      const g = currentNode.g + Math.hypot(dx, dz);
-      const next = open.get(k);
-      if (!next || g < next.g)
-        open.set(k, {p: np, g, f: g + Math.hypot(goal[0] - np[0], goal[1] - np[1]), parent: currentNode});
-    }
-    if (open.size > 60000) break;
-  }
-  const raw = [];
-  for (let node = best; node; node = node.parent) raw.unshift(node.p);
-  if (raw.length < 2) return null;
-  // String-pull: keep only turns, ensuring generous clearance for the walker radius.
-  const smoothed = [raw[0]];
-  let anchor = 0;
-  for (let i = 2; i < raw.length; i++) {
-    if (!lineOfSight(raw[anchor], raw[i])) {
-      smoothed.push(raw[i - 1]);
-      anchor = i - 1;
-    }
-  }
-  smoothed.push(raw[raw.length - 1]);
-  return smoothed;
-}
-
 const report = {schema: 1, url, label, passed: false, version: null, build_sha256: (() => {
   // pin the report to the exact build so publish.py can reject stale reports
   try { return createHash('sha256').update(readFileSync(path.join(root, 'reports', 'build.json'))).digest('hex'); }
@@ -169,7 +116,7 @@ try {
   const spawn = walkState.position;
   // BFS to the chapel square, then a hand-laid tail through the courthouse door's
   // wide-clearance channel (the doorway slants, so keep >=0.4 from both jambs).
-  const route = findPath(spawn, [8.7, -4.6]);
+  const route = findPath(nav, spawn, [8.7, -4.6]);
   if (Array.isArray(route)) route.push([8.75, -5.1], [8.95, -5.9], [9.1, -6.5], [9.2, -6.95], target);
   check('nav: 计算出可通行路径', Array.isArray(route) && route.length > 2, route ? `${route.length} waypoints` : 'no path');
 

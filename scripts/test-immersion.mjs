@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {IMMERSION_CONFIG, selectRoster, createBellProxy, pickSessionSpeeches} from '../src/immersion-config.js';
 import {createImmersionState, countVotesFor} from '../src/immersion-state.js';
-import {createNavigation} from '../src/map-walk-simulation.js';
+import {createNavigation, findPath, pickWanderTarget} from '../src/map-walk-simulation.js';
 
 const checks = [];
 const check = (name, fn) => {
@@ -384,6 +384,56 @@ check('bell: 触发距离内可达、距离外不触发（几何判断）', () =
  const [bx, , bz] = IMMERSION_CONFIG.bell.base;
  createNavigation(layout.layout, {...props, proxies: [...props.proxies, createBellProxy()]});
  assert.ok(Math.hypot(interaction[0] - bx, interaction[1] - bz) <= triggerDistance);
+});
+
+// --- walk-npc pathfinding helpers (findPath sunk from the smoke script) ------
+check('path: 出生点到铃交互点有路且每个路点无碰撞', () => {
+ const nav = createNavigation(layout.layout, props);
+ const route = findPath(nav, nav.spawn, IMMERSION_CONFIG.bell.interaction);
+ assert.ok(Array.isArray(route) && route.length >= 2, `route=${route && route.length}`);
+ for (const p of route) assert.equal(nav.collision(p), null, JSON.stringify(p));
+ const last = route[route.length - 1];
+ const [ix, iz] = IMMERSION_CONFIG.bell.interaction;
+ assert.ok(Math.hypot(last[0] - ix, last[1] - iz) < 0.5, `末端=${last} 交互点=${ix},${iz}`);
+});
+check('path: 实体内部目标返回null', () => {
+ const nav = createNavigation(layout.layout, props);
+ // 最大实体的包围盒中心必然深居实体内:最近可走格离它远超 0.4 容差。
+ const blocks = layout.layout.blocks.map(b => {
+  const xs = b.poly.map(p => p[0]), zs = b.poly.map(p => p[1]);
+  return {id: b.id, area: (Math.max(...xs) - Math.min(...xs)) * (Math.max(...zs) - Math.min(...zs)),
+   center: [(Math.max(...xs) + Math.min(...xs)) / 2, (Math.max(...zs) + Math.min(...zs)) / 2]};
+ }).sort((a, b) => b.area - a.area);
+ let probed = 0;
+ for (const b of blocks) {
+  const world = nav.toWorld(b.center);
+  if (nav.collision(world) === null) continue; // L形块中心可能不在实体内,换下一个
+  probed++;
+  assert.equal(findPath(nav, nav.spawn, world), null, `${b.id} 内部点 ${world} 不应可达`);
+  if (probed >= 3) break;
+ }
+ assert.ok(probed > 0, '没有找到实体内部点');
+});
+check('wander: 同种子pickWanderTarget可复现且结果可通行可达', () => {
+ const nav = createNavigation(layout.layout, props);
+ const lcg = seed => () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return seed / 4294967296; };
+ const a = pickWanderTarget(nav, lcg(20260920), {from: nav.spawn});
+ const b = pickWanderTarget(nav, lcg(20260920), {from: nav.spawn});
+ assert.ok(Array.isArray(a), `a=${a}`);
+ assert.deepEqual(a, b);
+ assert.equal(nav.collision(a), null, JSON.stringify(a));
+ assert.ok(Math.hypot(a[0] - nav.spawn[0], a[1] - nav.spawn[1]) >= 2.5, `距离=${Math.hypot(a[0] - nav.spawn[0], a[1] - nav.spawn[1])}`);
+ assert.ok(Array.isArray(findPath(nav, nav.spawn, a)), '采样点必须可达');
+});
+check('wander: 不同种子给出不同目标(采样确实在工作)', () => {
+ const nav = createNavigation(layout.layout, props);
+ const lcg = seed => () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return seed / 4294967296; };
+ const picks = new Set();
+ for (let s = 0; s < 8; s++) {
+  const p = pickWanderTarget(nav, lcg(s * 7919 + 3), {from: nav.spawn});
+  if (p) picks.add(p.map(v => v.toFixed(2)).join(','));
+ }
+ assert.ok(picks.size >= 4, `8个种子只得到${picks.size}个不同点`);
 });
 
 // --- baseline immutability --------------------------------------------------

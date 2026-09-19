@@ -83,6 +83,75 @@ export function moveCircle(nav,position,delta){
   if(!nav.collision([p[0],p[1]+step[1]]))p[1]+=step[1];
  }return {position:p,blocked};
 }
+// Grid A* over the nav mesh: the algorithm proven in the smoke script, sunk here
+// so the smoke and the walk NPCs share one implementation. Returns turn-only
+// waypoints, or null when the goal is further than the reach tolerance from any
+// walkable cell (deep inside a solid). The tolerance is 1.0 because interaction
+// points legitimately sit beside props: the emergency-button table spot measures
+// 0.94 from the nearest 0.26-clearance cell, so a best-effort path that ends
+// within 1.0 is still a useful "walk up to it" route; anything beyond that would
+// leave a walker grinding against a wall.
+export function findPath(nav,from,to,step=.22){
+ if(!nav)return null;
+ const key=p=>`${Math.round(p[0]/step)},${Math.round(p[1]/step)}`;
+ const start=[...from],goal=[...to];
+ const open=new Map([[key(start),{p:start,g:0,f:Math.hypot(goal[0]-start[0],goal[1]-start[1]),parent:null}]]);
+ const closed=new Set();
+ let best=null,bestDist=Infinity;
+ while(open.size){
+  let currentKey=null,currentNode=null;
+  for(const [k,node] of open)if(!currentNode||node.f<currentNode.f){currentNode=node;currentKey=k;}
+  open.delete(currentKey);closed.add(currentKey);
+  const d=Math.hypot(goal[0]-currentNode.p[0],goal[1]-currentNode.p[1]);
+  if(d<bestDist){bestDist=d;best=currentNode;}
+  if(d<0.4){best=currentNode;break;}
+  for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+   if(!dx&&!dz)continue;
+   const np=[currentNode.p[0]+dx*step,currentNode.p[1]+dz*step],k=key(np);
+   if(closed.has(k)||nav.collision(np,.26))continue;
+   const g=currentNode.g+Math.hypot(dx,dz),next=open.get(k);
+   if(!next||g<next.g)open.set(k,{p:np,g,f:g+Math.hypot(goal[0]-np[0],goal[1]-np[1]),parent:currentNode});
+  }
+  if(open.size>60000)break;
+ }
+ if(!best||bestDist>=1)return null;
+ const raw=[];
+ for(let node=best;node;node=node.parent)raw.unshift(node.p);
+ if(raw.length<2)return null;
+ // String-pull: keep only turns, sampling a generous clearance (0.3) for the walker radius.
+ const lineOfSight=(a,b,radius=.3)=>{
+  const dist=Math.hypot(b[0]-a[0],b[1]-a[1]),steps=Math.max(1,Math.ceil(dist/.1));
+  for(let i=0;i<=steps;i++){const t=i/steps;if(nav.collision([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t],radius))return false;}
+  return true;
+ };
+ const smoothed=[raw[0]];
+ let anchor=0;
+ for(let i=2;i<raw.length;i++){
+  if(!lineOfSight(raw[anchor],raw[i])){smoothed.push(raw[i-1]);anchor=i-1;}
+ }
+ smoothed.push(raw[raw.length-1]);
+ return smoothed;
+}
+// Deterministic wander-goal sampler for the walk NPCs: rejection-sample inside the
+// walkable bbox (the island boundary edges), keep points that are collision-free,
+// far enough from `from`, and actually reachable via findPath. `rng` is ()=>[0,1)
+// so callers pass a seeded LCG and every run replays the same stroll.
+export function pickWanderTarget(nav,rng,{minDistance=2.5,from}={}){
+ if(!nav)return null;
+ const start=from||nav.spawn;
+ let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+ for(const [a,b] of nav.boundary)for(const p of [a,b]){
+  if(p[0]<minX)minX=p[0];if(p[0]>maxX)maxX=p[0];if(p[1]<minZ)minZ=p[1];if(p[1]>maxZ)maxZ=p[1];
+ }
+ for(let i=0;i<200;i++){
+  const p=[minX+rng()*(maxX-minX),minZ+rng()*(maxZ-minZ)];
+  if(nav.collision(p))continue;
+  if(Math.hypot(p[0]-start[0],p[1]-start[1])<minDistance)continue;
+  if(!findPath(nav,start,p))continue;
+  return p;
+ }
+ return null;
+}
 export function createWalker(nav){
  const state={position:[...nav.spawn],heading:Math.PI,visited:new Set(),area:nav.areaAt(nav.spawn),near:null,blocked:null,distance:0,moving:false};
  function step(input,dt){
