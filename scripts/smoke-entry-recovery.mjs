@@ -8,7 +8,10 @@ const build=JSON.parse(await fs.readFile('reports/build.json','utf8'));
 const old=await fs.readFile('scripts/fixtures/index-1.0.0.html','utf8');
 const scene=JSON.parse(await fs.readFile('src/map-scene.json','utf8'));
 const manifest=JSON.parse(await fs.readFile('src/assets/manifest.json','utf8'));
-const b=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+// CHROME_PATH overrides the local browser; set it to an empty string to use the
+// Chromium that Playwright downloads (what CI does).
+const executablePath=process.env.CHROME_PATH??'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+const b=await chromium.launch({...(executablePath?{executablePath}:{}),headless:true});
 const results=[];
 try {
  for(const kind of ['cached-html','map-retry','avatar-retry']) {

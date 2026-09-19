@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Read-only by default; no job here needs to write to the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # GLB models and portraits are not in Git. The build verifies every asset
+      # against assets-manifest.json, so it cannot run without them; they are
+      # fetched from the published site and cached by manifest hash.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/assets
+          key: eys-assets-${{ hashFiles('assets-manifest.json') }}
+      - name: Fetch hash-locked runtime assets
+        run: npm run fetch-assets
+
+      - run: npm run build
+      - name: Package checks (scripts/check-build.mjs)
+        run: npm test
+      - name: Immersion logic checks (scripts/test-immersion.mjs)
+        run: npm run test:immersion
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+  smoke:
+    name: browser smoke (manual)
+    # End-to-end WebGL smoke needs a browser and the full asset download; it is
+    # run on demand rather than on every push so the required check stays fast.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Point the smoke scripts at the Playwright Chromium
+        run: |
+          path=$(node --input-type=module -e 'import {chromium} from "playwright"; console.log(chromium.executablePath());')
+          echo "CHROME_PATH=$path" >> "$GITHUB_ENV"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/assets
+          key: eys-assets-${{ hashFiles('assets-manifest.json') }}
+      - run: npm run fetch-assets
+      - run: npm run build
+      - name: Serve dist/
+        run: |
+          npm start &
+          timeout 60 bash -c 'until curl -sf http://127.0.0.1:8870/ > /dev/null; do sleep 1; done'
+      - run: node scripts/smoke.mjs
+      - run: node scripts/smoke-entry-recovery.mjs
