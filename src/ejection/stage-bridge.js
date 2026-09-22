@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {lerp, clamp01, ease, track} from './common.js';
 
 export function buildStage(ctx) {
- const {actors, targetId, isSelf, target, props, scene, camera, take, eyePos, stage, reduced, poseOnce, lastPose, setHiddenParts} = ctx;
+ const {actors, targetId, isSelf, target, props, scene, camera, take, eyePos, stage, reduced, lastPose, setHiddenParts} = ctx;
  // 断桥坠落: the target crosses a plank bridge, the middle planks give way,
  // and the fall lands in the existing water read (deep blue below).
  scene.background = new THREE.Color('#0d3357');

@@ -1,10 +1,10 @@
 // BOULDER (E4) ejection stage — mechanically moved from immersion-ejection.js
 // (2026-09-23 night split; branch body unchanged, see docs/immersion/ejection-split-map.md).
 import * as THREE from 'three';
-import {lerp, clamp01, ease, track} from './common.js';
+import {lerp, clamp01, track} from './common.js';
 
 export function buildStage(ctx) {
- const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, poseOnce, lastPose, setHiddenParts} = ctx;
+ const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, lastPose, setHiddenParts} = ctx;
  // 巨石滚落: comedy staging - the target is flattened then drifts off as a
  // 'paper goose'. No gore.
  scene.background = new THREE.Color('#1a1610');

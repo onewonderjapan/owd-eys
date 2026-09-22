@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import {lerp, clamp01, ease, track} from './common.js';
 
 export function buildStage(ctx) {
- const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, poseOnce, lastPose, setHiddenParts} = ctx;
+ const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, lastPose, setHiddenParts} = ctx;
  // 冲水飞湖: comedy spiral into a drain, launched over the town, splash landing.
  scene.background = new THREE.Color('#1c2a33');
  const ground = new THREE.Mesh(take(new THREE.PlaneGeometry(24, 24)),
