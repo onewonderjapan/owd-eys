@@ -91,28 +91,58 @@ export function moveCircle(nav,position,delta){
 // 0.94 from the nearest 0.26-clearance cell, so a best-effort path that ends
 // within 1.0 is still a useful "walk up to it" route; anything beyond that would
 // leave a walker grinding against a wall.
+// The open set is a binary heap: the previous linear scan made an unreachable
+// goal cost ~80-170ms of main-thread time, which the walk NPCs paid inside a
+// requestAnimationFrame tick every time they picked a new stroll target.
 export function findPath(nav,from,to,step=.22){
  if(!nav)return null;
  const key=p=>`${Math.round(p[0]/step)},${Math.round(p[1]/step)}`;
  const start=[...from],goal=[...to];
- const open=new Map([[key(start),{p:start,g:0,f:Math.hypot(goal[0]-start[0],goal[1]-start[1]),parent:null}]]);
- const closed=new Set();
- let best=null,bestDist=Infinity;
- while(open.size){
-  let currentKey=null,currentNode=null;
-  for(const [k,node] of open)if(!currentNode||node.f<currentNode.f){currentNode=node;currentKey=k;}
-  open.delete(currentKey);closed.add(currentKey);
-  const d=Math.hypot(goal[0]-currentNode.p[0],goal[1]-currentNode.p[1]);
-  if(d<bestDist){bestDist=d;best=currentNode;}
-  if(d<0.4){best=currentNode;break;}
+ const heap=[],gScore=new Map(),closed=new Set(),solid=new Map();
+ const swap=(i,j)=>{const t=heap[i];heap[i]=heap[j];heap[j]=t;};
+ const push=node=>{
+  heap.push(node);
+  for(let i=heap.length-1;i>0;){const parent=(i-1)>>1;if(heap[parent].f<=heap[i].f)break;swap(parent,i);i=parent;}
+ };
+ const pop=()=>{
+  const top=heap[0],last=heap.pop();
+  if(heap.length){
+   heap[0]=last;
+   for(let i=0;;){
+    const l=i*2+1,r=l+1;let small=i;
+    if(l<heap.length&&heap[l].f<heap[small].f)small=l;
+    if(r<heap.length&&heap[r].f<heap[small].f)small=r;
+    if(small===i)break;
+    swap(small,i);i=small;
+   }
+  }
+  return top;
+ };
+ const heuristic=p=>Math.hypot(goal[0]-p[0],goal[1]-p[1]);
+ push({p:start,g:0,f:heuristic(start),parent:null});gScore.set(key(start),0);
+ let best=null,bestDist=Infinity,expanded=0;
+ while(heap.length){
+  const current=pop(),currentKey=key(current.p);
+  if(closed.has(currentKey))continue; // stale heap entry superseded by a cheaper one
+  closed.add(currentKey);
+  const d=heuristic(current.p);
+  if(d<bestDist){bestDist=d;best=current;}
+  if(d<0.4){best=current;break;}
+  if(++expanded>60000)break;
   for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
    if(!dx&&!dz)continue;
-   const np=[currentNode.p[0]+dx*step,currentNode.p[1]+dz*step],k=key(np);
-   if(closed.has(k)||nav.collision(np,.26))continue;
-   const g=currentNode.g+Math.hypot(dx,dz),next=open.get(k);
-   if(!next||g<next.g)open.set(k,{p:np,g,f:g+Math.hypot(goal[0]-np[0],goal[1]-np[1]),parent:currentNode});
+   const np=[current.p[0]+dx*step,current.p[1]+dz*step],k=key(np);
+   if(closed.has(k))continue;
+   // Inside one call the grid key and the sampled position are a bijection
+   // (positions are start+k*step), so memoizing is exact, and it removes the
+   // ~3.5x repeat checks that dominated the cost.
+   let blocked=solid.get(k);
+   if(blocked===undefined){blocked=Boolean(nav.collision(np,.26));solid.set(k,blocked);}
+   if(blocked)continue;
+   const g=current.g+Math.hypot(dx,dz),prev=gScore.get(k);
+   if(prev!==undefined&&g>=prev)continue;
+   gScore.set(k,g);push({p:np,g,f:g+heuristic(np),parent:current});
   }
-  if(open.size>60000)break;
  }
  if(!best||bestDist>=1)return null;
  const raw=[];
@@ -132,13 +162,48 @@ export function findPath(nav,from,to,step=.22){
  smoothed.push(raw[raw.length-1]);
  return smoothed;
 }
-// Deterministic wander-goal sampler for the walk NPCs: rejection-sample inside the
-// walkable bbox (the island boundary edges), keep points that are collision-free,
-// far enough from `from`, and actually reachable via findPath. `rng` is ()=>[0,1)
-// so callers pass a seeded LCG and every run replays the same stroll.
-export function pickWanderTarget(nav,rng,{minDistance=2.5,from}={}){
+// One flood fill of everything walkable from `origin`, so wander targets can be
+// drawn from a list of known-reachable points instead of rejection-sampling the
+// whole bounding box (where water and off-island picks each cost a saturated A*).
+// Coarser than the path grid on purpose: this only seeds stroll goals.
+export function buildReachable(nav,origin,{step=.44,clearance=.26}={}){
+ if(!nav)return [];
+ const start=origin||nav.spawn;
+ if(nav.collision(start,clearance))return [];
+ const key=p=>`${Math.round(p[0]/step)},${Math.round(p[1]/step)}`;
+ const seen=new Set([key(start)]),points=[[...start]],queue=[[...start]];
+ while(queue.length){
+  const p=queue.shift();
+  for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+   if(!dx&&!dz)continue;
+   const np=[p[0]+dx*step,p[1]+dz*step],k=key(np);
+   if(seen.has(k))continue;
+   seen.add(k);
+   if(nav.collision(np,clearance))continue;
+   points.push(np);queue.push(np);
+  }
+  if(points.length>40000)break;
+ }
+ return points;
+}
+// Deterministic wander-goal sampler for the walk NPCs. `rng` is ()=>[0,1) so
+// callers pass a seeded LCG and every run replays the same stroll. Pass
+// `reachable` (from buildReachable) to sample connected ground directly; without
+// it the sampler falls back to rejection-sampling the walkable bbox. With
+// `withRoute` the computed path comes back too, so callers never pay findPath twice.
+export function pickWanderTarget(nav,rng,{minDistance=2.5,from,reachable=null,withRoute=false}={}){
  if(!nav)return null;
  const start=from||nav.spawn;
+ const result=(position,route)=>withRoute?{position,route}:position;
+ if(reachable&&reachable.length){
+  for(let i=0;i<80;i++){
+   const p=[...reachable[Math.floor(rng()*reachable.length)]];
+   if(Math.hypot(p[0]-start[0],p[1]-start[1])<minDistance)continue;
+   const route=findPath(nav,start,p);
+   if(route)return result(p,route);
+  }
+  return null;
+ }
  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
  for(const [a,b] of nav.boundary)for(const p of [a,b]){
   if(p[0]<minX)minX=p[0];if(p[0]>maxX)maxX=p[0];if(p[1]<minZ)minZ=p[1];if(p[1]>maxZ)maxZ=p[1];
@@ -147,10 +212,116 @@ export function pickWanderTarget(nav,rng,{minDistance=2.5,from}={}){
   const p=[minX+rng()*(maxX-minX),minZ+rng()*(maxZ-minZ)];
   if(nav.collision(p))continue;
   if(Math.hypot(p[0]-start[0],p[1]-start[1])<minDistance)continue;
-  if(!findPath(nav,start,p))continue;
-  return p;
+  const route=findPath(nav,start,p);
+  if(!route)continue;
+  return result(p,route);
  }
  return null;
+}
+// Precomputed stroll router for the walk NPCs. A full findPath costs ~14k
+// nav.collision calls (~80ms, and ~120ms when the goal is unreachable); paying
+// that inside a requestAnimationFrame tick every time a townsperson picked a new
+// target was a visible hitch with four of them. So we spend one flood fill at
+// walk start and route over those cells afterwards: BFS across ~500 precomputed
+// nodes needs zero collision checks, and only the final string-pull touches the
+// nav mesh again. The resolution must match findPath's 0.22 grid: at 0.44 the
+// flood fill cannot thread the map's doorways and the reachable set collapses to
+// the plaza around spawn (491 cells, 11 units short of the courthouse bell).
+export function createWanderGraph(nav,origin,{step=.22,clearance=.26,reach=1}={}){
+ const points=buildReachable(nav,origin,{step,clearance});
+ const key=p=>`${Math.round(p[0]/step)},${Math.round(p[1]/step)}`;
+ const index=new Map();
+ points.forEach((p,i)=>index.set(key(p),i));
+ const neighbours=points.map(p=>{
+  const out=[];
+  for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+   if(!dx&&!dz)continue;
+   const j=index.get(key([p[0]+dx*step,p[1]+dz*step]));
+   if(j!==undefined)out.push(j);
+  }
+  return out;
+ });
+ // Same reach tolerance as findPath: interaction spots legitimately sit beside
+ // props (the bell stand measures 0.94 from the nearest walkable cell), so a
+ // route that ends within `reach` of the goal is still a useful walk-up route.
+ // Points sit on the same absolute grid as `key`, so the exact cell is an O(1)
+ // lookup and only an off-grid probe walks outward — no linear scan over ~4.8k
+ // nodes. Same reach tolerance as findPath: interaction spots legitimately sit
+ // beside props (the bell stand measures 0.94 from the nearest walkable cell),
+ // so a route that ends within `reach` of the goal is still a walk-up route.
+ const rings=Math.max(1,Math.ceil(reach/step));
+ const nearest=p=>{
+  const direct=index.get(key(p));
+  if(direct!==undefined)return direct;
+  for(let r=1;r<=rings;r++){
+   let bi=-1,bd=Infinity;
+   for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){
+    if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;
+    const j=index.get(key([p[0]+dx*step,p[1]+dz*step]));
+    if(j===undefined)continue;
+    const d=Math.hypot(points[j][0]-p[0],points[j][1]-p[1]);
+    if(d<bd&&d<=reach){bd=d;bi=j;}
+   }
+   if(bi>=0)return bi;
+  }
+  return -1;
+ };
+ // One BFS answers every goal from the same start, so sampling does not re-search
+ // per attempt; the tree is pure array work over precomputed neighbours.
+ function spread(startIndex){
+  const parent=new Int32Array(points.length).fill(-2);
+  parent[startIndex]=-1;
+  const queue=[startIndex];
+  for(let head=0;head<queue.length;head++)for(const next of neighbours[queue[head]]){
+   if(parent[next]!==-2)continue;
+   parent[next]=queue[head];queue.push(next);
+  }
+  return parent;
+ }
+ // Turn-only decimation instead of a line-of-sight string pull: every cell on the
+ // BFS path is already verified free at `clearance`, and collinear neighbours
+ // collapse exactly by arithmetic. That keeps the whole stitch free of
+ // nav.collision calls, which is what the line-of-sight pass cost (~4ms per
+ // retarget on a cross-map route, inside the RAF tick).
+ function stitch(parent,goalIndex,from,to){
+  if(goalIndex<0||parent[goalIndex]===-2)return null;
+  const cells=[];
+  for(let i=goalIndex;i>=0;i=parent[i])cells.unshift(points[i]);
+  const raw=[[...from],...cells,[...to]];
+  const out=[raw[0]];
+  for(let i=1;i<raw.length-1;i++){
+   const a=out[out.length-1],b=raw[i],c=raw[i+1];
+   // keep b only when the direction actually changes at it
+   const cross=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+   if(Math.abs(cross)>1e-9)out.push(b);
+  }
+  out.push(raw[raw.length-1]);
+  return out.length>=2?out:null;
+ }
+ function route(from,to){
+  if(!points.length)return null;
+  const startIndex=nearest(from);
+  if(startIndex<0)return null;
+  return stitch(spread(startIndex),nearest(to),from,to);
+ }
+ // Deterministic goal pick: a random reachable cell far enough away, with its route.
+ function sample(rng,{minDistance=2.5,from}={}){
+  if(!points.length)return null;
+  const start=from||origin||nav.spawn;
+  const startIndex=nearest(start);
+  if(startIndex<0)return null;
+  const parent=spread(startIndex);
+  for(let i=0;i<40;i++){
+   const j=Math.floor(rng()*points.length);
+   if(parent[j]===-2)continue;
+   const p=[...points[j]];
+   if(Math.hypot(p[0]-start[0],p[1]-start[1])<minDistance)continue;
+   const path=stitch(parent,j,start,p);
+   if(path)return {position:p,route:path};
+  }
+  return null;
+ }
+ return {points,route,sample,size:points.length};
 }
 export function createWalker(nav){
  const state={position:[...nav.spawn],heading:Math.PI,visited:new Set(),area:nav.areaAt(nav.spawn),near:null,blocked:null,distance:0,moving:false};

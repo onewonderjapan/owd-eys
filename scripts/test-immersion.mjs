@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {IMMERSION_CONFIG, selectRoster, createBellProxy, pickSessionSpeeches} from '../src/immersion-config.js';
 import {createImmersionState, countVotesFor} from '../src/immersion-state.js';
-import {createNavigation, findPath, pickWanderTarget} from '../src/map-walk-simulation.js';
+import {createNavigation, findPath, pickWanderTarget, createWanderGraph} from '../src/map-walk-simulation.js';
 
 const checks = [];
 const check = (name, fn) => {
@@ -424,6 +424,29 @@ check('wander: 同种子pickWanderTarget可复现且结果可通行可达', () =
  assert.equal(nav.collision(a), null, JSON.stringify(a));
  assert.ok(Math.hypot(a[0] - nav.spawn[0], a[1] - nav.spawn[1]) >= 2.5, `距离=${Math.hypot(a[0] - nav.spawn[0], a[1] - nav.spawn[1])}`);
  assert.ok(Array.isArray(findPath(nav, nav.spawn, a)), '采样点必须可达');
+});
+check('wander: 漫游图路径无碰撞且首尾接住真实点', () => {
+ const nav = createNavigation(layout.layout, props);
+ const graph = createWanderGraph(nav, nav.spawn);
+ assert.ok(graph.size > 50, `可达格只有${graph.size}个`);
+ const goal = IMMERSION_CONFIG.bell.interaction;
+ const route = graph.route(nav.spawn, goal);
+ assert.ok(Array.isArray(route) && route.length >= 2, `route=${route && route.length}`);
+ assert.deepEqual(route[0], [...nav.spawn]);
+ assert.deepEqual(route[route.length - 1], [...goal]);
+ // 端点是真实站位(铃旁按设计贴着桌子),中间路点必须全部可走。
+ for (const p of route.slice(1, -1)) assert.equal(nav.collision(p, 0.26), null, JSON.stringify(p));
+});
+check('wander: 漫游图采样确定性、够远、且带可走路径', () => {
+ const nav = createNavigation(layout.layout, props);
+ const graph = createWanderGraph(nav, nav.spawn);
+ const lcg = seed => () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return seed / 4294967296; };
+ const a = graph.sample(lcg(20260920), {minDistance: 2.5, from: nav.spawn});
+ const b = graph.sample(lcg(20260920), {minDistance: 2.5, from: nav.spawn});
+ assert.ok(a && Array.isArray(a.route), `a=${JSON.stringify(a)}`);
+ assert.deepEqual(a.position, b.position);
+ assert.ok(Math.hypot(a.position[0] - nav.spawn[0], a.position[1] - nav.spawn[1]) >= 2.5, '采样点必须离起点够远');
+ for (const p of a.route.slice(1, -1)) assert.equal(nav.collision(p, 0.26), null, JSON.stringify(p));
 });
 check('wander: 不同种子给出不同目标(采样确实在工作)', () => {
  const nav = createNavigation(layout.layout, props);

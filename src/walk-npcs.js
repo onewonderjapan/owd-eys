@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
-import {findPath,pickWanderTarget,moveCircle} from './map-walk-simulation.js';
+import {createWanderGraph,moveCircle} from './map-walk-simulation.js';
 import {IMMERSION_CONFIG} from './immersion-config.js';
 
 // B4 walk-NPC townsfolk (design-npc-wander.md): roaming extras for free roam.
@@ -11,10 +11,13 @@ const makeRng=seed=>{let s=(seed*2654435761)>>>0;return()=>{s=(Math.imul(s,11035
 const span=(rng,range)=>range[0]+rng()*(range[1]-range[0]);
 
 export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActor,isMobile=()=>false,reducedMotion=false,camera,host}){
- const list=[];let started=false,hidden=false,bubblesSuppressed=false,bubbleLayer=null,loadToken=0,activeLoads=0,queue=[],activeCount=0,rng=makeRng(20260920);
+ const list=[];let started=false,hidden=false,bubblesSuppressed=false,bubbleLayer=null,loadToken=0,activeLoads=0,queue=[],activeCount=0,rng=makeRng(20260920),graph=null;
+ // Stroll targets come from the walk-start wander graph (see createWanderGraph):
+ // routing over its precomputed cells costs ~2ms instead of the ~73ms median a
+ // full findPath needed, which matters because this runs inside the RAF tick.
  const spawnPoint=()=>{
   const from=getPlayerPosition?.()||nav.spawn;
-  return pickWanderTarget(nav,rng,{minDistance:config.spawnMinDistance,from})||[...nav.spawn];
+  return graph?.sample(rng,{minDistance:config.spawnMinDistance,from})?.position||[...nav.spawn];
  };
  function pump(){
   if(!started)return;
@@ -33,9 +36,9 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   }
  }
  function chooseTarget(npc){
-  const goal=pickWanderTarget(nav,rng,{minDistance:2.5,from:npc.position});
-  npc.route=goal?findPath(nav,npc.position,goal):null;npc.wp=1;
-  if(!npc.route||npc.route.length<2){npc.route=null;npc.pause=span(rng,config.pauseRange);}
+  const picked=graph?.sample(rng,{minDistance:2.5,from:npc.position});
+  npc.route=picked&&picked.route.length>=2?picked.route:null;npc.wp=1;
+  if(!npc.route){npc.pause=span(rng,config.pauseRange);} // nowhere to go: idle, retry next pause
  }
  function stepNpc(npc,dt){
   if(npc.pause>0){npc.pause-=dt;npc.moving=false;}
@@ -118,6 +121,7 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
  function syncLayerHidden(){if(bubbleLayer)bubbleLayer.hidden=hidden||bubblesSuppressed;}
  function start(){
   if(started||!nav)return;started=true;
+  graph=createWanderGraph(nav,getPlayerPosition?.()||nav.spawn); // one flood fill, ~7ms
   activeCount=isMobile()?config.mobileCount:config.count;
   queue=IMMERSION_CONFIG.rosterCandidates.filter(id=>id!==getPlayerActor?.()).slice(0,activeCount);
   pump();
@@ -139,7 +143,7 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   for(const npc of list){if(npc.avatar){scene.remove(npc.avatar.player);disposeWalkingAvatar(npc.avatar);}npc.avatar=null;if(npc.el)npc.el.remove();}
   list.length=0;
   if(bubbleLayer){bubbleLayer.remove();bubbleLayer=null;}
-  hidden=false;bubblesSuppressed=false;rng=makeRng(20260920);
+  graph=null;hidden=false;bubblesSuppressed=false;rng=makeRng(20260920);
  }
  const state=()=>({
   count:activeCount,loaded:list.length,hidden,
