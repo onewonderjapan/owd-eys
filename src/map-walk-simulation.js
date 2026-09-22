@@ -304,8 +304,11 @@ export function createWanderGraph(nav,origin,{step=.22,clearance=.26,reach=1}={}
   if(startIndex<0)return null;
   return stitch(spread(startIndex),nearest(to),from,to);
  }
- // Deterministic goal pick: a random reachable cell far enough away, with its route.
- function sample(rng,{minDistance=2.5,from}={}){
+ // Deterministic goal pick: a random reachable cell far enough away, with its
+ // route. `accept(position, route)` lets the caller veto candidates (the walk
+ // NPCs use it to keep out of the player's clearance); rejected picks still
+ // consume rng draws, so a given seed replays identically for a given veto.
+ function sample(rng,{minDistance=2.5,from,accept=null}={}){
   if(!points.length)return null;
   const start=from||origin||nav.spawn;
   const startIndex=nearest(start);
@@ -317,7 +320,8 @@ export function createWanderGraph(nav,origin,{step=.22,clearance=.26,reach=1}={}
    const p=[...points[j]];
    if(Math.hypot(p[0]-start[0],p[1]-start[1])<minDistance)continue;
    const path=stitch(parent,j,start,p);
-   if(path)return {position:p,route:path};
+   if(!path||(accept&&!accept(p,path)))continue;
+   return {position:p,route:path};
   }
   return null;
  }

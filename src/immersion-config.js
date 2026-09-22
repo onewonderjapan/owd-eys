@@ -86,11 +86,17 @@ export const WALK_NPC_CONFIG = Object.freeze({
  mobileCount: 2,      // phone townsfolk
  speed: 1.4,          // stroll speed, units/second (slower than the player's 2.35)
  pauseRange: Object.freeze([1.5, 4.0]),
- avoidPlayerRadius: 0.9,  // wait in place instead of shoving through the player
+ avoidPlayerRadius: 0.9,  // inside this the townsperson gives way (never waits here indefinitely)
+ avoidWait: 1.2,          // seconds to yield before picking somewhere else to go
+ personalSpace: 1.5,      // a leg that would end this close to the player is re-planned
+ playerClearance: 2.6,    // stroll goals are never chosen this close to the player
+ npcSpacing: 0.55,        // yield to another townsperson standing this close ahead
+ retargetCooldown: 0.6,   // seconds between proactive re-plans, so nobody thrashes
  spawnMinDistance: 3.0,
  bubble: Object.freeze({
   duration: 2.8,
   cooldown: Object.freeze([6, 14]),
+  maxDistance: 9,         // ground distance beyond which chatter is not shown
   pool: Object.freeze([
    '今天广场的风真舒服。', '码头的木箱又堆高了。', '酒馆说晚上有新烤饼。',
    '礼拜堂的钟声真稳。', '河边的芦苇黄了一半。', '散步有助于思考人生。',

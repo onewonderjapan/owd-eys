@@ -448,6 +448,24 @@ check('wander: 漫游图采样确定性、够远、且带可走路径', () => {
  assert.ok(Math.hypot(a.position[0] - nav.spawn[0], a.position[1] - nav.spawn[1]) >= 2.5, '采样点必须离起点够远');
  for (const p of a.route.slice(1, -1)) assert.equal(nav.collision(p, 0.26), null, JSON.stringify(p));
 });
+check('wander: accept 谓词把靠近玩家的目标与首段全部排除', () => {
+ const nav = createNavigation(layout.layout, props);
+ const graph = createWanderGraph(nav, nav.spawn);
+ const lcg = seed => () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return seed / 4294967296; };
+ const player = [...nav.spawn];
+ const far = p => Math.hypot(p[0] - player[0], p[1] - player[1]);
+ const from = [nav.spawn[0] + 0.44, nav.spawn[1]]; // a townsperson standing right next to the player
+ let checked = 0;
+ for (let s = 1; s <= 6; s++) {
+  const picked = graph.sample(lcg(s * 104729), {minDistance: 2.5, from, accept: (pos, route) => far(pos) >= 4 && far(route[1]) >= far(route[0])});
+  if (!picked) continue;
+  checked++;
+  assert.ok(far(picked.position) >= 4, `目标离玩家 ${far(picked.position).toFixed(2)}`);
+  assert.ok(far(picked.route[1]) >= far(picked.route[0]), '首段不应向玩家靠近');
+  assert.ok(picked.route.slice(1, -1).every(q => nav.collision(q, 0.26) === null), '路点必须可走');
+ }
+ assert.ok(checked >= 3, `只有 ${checked} 个种子产出了可接受目标`);
+});
 check('wander: 不同种子给出不同目标(采样确实在工作)', () => {
  const nav = createNavigation(layout.layout, props);
  const lcg = seed => () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return seed / 4294967296; };

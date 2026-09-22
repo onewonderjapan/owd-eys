@@ -50,9 +50,9 @@ npm start
 ## 测试
 
 ```sh
-npm test                         # 纯逻辑（状态机 + 寻路共 35 项）+ 产物检查
-node scripts/smoke-immersion.mjs # 端到端桌面冒烟（进入→行走→按铃→会议→出局→镇民，72 项）
-MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion-mobile  # 手机断言（59 项）
+npm test                         # 纯逻辑（状态机 + 寻路共 38 项）+ 产物检查
+node scripts/smoke-immersion.mjs # 端到端桌面冒烟（进入→行走→按铃→会议→出局→镇民，74 项）
+MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion-mobile  # 手机断言（61 项）
 ```
 
 ## 许可与边界

@@ -693,6 +693,33 @@ try {
       });
     }
     check('npc: 20秒内出现气泡且文案来自固定池', typeof npcBubbleSeen === 'string' && NPC_POOL.includes(npcBubbleSeen), `bubble=${JSON.stringify(npcBubbleSeen)} pool=${NPC_POOL.length}`);
+    // Give-way (review 2026-09-22): with the player standing still, no townsperson
+    // may camp inside avoidPlayerRadius -- the old wait branch parked one in front
+    // of the first-person camera indefinitely. Also: every visible bubble box must
+    // lie fully inside the viewport (top-edge clipping was visible in review).
+    const npcCampSamples = [];
+    const npcBubbleRects = [];
+    for (let npcTick = 0; npcTick < 24; npcTick++) {
+      const npcSnap = await npcPage.evaluate(radius => {
+        const s = window.eys.state().walk; const [px, pz] = s.position;
+        const close = s.npcs.npcs.filter(m => Math.hypot(m.position[0] - px, m.position[1] - pz) < radius).map(m => m.actor);
+        const rects = [...document.querySelectorAll('.walk-npc-bubble')].filter(e => e.style.display === 'block')
+          .map(e => { const r = e.getBoundingClientRect(); return {l: +r.left.toFixed(1), t: +r.top.toFixed(1), r: +r.right.toFixed(1), b: +r.bottom.toFixed(1)}; });
+        return {close, rects, vw: innerWidth, vh: innerHeight};
+      }, NPC_CFG.avoidPlayerRadius);
+      npcCampSamples.push(npcSnap.close);
+      for (const r of npcSnap.rects) npcBubbleRects.push({...r, vw: npcSnap.vw, vh: npcSnap.vh});
+      await npcPage.waitForTimeout(250);
+    }
+    let npcLongestCamp = 0;
+    for (const actor of new Set(npcCampSamples.flat())) {
+      let run = 0;
+      for (const close of npcCampSamples) { run = close.includes(actor) ? run + 1 : 0; npcLongestCamp = Math.max(npcLongestCamp, run); }
+    }
+    const npcCampLimit = Math.ceil((NPC_CFG.avoidWait + 1.5) / 0.25);
+    check('npc: 玩家静止6秒内无人在避让半径内滞留超过让路等待+1.5s', npcLongestCamp <= npcCampLimit, `longestRun=${npcLongestCamp}/${npcCampSamples.length} samples (limit ${npcCampLimit}) closeSamples=${npcCampSamples.filter(c => c.length).length}`);
+    const npcBubbleOffscreen = npcBubbleRects.filter(r => r.l < -1 || r.t < -1 || r.r > r.vw + 1 || r.b > r.vh + 1);
+    check('npc: 采样期间可见气泡整体落在视口内', npcBubbleOffscreen.length === 0, `bubbleFrames=${npcBubbleRects.length} offscreen=${JSON.stringify(npcBubbleOffscreen.slice(0, 3))}`);
     // Photo mode: townsfolk stay visible, the bubble layer must hide and restore.
     const npcLayer = () => npcPage.evaluate(() => { const el = document.querySelector('#walk-npc-bubbles'); return el ? {present: true, hidden: el.hidden, display: getComputedStyle(el).display} : {present: false}; });
     await npcPage.click('#walk-photo');
