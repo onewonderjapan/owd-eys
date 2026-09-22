@@ -2,7 +2,7 @@
   "schema_version": 1,
   "feature_id": "eys-pov-immersion",
   "prepared_on": "2026-09-13",
-  "updated_at": "2026-09-20",
+  "updated_at": "2026-09-23",
   "status": "released",
   "execution_started": true,
   "executor": "ZCode",
@@ -329,7 +329,7 @@
     "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
     "本文件记录本地候选完成，不代表已发布或已部署。"
   ],
-  "next_action": "overnight-20260920 branch pushed (not merged; includes 0919): F1 B4 walk-NPC townsfolk (findPath/pickWanderTarget sunk into src, src/walk-npcs.js + bubbles, busy-hidden/photo-no-bubble, desktop smoke 72/72 + mobile 59/59, P0 35/35); F2/F3 web_wardrobe tools committed locally (a2-coats-closeup 54 shots; mix-intersection-audit 50 groups/476 pairs ray-parity 0 unstable, 27 suspected -> A4 list); F4 hygiene (scripts/dev/) + README/START_HERE refresh; F5 design-pov-gear.md. Morning: read C:/3d/eys/REPORT_FLASH_20260920.md, review 8870 + web_wardrobe pages, merge branch, rebuild + five gates, publish 1.5.0.",
+  "next_action": "overnight-20260923 branch pushed (not merged; from main 9ac5776): F1 immersion-ejection.js mechanically split into src/ejection/ (common + 8 stage modules, registry 39 lines, export surface unchanged; style-flush smoke 46/47 is a pre-existing 1.5.0 N4 error-panel failure, reproduced on unmodified baseline); F2 performance gate scripts/smoke-perf.mjs (relative thresholds only) wired into publish.py after entry_check, DEPLOYMENT/README updated, publish dry-run passes all gates; F3 mobile top bar overlap fixed (<=420px status drops under button row, measured 33px overlap at 375px; desktop rects identical; MOBILE smoke 61->62 with non-intersection check + hud-top.png); gates tonight: P0 38/38, desktop 74/74, MOBILE 62/62, STYLE x8 green except pre-existing flush 46/47. F5 three 0.186 trial on feature/three-0186 (worktree owd-eys-three0186, NOT merged): all gates green except same flush 46/47, 0 deprecated/THREE console warnings, +2 vendored files (SkeletonUtils); main three stays 0.180.0. F4 web_wardrobe audit v2 a84b6fa: bidirectional rayAB/rayBA, suspected groups 27->11 (14 interpenetrated, 57 enclosed info-only), v1 artifacts untouched. Next: owner decides merges (overnight-20260923, three-0186), A2 direction, A4 list from index-v2.html, E7 scheduling.",
   "blockers": [],
   "deviations": [
     {
