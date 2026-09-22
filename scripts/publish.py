@@ -18,6 +18,8 @@ view_check=json.loads((root/'reports/local/first-person.json').read_text(encodin
 assert view_check['passed'] and view_check['build_sha256']==hashlib.sha256((root/'reports/build.json').read_bytes()).hexdigest(),'Verify first-person against the current build before publication.'
 entry_check=json.loads((root/'reports/local/entry-recovery.json').read_text(encoding='utf-8'))
 assert entry_check['passed'] and entry_check['build_sha256']==view_check['build_sha256'],'Verify cached-page entry and retry against the current build.'
+perf_gate=json.loads((root/'reports/local/perf.json').read_text(encoding='utf-8'))
+assert perf_gate['passed'] and perf_gate['build_sha256']==view_check['build_sha256'],'Verify the performance gate against the current build before publication.'
 # immersion gate: the newest, largest feature must be smoke-tested against the
 # exact build that is about to ship, or a broken immersion can go out with all
 # other gates green
