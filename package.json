@@ -10,7 +10,7 @@
     "test": "node scripts/check-build.mjs"
   },
   "dependencies": {
-    "three": "0.180.0"
+    "three": "0.186.0"
   },
   "devDependencies": {
     "playwright": "1.55.0"
