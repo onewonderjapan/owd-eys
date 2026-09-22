@@ -742,6 +742,20 @@ try {
     await npcPage.waitForTimeout(500);
     const npcHiddenAfter = await npcPage.evaluate(() => window.eys.state().walk.npcs);
     check('npc: 回到漫游镇民恢复且加载数不变', npcHiddenAfter?.hidden === false && npcHiddenAfter?.loaded === NPC_EXPECT, JSON.stringify({hidden: npcHiddenAfter?.hidden, loaded: npcHiddenAfter?.loaded}));
+    // F3 (2026-09-23): on narrow screens the top-right button group used to reach
+    // left across the area-label box (measured 33px overlap at 375px). The two top
+    // HUD blocks must be non-degenerate AND non-intersecting; save the evidence shot.
+    if (MOBILE) {
+      const hudTop = await npcPage.evaluate(() => {
+        const rect = sel => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return {l: +r.left.toFixed(1), t: +r.top.toFixed(1), r: +r.right.toFixed(1), b: +r.bottom.toFixed(1)}; };
+        const st = rect('.walk-status'), ac = rect('.walk-actions');
+        const filled = b => !!b && b.r > b.l && b.b > b.t;
+        const disjoint = filled(st) && filled(ac) && (ac.l >= st.r || ac.r <= st.l || ac.t >= st.b || ac.b <= st.t);
+        return {status: st, actions: ac, disjoint};
+      });
+      check('hud: 顶栏区域标签与按钮组不相交', hudTop.disjoint === true, JSON.stringify(hudTop));
+      await npcPage.screenshot({path: path.join(root, 'reports', label, 'hud-top.png'), clip: {x: 0, y: 0, width: finalViewport.width, height: 150}});
+    }
     // Info (never a failure): drawCalls, 2s RAF count, renderer memory before/after load.
     const npcMemAfter = await npcPage.evaluate(() => { const s = window.eys.state().walk; return {drawCalls: s.drawCalls, memory: s.memory}; });
     const npcRaf2s = await npcPage.evaluate(() => new Promise(res => { let c = 0; const t0 = performance.now(); const loop = () => { c++; if (performance.now() - t0 < 2000) requestAnimationFrame(loop); else res(c); }; requestAnimationFrame(loop); }));

@@ -15,3 +15,9 @@
 #walk-photo-bar span{color:#ffe3a3;font-size:11px}
 @media(pointer:coarse),(max-width:650px){#walk-photo-bar{bottom:max(22px,env(safe-area-inset-bottom));max-width:calc(100% - 24px)}#walk-photo-bar span{display:none}}
 #walk-dusk[aria-pressed=true],#walk-photo[aria-pressed=true]{border-color:#e9b668;background:#3d5655}
+
+/* F3 (2026-09-23): on narrow screens the .walk-actions row reaches left across
+   .walk-status (measured overlap 33px at 375px). Keep both top blocks readable: below 420px
+   the status box drops under the button group, and the button group may wrap right-aligned
+   as extra insurance for ultra-narrow widths. Desktop (>650px) rules are untouched. */
+@media(max-width:420px){.walk-status{top:calc(max(14px,env(safe-area-inset-top)) + 46px)}.walk-actions{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 28px)}}
