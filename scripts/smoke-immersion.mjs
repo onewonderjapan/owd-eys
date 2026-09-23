@@ -607,17 +607,27 @@ try {
     // capture the whole performance: one frame per ~1.2s of stage time
     const styleErrorsBefore = pageErrors.length;
     const styleElapsed = [];
+    const styleWings = [];
     for (let shot = 1; shot <= 6; shot++) {
       await page.waitForTimeout(1200);
       await page.screenshot({path: path.join(root, 'reports', 'immersion', `style-${EXTRA_STYLE}-${shot}.png`), type: 'png'});
       report.screenshots.push(`style-${EXTRA_STYLE}-${shot}.png`);
-      const styleSnap = await page.evaluate(() => ({ph: window.eys.state().walk.immersion?.phase, el: window.eys.state().walk.immersion?.elapsed}));
+      const styleSnap = await page.evaluate(() => ({ph: window.eys.state().walk.immersion?.phase, el: window.eys.state().walk.immersion?.elapsed, wings: window.eys.state().walk.immersion?.povWings}));
+      if (styleSnap.wings) styleWings.push(styleSnap.wings);
       if (styleSnap.ph !== 'ejection') break;
       styleElapsed.push(styleSnap.el);
     }
     // A thrown stage frame used to freeze the page silently (flush, 1.4.0..1.5.0):
     // identical screenshots, elapsed stuck. Require the clock to keep moving.
     const styleAdvancing = styleElapsed.length >= 2 && styleElapsed.every((v, i) => i === 0 || v > styleElapsed[i - 1]);
+    // Self POV wings must stay anchored in the frame (review 2026-09-24: they
+    // followed the tumbling/spinning body and flew around the screen).
+    const wingXs = styleWings.map(w => w.x), wingYs = styleWings.map(w => w.y);
+    const wingDrift = styleWings.length ? Math.max(Math.max(...wingXs) - Math.min(...wingXs), Math.max(...wingYs) - Math.min(...wingYs)) : null;
+    console.log('POV-WINGS', EXTRA_STYLE, JSON.stringify({drift: wingDrift, samples: styleWings}));
+    check('style-' + EXTRA_STYLE + ': 自身视角翅膀固定在画面下缘(漂移<0.25 且始终在镜头前)',
+      styleWings.length >= 2 && wingDrift < 0.25 && styleWings.every(w => w.inFront && w.y < 0),
+      `drift=${wingDrift} samples=${JSON.stringify(styleWings.slice(0, 6))}`);
     check('style-' + EXTRA_STYLE + ': 演出全程帧持续推进且无页面异常', styleAdvancing && pageErrors.length === styleErrorsBefore,
       `elapsed=${JSON.stringify(styleElapsed.map(v => +(v ?? -1).toFixed(2)))} newErrors=${JSON.stringify(pageErrors.slice(styleErrorsBefore).map(e => e.slice(0, 160)))}`);
     // V1 2026-09-24: fire self-view shot 5 (~6s, inside the pit looking back at

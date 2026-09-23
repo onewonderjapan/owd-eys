@@ -169,6 +169,23 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   }
  }
 
+ // Where the self POV wings sit on screen (normalized device coords of the rig's
+ // bounding-box centre, plus its on-screen size). Diagnostic for the smoke: the
+ // wings must stay put in the frame instead of flying around with the body.
+ const povBox = new THREE.Box3(), povCenter = new THREE.Vector3(), povSize = new THREE.Vector3();
+ function povWingsOnScreen() {
+  if (!ejectionWings || !ejectionStage || !ejectionWings.children.length) return null;
+  ejectionWings.updateWorldMatrix(true, true);
+  povBox.setFromObject(ejectionWings);
+  if (povBox.isEmpty()) return null;
+  povBox.getCenter(povCenter); povBox.getSize(povSize);
+  const cam = ejectionStage.camera;
+  cam.updateMatrixWorld();
+  const p = povCenter.clone().project(cam);
+  const inFront = povCenter.clone().applyMatrix4(cam.matrixWorldInverse).z < 0;
+  return {x: +p.x.toFixed(3), y: +p.y.toFixed(3), inFront, size: +povSize.length().toFixed(3)};
+ }
+
  function destroyEjectionWings() {
   if (ejectionWings) {
    for (const wing of ejectionWings.children)
@@ -552,6 +569,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
     look: look.state(),
     positionDrift,
     ringBell: snapshot.phase === 'ringing' ? ringBellProjection() : null,
+    povWings: ['ejection', 'finished'].includes(snapshot.phase) ? povWingsOnScreen() : null,
    };
   },
   dispose() {
