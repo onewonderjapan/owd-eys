@@ -175,13 +175,19 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    // The ejection stage draws the full cast plus effects; render at 1x during the
    // performance and restore the walk ratio on the roam path below.
    if(!busyScaled){busyScaled=true;renderer.setPixelRatio(1);resize();}
-   director.update(paused?0:dt);
+   // A throw here used to end the RAF chain: the flush stage's stray `splash`
+   // reference froze the whole game 5.2s into the performance (1.4.0..1.5.0).
+   // Now a broken stage ends the session and the town keeps running.
+   try{director.update(paused?0:dt);}catch(err){console.error('[eys] performance frame failed; returning to roam',err);try{director.cancel('error');}catch{}}
    render();raf=requestAnimationFrame(frameLoop);return;
   }
   if(busyScaled){busyScaled=false;renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));resize();}
   updateBusyHud(false);
   npcs?.setHidden(false);
-  if(avatar&&!avatar.player.visible)avatar.player.visible=true;
+  // Roam restores the walking model after a performance hid it, but only in the
+  // overview: in first person the camera sits inside the head, and forcing the
+  // model visible every frame blanked the whole view (regression 2026-09-15..1.5.0).
+  if(avatar){const wantAvatar=!document.body.classList.contains('first-person');if(avatar.player.visible!==wantAvatar)avatar.player.visible=wantAvatar;}
   const values=new Set([...keys,...touches.values()]);const x=Number(values.has('KeyD')||values.has('ArrowRight'))-Number(values.has('KeyA')||values.has('ArrowLeft')),z=Number(values.has('KeyS')||values.has('ArrowDown'))-Number(values.has('KeyW')||values.has('ArrowUp'));
   const s=walker.step(photoMode||paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
   walkAudio.frame(dt,s.moving,s.distance);

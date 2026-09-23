@@ -52,7 +52,6 @@ export function buildStage(ctx) {
    const k = clamp01((elapsed - airEnd) / (splashEnd - airEnd));
    target.player.position.set(7.5, lerp(0.1, -0.55, k), 0);
    target.player.rotation.z = 0;
-   if (k >= 1 && splash.userData.last !== 1) { splash.userData.last = 1; }
   }
   for (const id of actors.ids) {
    const a = actors.get(id);

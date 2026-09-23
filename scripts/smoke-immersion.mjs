@@ -507,13 +507,21 @@ try {
     console.log('STYLE-DIAG', EXTRA_STYLE, 'votingReached=', votingReached, 'diag=', diag);
     check('style-' + EXTRA_STYLE + ': 进入对应出局舞台', reached === true, `style=${EXTRA_STYLE} reached=${reached}`);
     // capture the whole performance: one frame per ~1.2s of stage time
+    const styleErrorsBefore = pageErrors.length;
+    const styleElapsed = [];
     for (let shot = 1; shot <= 6; shot++) {
       await page.waitForTimeout(1200);
       await page.screenshot({path: path.join(root, 'reports', 'immersion', `style-${EXTRA_STYLE}-${shot}.png`), type: 'png'});
       report.screenshots.push(`style-${EXTRA_STYLE}-${shot}.png`);
-      const ph = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
-      if (ph !== 'ejection') break;
+      const styleSnap = await page.evaluate(() => ({ph: window.eys.state().walk.immersion?.phase, el: window.eys.state().walk.immersion?.elapsed}));
+      if (styleSnap.ph !== 'ejection') break;
+      styleElapsed.push(styleSnap.el);
     }
+    // A thrown stage frame used to freeze the page silently (flush, 1.4.0..1.5.0):
+    // identical screenshots, elapsed stuck. Require the clock to keep moving.
+    const styleAdvancing = styleElapsed.length >= 2 && styleElapsed.every((v, i) => i === 0 || v > styleElapsed[i - 1]);
+    check('style-' + EXTRA_STYLE + ': 演出全程帧持续推进且无页面异常', styleAdvancing && pageErrors.length === styleErrorsBefore,
+      `elapsed=${JSON.stringify(styleElapsed.map(v => +(v ?? -1).toFixed(2)))} newErrors=${JSON.stringify(pageErrors.slice(styleErrorsBefore).map(e => e.slice(0, 160)))}`);
     await page.evaluate(() => document.querySelector('#immersion-skip')?.click());
     await page.waitForFunction(() => ['finished', 'returning', 'roam'].includes(window.eys?.state?.().walk?.immersion?.phase), null, {timeout: 20000}).catch(() => {});
     await page.evaluate(() => document.querySelector('#immersion-return')?.click());
@@ -550,14 +558,22 @@ try {
     if (errPhase) await page.evaluate(() => window.dispatchEvent(new Event('focus'))); // headless focus flake: resume renders
     const retryVisible = errPhase ? await page.locator('#immersion-retry').waitFor({state:'visible', timeout:10000}).then(()=>true).catch(()=>false) : false;
     if (!retryVisible) {
-      const dbg = await page.evaluate(() => JSON.stringify({
+      const dbg = await page.evaluate(async () => JSON.stringify({
         phase: window.eys.state().walk.immersion?.phase,
         uiHidden: document.querySelector('#immersion-ui')?.hidden ?? 'no-ui',
         panelHidden: document.querySelector('#immersion-error-panel')?.hidden ?? 'no-panel',
         retryBtn: (() => { const b = document.querySelector('#immersion-retry'); return b ? {hidden: b.hidden, disabled: b.disabled, box: b.getBoundingClientRect().toJSON()} : 'missing'; })(),
         raf: window.eys.state().walk?.drawCalls ?? null,
+        panels: document.querySelectorAll('#immersion-error-panel').length,
+        uiRoots: document.querySelectorAll('#immersion-ui').length,
+        busy: window.eys.state().walk.immersion?.busy,
+        paused: window.eys.state().walk.paused,
+        photo: window.eys.state().walk.photo,
+        active: window.eys.state().walk.active,
+        framesAdvance: await new Promise(r => { const a = window.eys.state().walk.immersion?.elapsed; setTimeout(() => r([a, window.eys.state().walk.immersion?.elapsed]), 400); }),
       }));
       console.log('N4-DIAG', dbg);
+      console.log('N4-PAGEERRORS', JSON.stringify(pageErrors.slice(-3)));
     }
     check('retry: 重试按钮可见', retryVisible === true, `visible=${retryVisible}`);
     await page.click('#immersion-retry');

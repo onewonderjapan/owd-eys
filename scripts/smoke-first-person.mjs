@@ -10,9 +10,13 @@ try {
  const page=await browser.newPage({viewport:{width:1440,height:960}});
  page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url());});
  const state=()=>page.evaluate(()=>eys.state().walk);
+ // Let the walk loop run before judging visibility: reading state right after the
+ // toggle only sees the handler's write, and missed a per-frame override for a week.
+ const settle=pg=>pg.evaluate(()=>new Promise(r=>{let n=0;const f=()=>++n>=20?r():requestAnimationFrame(f);requestAnimationFrame(f);}));
  await page.goto(new URL('?actor=cast.10',url).href);await page.locator('#walk-enter').click();await page.waitForFunction(()=>eys.state().walk?.active,null,{timeout:90000});
  assert.equal((await state()).view.mode,'overview');await page.locator('#walk-view-toggle').click();
  assert.equal((await state()).view.mode,'first-person');assert.equal((await state()).avatarVisible,false);
+ await settle(page);assert.equal((await state()).avatarVisible,false,'first person must keep the own model hidden after frames run');
  assert.equal(await page.locator('#walk-view-toggle').getAttribute('aria-pressed'),'true');
  let s=await state();assert(s.view.position[1]>.7&&s.view.position[1]<1.2);
  const p0=[...s.position],yaw0=s.view.yaw;
@@ -29,10 +33,12 @@ try {
  assert((await state()).active,'First Escape releases the pointer without leaving the game');
  await page.keyboard.press('KeyV');assert.equal((await state()).view.mode,'overview');assert.equal((await state()).avatarVisible,true);
  await page.keyboard.press('KeyV');assert.equal((await state()).view.mode,'first-person');
+ await settle(page);assert.equal((await state()).avatarVisible,false,'re-entering first person keeps the own model hidden');
  await page.locator('#walk-help-toggle').click();const helpPos=(await state()).position;
  await page.keyboard.down('KeyW');await page.waitForTimeout(160);await page.keyboard.up('KeyW');assert.deepEqual((await state()).position,helpPos);
  await page.locator('#walk-help-toggle').click();
  await page.locator('#walk-exit').click();assert(!(await state()).active);assert(await page.locator('#character-grid').isVisible());
+ checks.push('Own model stays hidden in first person after 20 frames (desktop, re-entry, phone)');
  checks.push('Desktop toggle and V, eye-height camera, camera-relative movement, mouse drag and pointer-lock Escape, help pauses movement, return to selection');
 
  const mobile=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
@@ -40,6 +46,7 @@ try {
  await phone.goto(new URL('?actor=cast.10',url).href);await phone.locator('#walk-enter').tap();await phone.waitForFunction(()=>eys.state().walk?.active,null,{timeout:90000});await phone.locator('#walk-view-toggle').tap();
  const phoneState=()=>phone.evaluate(()=>eys.state().walk);
  assert.equal((await phoneState()).view.mode,'first-person');assert.equal((await phoneState()).view.aspect,390/844);
+ await settle(phone);assert.equal((await phoneState()).avatarVisible,false,'phone first person keeps the own model hidden');
  const cdp=await mobile.newCDPSession(phone);
  const pad=await phone.locator('[data-move="KeyW"]').boundingBox(),a={id:1,x:pad.x+pad.width/2,y:pad.y+pad.height/2,radiusX:3,radiusY:3,force:1};
  const before=await phoneState();
