@@ -261,9 +261,24 @@ try {
   const duskOn = await page.evaluate(() => window.eys.state().walk);
   const duskPressed = await page.locator('#walk-dusk').getAttribute('aria-pressed');
   check('dusk: 切换到黄昏', duskOn.dusk === true && duskPressed === 'true' && duskOn.duskBg !== bgBefore && duskOn.duskBg === '3d3654', `dusk=${duskOn.dusk} bg ${bgBefore}->${duskOn.duskBg}`);
+  // V5 2026-09-24: dusk must brighten the shared window/lamp-housing material
+  // and drop glow pools under the street lamps (measured via live state).
+  const glowOn = await page.evaluate(() => window.eys.state().walk.duskGlow);
+  const poolsOn = await page.evaluate(() => window.eys.state().walk.glowPools);
+  check('dusk: 灯罩/窗户自发光提升', Boolean(glowOn) && glowOn.count > 0 && glowOn.intensity > 1.2, JSON.stringify(glowOn));
+  check('dusk: 灯下光斑就位', poolsOn === 5, `pools=${poolsOn}`);
+  await page.waitForTimeout(300);
+  await page.screenshot({path: path.join(root, 'reports', 'immersion', shotPrefix + 'dusk-on.png'), type: 'png'});
+  report.screenshots.push(shotPrefix + 'dusk-on.png');
   await page.click('#walk-dusk');
   const duskOff = await page.evaluate(() => window.eys.state().walk);
   check('dusk: 切回原光照', duskOff.dusk === false && duskOff.duskBg === bgBefore, `dusk=${duskOff.dusk} bg=${duskOff.duskBg} want=${bgBefore}`);
+  const glowOff = await page.evaluate(() => window.eys.state().walk.duskGlow);
+  check('dusk: 关闭后自发光逐项还原', Boolean(glowOff) && glowOff.count === glowOn.count && Math.abs(glowOff.intensity - 1) < 0.01, JSON.stringify(glowOff));
+  check('dusk: 关闭后光斑撤除', duskOff.glowPools === 0, `pools=${duskOff.glowPools}`);
+  await page.waitForTimeout(300);
+  await page.screenshot({path: path.join(root, 'reports', 'immersion', shotPrefix + 'dusk-off.png'), type: 'png'});
+  report.screenshots.push(shotPrefix + 'dusk-off.png');
 
   const promptVisible = await page.evaluate(() => {
     const el = document.querySelector('#immersion-prompt');
@@ -337,6 +352,28 @@ try {
   if (!await waitPhase('ringing', 40000)) check('flow: ringing', false, JSON.stringify(await imm()));
   await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing' && window.eys.state().walk.immersion.elapsed > 0.4, {timeout: 20000}).catch(() => {});
   await SHOT('ring-pov.png');
+  // V5 2026-09-24: the sky dome must give a vertical gradient — compare the high
+  // sky band against the horizon band of the same frame (flat 1.5.1 bg ≈ 0 diff).
+  const skyGrad = await page.evaluate(async src => {
+    const blob = await (await fetch('data:image/png;base64,' + src)).blob();
+    const bmp = await createImageBitmap(blob);
+    const cv = document.createElement('canvas');
+    cv.width = bmp.width; cv.height = bmp.height;
+    const g = cv.getContext('2d');
+    g.drawImage(bmp, 0, 0);
+    const d = g.getImageData(0, 0, cv.width, cv.height).data;
+    const w = cv.width, h = cv.height;
+    const band = (y0, y1) => {
+      let r = 0, gr = 0, b = 0, n = 0;
+      for (let y = Math.floor(h * y0); y < Math.floor(h * y1); y++) for (let x = Math.floor(w * 0.3); x < Math.floor(w * 0.7); x++) {
+        const i = (y * w + x) * 4; r += d[i]; gr += d[i + 1]; b += d[i + 2]; n++;
+      }
+      return [r / n, gr / n, b / n];
+    };
+    const t = band(0.03, 0.08), m = band(0.24, 0.29);
+    return +(Math.abs(t[0] - m[0]) + Math.abs(t[1] - m[1]) + Math.abs(t[2] - m[2])).toFixed(1);
+  }, readFileSync(path.join(root, 'reports', 'immersion', shotPrefix + 'ring-pov.png')).toString('base64'));
+  check('sky: 天顶-地平线色差>25', skyGrad > 25, JSON.stringify({diff: skyGrad}));
   if (!await waitPhase('seating', 15000)) check('flow: seating', false, JSON.stringify(await imm()));
   check('flow: seating入discussion', await waitPhase('discussion', 15000), 'discussion reached');
   await page.waitForTimeout(1200);

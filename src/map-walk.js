@@ -61,22 +61,76 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  // Dusk mood (B3): lights and background only — no texture/material changes,
  // fully reversible. Persist through immersion (the bell ring shares this
  // scene) and restore when leaving walk so the main page is untouched.
+ // V5 2026-09-24 additions, all snapshot-driven like the originals: sky dome
+ // palette, lamp/window emissive boost, and ground glow discs under the five
+ // street lamps (emissive discs only — no real-time lights, so mobile pays
+ // nothing). The B7 flicker guard above is unchanged.
+ const SKY_DAY={top:'#22303c',bottom:'#87a0ae'},SKY_DUSK={top:'#2a2440',bottom:'#b0785a'};
+ const FP_FOG={day:new THREE.Color('#87a0ae'),dusk:new THREE.Color('#b0785a')};
+ let skyDome=null,duskGlow=[],duskPools=null,lampSpots=[],mapProps=null,fpFogOn=false;
+ function paintSky(pal){
+  if(!skyDome)return;
+  const top=new THREE.Color(pal.top),bottom=new THREE.Color(pal.bottom),c=new THREE.Color();
+  const pos=skyDome.geometry.attributes.position,col=skyDome.geometry.attributes.color;
+  for(let i=0;i<pos.count;i++){c.lerpColors(bottom,top,THREE.MathUtils.clamp(pos.getY(i)/150*0.5+0.5,0,1));col.setXYZ(i,c.r,c.g,c.b);}
+  col.needsUpdate=true;
+ }
+ function ensureDuskPools(show){
+  if(show&&!duskPools&&lampSpots.length){
+   const geo=new THREE.CircleGeometry(1.05,20);
+   const mat=new THREE.MeshBasicMaterial({color:'#ffb26b',transparent:true,opacity:0.3,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
+   duskPools=[];
+   for(const [x,z] of lampSpots){
+    const d=new THREE.Mesh(geo,mat);d.rotation.x=-Math.PI/2;d.position.set(x,0.03,z);d.renderOrder=1;
+    scene.add(d);duskPools.push(d);
+   }
+  }
+  if(duskPools)for(const d of duskPools)d.visible=show;
+ }
  function setDusk(next){
   if(next===dusk)return;dusk=next;
   stopFlicker(); // never snapshot flicker-dimmed intensities as the dusk baseline
   if(next){
-   duskSaved={bg:scene.background&&scene.background.isColor?scene.background.getHex():null,hemis:[],dirls:[]};
+   duskSaved={bg:scene.background&&scene.background.isColor?scene.background.getHex():null,hemis:[],dirls:[],glow:[]};
    for(const o of scene.children){
     if(o.isHemisphereLight){duskSaved.hemis.push({o,color:o.color.getHex(),ground:o.groundColor.getHex(),intensity:o.intensity});o.color.set('#7d6aa8');o.groundColor.set('#4a3f3d');o.intensity*=.85;}
     else if(o.isDirectionalLight){duskSaved.dirls.push({o,color:o.color.getHex(),intensity:o.intensity});o.color.set('#ffb26b');o.intensity*=.7;}
    }
    if(duskSaved.bg!==null)scene.background.set('#3d3654');
+   duskSaved.glow=duskGlow.map(m=>({m,intensity:m.emissiveIntensity}));
+   for(const g of duskSaved.glow)g.m.emissiveIntensity=1.8;
+   paintSky(SKY_DUSK);
+   ensureDuskPools(true);
+   if(scene.fog)scene.fog.color.copy(FP_FOG.dusk);
   }else if(duskSaved){
    if(duskSaved.bg!==null&&scene.background&&scene.background.isColor)scene.background.setHex(duskSaved.bg);
    for(const h of duskSaved.hemis){h.o.color.setHex(h.color);h.o.groundColor.setHex(h.ground);h.o.intensity=h.intensity;}
    for(const d of duskSaved.dirls){d.o.color.setHex(d.color);d.o.intensity=d.intensity;}
+   for(const g of duskSaved.glow)g.m.emissiveIntensity=g.intensity;
    duskSaved=null;
+   paintSky(SKY_DAY);
+   ensureDuskPools(false);
+   if(scene.fog)scene.fog.color.copy(FP_FOG.day);
   }
+ }
+ // Sky dome + dusk glow collection run once at install; both are additive to the
+ // original scene and never replace or destroy world content.
+ {
+  const geo=new THREE.SphereGeometry(150,24,12);
+  geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*3),3));
+  skyDome=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));
+  skyDome.renderOrder=-1;scene.add(skyDome);paintSky(SKY_DAY);
+  const glow=new Set();
+  root.traverse(o=>{if(o.isMesh&&o.material&&/warm amber glass/i.test(o.material.name||''))glow.add(o.material);});
+  duskGlow=[...glow];
+ }
+ // First-person light haze: the horizon fades naturally at eye level; the
+ // overview stays crisp because the fog only exists while first-person is on.
+ function syncFirstPersonFog(){
+  const fp=document.body.classList.contains('first-person');
+  if(fp===fpFogOn)return;
+  fpFogOn=fp;
+  scene.fog=fp?new THREE.Fog(dusk?FP_FOG.dusk.clone():FP_FOG.day.clone(),28,95):null;
  }
  // B7 flicker (design-flicker.md): approaching the emergency-button table dips
  // the top-level lights and restores them exactly. Intensity-only; no light or
@@ -188,6 +242,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   // overview: in first person the camera sits inside the head, and forcing the
   // model visible every frame blanked the whole view (regression 2026-09-15..1.5.0).
   if(avatar){const wantAvatar=!document.body.classList.contains('first-person');if(avatar.player.visible!==wantAvatar)avatar.player.visible=wantAvatar;}
+  syncFirstPersonFog();
   const values=new Set([...keys,...touches.values()]);const x=Number(values.has('KeyD')||values.has('ArrowRight'))-Number(values.has('KeyA')||values.has('ArrowLeft')),z=Number(values.has('KeyS')||values.has('ArrowDown'))-Number(values.has('KeyW')||values.has('ArrowUp'));
   const s=walker.step(photoMode||paused||!info.hidden||!$('#walk-help').hidden?[0,0]:view.input(x,z),dt);
   walkAudio.frame(dt,s.moving,s.distance);
@@ -222,7 +277,12 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  async function start(){
   if(active||loading)return;loading=true;failure=null;enter.disabled=true;enter.textContent='正在准备角色…';$('#walk-error').hidden=true;
   try{
-   if(!walker){const response=await fetch(new URL('map-walk-props.json',import.meta.url));if(!response.ok)throw Error('碰撞数据未能打开');const props=await response.json();if(props.map_id!==data.id||props.source_blend_sha256!==data.report.blend_sha256)throw Error('碰撞数据与当前地图版本不一致');nav=createNavigation(data.layout,props);walker=createWalker(nav);}
+   if(skyDome&&!skyDome.parent)scene.add(skyDome); // sky dome lives with the walk session
+   if(!walker){const response=await fetch(new URL('map-walk-props.json',import.meta.url));if(!response.ok)throw Error('碰撞数据未能打开');const props=await response.json();if(props.map_id!==data.id||props.source_blend_sha256!==data.report.blend_sha256)throw Error('碰撞数据与当前地图版本不一致');nav=createNavigation(data.layout,props);walker=createWalker(nav);
+    // Street-lamp footprints for the dusk glow pools (read-only derive; the
+    // collision JSON itself is never modified).
+    lampSpots=props.proxies.filter(p=>/Lamp \| foot/.test(p.name)).map(p=>{const xs=p.poly.map(q=>q[0]),zs=p.poly.map(q=>q[1]);return [xs.reduce((a,b)=>a+b,0)/xs.length,zs.reduce((a,b)=>a+b,0)/zs.length];});
+   }
    if(!propsStarted){propsStarted=true;propsLibrary.ensure().then(()=>{director?.refreshProps();}).catch(()=>{});}
    ensureDirector();
    const actorId=getActor();
@@ -250,6 +310,8 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(!active)return;active=false;
   if(director&&director.busy)director.cancel('stop');
   walkAudio.stop();exitPhoto();setDusk(false);syncDuskButton();stopFlicker();
+  fpFogOn=false;scene.fog=null; // first-person haze must not leak into the main page
+  if(skyDome&&skyDome.parent)scene.remove(skyDome); // same for the sky dome
   npcs?.stop();npcs=null; // exit walk: townsfolk and their bubble layer go with it
   immersionSnapshot=null;updateBusyHud(false);
   clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
@@ -304,6 +366,6 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,duskGlow:duskGlow.length?{count:duskGlow.length,intensity:+duskGlow[0].emissiveIntensity.toFixed(3)}:null,glowPools:duskPools?duskPools.filter(d=>d.visible).length:0,fogColor:scene.fog?scene.fog.color.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }
