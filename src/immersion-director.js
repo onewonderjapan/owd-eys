@@ -50,9 +50,29 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  }
 
  function bellEyePose() {
-  const [x, , z] = IMMERSION_CONFIG.bell.interaction;
+  // interaction is [x, z] — the old [x, , z] destructure left z undefined and
+  // parked the ring camera at world z=0, ~7m from the bell (V4 2026-09-24).
+  const [x, z] = IMMERSION_CONFIG.bell.interaction;
   const [bx, by, bz] = IMMERSION_CONFIG.bell.base;
   return {position: [x, by + 0.755, z], target: [bx, by + 0.52, bz]};
+ }
+
+ // Projected on-screen width of the bell (bbox corners through the ring camera),
+ // as a fraction of the viewport width. V4 2026-09-24: the ring beat used to show
+ // the bell a few pixels wide; the smoke gates on this number.
+ function ringBellProjection() {
+  if (!worldBell || !ringCamera) return null;
+  const bbox = new THREE.Box3().setFromObject(worldBell.group);
+  if (bbox.isEmpty()) return null;
+  const v = new THREE.Vector3();
+  let minX = 1, maxX = -1, minY = 1, maxY = -1;
+  for (let i = 0; i < 8; i++) {
+   v.set(i & 1 ? bbox.max.x : bbox.min.x, i & 2 ? bbox.max.y : bbox.min.y, i & 4 ? bbox.max.z : bbox.min.z);
+   v.project(ringCamera);
+   minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+   minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+  }
+  return {widthFrac: +(maxX - minX).toFixed(4), heightFrac: +(maxY - minY).toFixed(4)};
  }
 
  function ensureRingCamera() {
@@ -531,6 +551,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
     ejection: ejectionStage && ejectionStage.diagnostics ? ejectionStage.diagnostics() : null,
     look: look.state(),
     positionDrift,
+    ringBell: snapshot.phase === 'ringing' ? ringBellProjection() : null,
    };
   },
   dispose() {

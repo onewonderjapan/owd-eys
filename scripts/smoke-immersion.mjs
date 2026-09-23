@@ -290,6 +290,10 @@ try {
   await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 30000}).catch(() => {});
   const ringState = await page.evaluate(() => window.eys.state().walk.immersion?.phase);
   check('session: 准备完成后鸣铃', ringState === 'ringing', `phase=${ringState}`);
+  // V4 2026-09-24: the ring beat must have the bell as its subject — projected
+  // bell width ≥ 20% of the viewport (exposed by the director's state()).
+  const ringBell = await page.evaluate(() => window.eys.state().walk.immersion?.ringBell);
+  check('ring: 铃投影宽度≥20%视口', Boolean(ringBell) && ringBell.widthFrac >= 0.2, JSON.stringify(ringBell));
   const duckedAudio = await page.evaluate(() => window.eys.state().walk.audio);
   check('audio: 演出期间行走音被压低', duckedAudio?.ducked === true && duckedAudio?.on === true, JSON.stringify(duckedAudio));
 
