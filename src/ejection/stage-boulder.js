@@ -28,6 +28,8 @@ export function buildStage(ctx) {
 
  const rollStart = 1.0, rollEnd = 3.1, flatten = 2.15;
  stage.beats = {walkEnd: rollStart, liftEnd: rollStart, carryEnd: rollStart, pauseEnd: rollStart, dropEnd: flatten};
+ // Self POV rides the head until the body is flattened into the paper goose.
+ stage.selfPovUntil = flatten;
 
  stage.update = ({elapsed, reducedMotion}) => {
   reduced.value = Boolean(reducedMotion);

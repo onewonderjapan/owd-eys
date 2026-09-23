@@ -191,8 +191,12 @@ export function buildStage(ctx) {
   // stand-in) so the "looking back at the crowd" beat stays readable. Purely
   // brightness scaling — no new temporal modulation, reduced-motion unaffected.
   const camDist = camera.position.distanceTo(flameCenter);
-  const proximity = clamp01((camDist - 0.4) / 0.9); // 0 inside the pit -> 1 beyond ~1.3
-  flameMat.opacity = 0.85 * clamp01((camDist - 0.55) / 0.75);
+  // Band narrowed for the head-mounted self camera (2026-09-24): it sits ~0.5m
+  // from the flame centre, which the old bands (tuned for the authored low
+  // camera in the pit floor) treated as "inside" -- flames faded out, the pit
+  // light dropped to a third, and the crowd it lights went dark.
+  const proximity = clamp01((camDist - 0.18) / 0.5); // 0 only right in the flames -> 1 beyond ~0.7
+  flameMat.opacity = 0.85 * clamp01((camDist - 0.25) / 0.45);
   fireLight.intensity = 7 * flicker * feed * (0.35 + 0.65 * proximity);
   for (const flame of flames) {
    const w = 0.8 + Math.sin(elapsed * 9 + flame.userData.phase) * 0.22;

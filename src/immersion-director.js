@@ -30,7 +30,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  let lastStageKind = null;
  let ringCamera = null;
  let ringWings = null;
- let ejectionWings = null;
+ let selfPov = null; // head-mounted self camera state (see buildSelfPov)
  let loadingProgress = null;
  let nearBell = null;
  let endReason = null;
@@ -104,95 +104,214 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   ringWings = null;
  }
 
- function buildEjectionWings() {
-  destroyEjectionWings();
-  if (!actors || !ejectionStage || !ejectionStage.isSelf) return;
-  ejectionWings = actors.buildWingRig(playerActorId);
-  if (!ejectionWings) return;
-  // Own material clones: double-sided with a style-matched faint emissive so the
-  // wing's far side reads as a lit wing instead of a black silhouette against the
-  // fire or the deep water. Disposed with the rig below.
-  const warm = ejectionStage.style === 'fire';
-  for (const wing of ejectionWings.children) {
-   wing.geometry.computeBoundingBox();
-   const cx = wing.geometry.boundingBox.getCenter(new THREE.Vector3()).x;
-   wing.userData.side = Math.sign(cx) || 1;
-   if (wing.material) {
-    const m = wing.material.clone();
-    m.side = THREE.DoubleSide;
-    if (m.emissive) {
-     m.emissive = new THREE.Color(warm ? '#3f170b' : '#141b23');
-     if (m.emissiveIntensity !== undefined) m.emissiveIntensity = 0.6;
-    }
-    wing.material = m;
-    wing.userData.povWingOwned = true;
-   }
-  }
-  ejectionWings.matrixAutoUpdate = false;
-  ejectionStage.scene.add(ejectionWings);
+ // ---------------------------------------------------------------------------
+ // Self POV: the camera rides the player's own head and the real body is shown
+ // (2026-09-24). This replaces the proxy wing rig, which followed the tumbling
+ // body while the camera followed a separately authored eye track, so the "hands"
+ // flew around the frame (measured drift: flush 0.80, boulder 6.0, space 8.2 NDC).
+ //
+ // Nothing is hand-placed per angle or per character:
+ // - the eye point comes from the eye meshes' bounds (model space), on the
+ //   midline, pushed just in front of the face so the camera is outside the head;
+ // - only the head is hidden in first person (eyes, beak, crown feathers, and any
+ //   headwear/facewear socket), so looking down shows your chest, wings, feet and
+ //   clothes -- always in sync because it is the actual posed body;
+ // - the stage keeps its framing intent: whatever point its authored camera was
+ //   looking at, the head camera looks at the same point;
+ // - stabilised: the own body stays upright (a stage's spin/tumble survives only
+ //   as a mild camera wobble, zero under reduced motion);
+ // - a stage may hand the view back to its authored third-person camera from
+ //   `stage.selfPovUntil` (e.g. the chandelier impact, the boulder flattening),
+ //   with a 0.35s blend either way.
+ const SELF_POV_BLEND = 0.35;
+ const SELF_POV_NEAR = 0.5;    // metres: other heads closer than this to the lens are culled
+ const SELF_POV_HEAD_Y = 0.72; // approximate head height above an actor's feet (0.28-scale avatars)
+ const SELF_POV_PITCH = [-0.32, 0.45]; // default head-cam pitch band (rad); user look adds on top
+ const povEye = new THREE.Vector3(), povAuthored = new THREE.Vector3(), povFwd = new THREE.Vector3(), povTarget = new THREE.Vector3();
+ function setHeadHidden(hidden) {
+  if (!selfPov || selfPov.headHidden === hidden) return;
+  selfPov.headHidden = hidden;
+  for (const h of selfPov.hidden) h.o.visible = hidden ? false : h.visible;
  }
-
- // Narrow the wing rig toward the body center on narrow aspects so both wing roots
- // stay readable in portrait; the world view never gets a FOV compensation instead.
- // Per frame the clones re-derive their model-local placement from the source meshes
- // (pose-fresh), then add a small outward offset plus the stage's splay so the wings
- // droop away from the sight line while carried under or settled in the pit.
- const wingInv = new THREE.Matrix4();
- const wingScaleMat = new THREE.Matrix4(); // per-frame scratch, no allocation in the wing loop
- const ONES = new THREE.Vector3(1, 1, 1);
- const wingOff = new THREE.Matrix4();
- const wingOffPos = new THREE.Vector3();
- const wingOffQuat = new THREE.Quaternion();
- const wingOffEuler = new THREE.Euler();
- function updateEjectionWings() {
-  if (!ejectionWings || !actors || !ejectionStage) return;
+ function buildSelfPov() {
+  destroySelfPov();
+  if (!actors || !ejectionStage || !ejectionStage.isSelf) return;
   const avatar = actors.get(playerActorId);
   if (!avatar) return;
-  const aspect = host.clientWidth / Math.max(1, host.clientHeight);
-  const narrow = aspect >= 1.3 ? 1 : aspect >= 0.8 ? lerp(1, 0.78, (1.3 - aspect) / 0.5) : 0.74;
-  avatar.model.updateWorldMatrix(true, true);
-  wingInv.copy(avatar.model.matrixWorld).invert();
-  ejectionWings.matrix.multiplyMatrices(avatar.model.matrixWorld, wingScaleMat.makeScale(narrow, 1, 1));
-  const splay = ejectionStage.wingSplay || 0;
-  for (const wing of ejectionWings.children) {
-   const source = wing.userData.source;
-   if (!source) continue;
-   const side = wing.userData.side || 1;
-   wingOffPos.set(side * (0.09 + splay * 0.15), -0.04 - splay * 0.04, 0.16);
-   // Wing geometry is a vertical XY-plane surface (thin along Z) whose broad face
-   // already faces the travel direction; the yaw component spreads the tips into a
-   // clear V clear of the sight line, the small roll droops them naturally.
-   wingOffEuler.set(0, -side * (0.62 + splay * 0.45), -side * 0.2);
-   wingOffQuat.setFromEuler(wingOffEuler);
-   wingOff.compose(wingOffPos, wingOffQuat, ONES);
-   wing.matrix.multiplyMatrices(wingInv, source.matrixWorld).multiply(wingOff);
+  const model = avatar.model;
+  model.updateWorldMatrix(true, true);
+  const toModel = new THREE.Matrix4().copy(model.matrixWorld).invert();
+  const eyeBox = new THREE.Box3(), part = new THREE.Box3();
+  const hidden = [];
+  let bodyMesh = null;
+  model.traverse(o => {
+   const slot = o.userData && o.userData.slot;
+   if (slot === 'headwear' || slot === 'facewear') { hidden.push({o, visible: o.visible}); return; }
+   if (!o.isMesh) return;
+   const name = o.name || '';
+   // GLTFLoader sanitizes node names (spaces -> '_'), so match either separator.
+   if (/seamless[\s_]rounded[\s_]body/i.test(name)) bodyMesh = o;
+   if (/eye[\s_](white[\s_]sclera|ink[\s_]rim)/i.test(name)) { part.setFromObject(o); part.applyMatrix4(toModel); eyeBox.union(part); }
+   if (/(^|[\s_|])eye([\s_]|$)|beak|nostril|crown|mouth[\s_]crease/i.test(name)) hidden.push({o, visible: o.visible});
+  });
+  if (eyeBox.isEmpty()) return;
+  const eyeCenter = eyeBox.getCenter(new THREE.Vector3());
+  // Head surface in front of the eyes on the midline, so the camera never sits inside the head.
+  let front = eyeBox.max.z;
+  if (bodyMesh && bodyMesh.geometry && bodyMesh.geometry.attributes.position) {
+   const pos = bodyMesh.geometry.attributes.position, v = new THREE.Vector3();
+   const meshToModel = new THREE.Matrix4().multiplyMatrices(toModel, bodyMesh.matrixWorld);
+   for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).applyMatrix4(meshToModel);
+    if (Math.abs(v.x) < 0.3 && Math.abs(v.y - eyeCenter.y) < 0.2 && v.z > front) front = v.z;
+   }
   }
+  selfPov = {
+   avatar, hidden, headHidden: false, blend: 1, roll: 0, mode: 'head', camToEye: 0,
+   // 0.2 model units (~5.6cm at the 0.28 avatar scale) ahead of the face, so a
+   // raised gaze does not catch the top of the head in the upper edge of the frame.
+   eyeLocal: new THREE.Vector3(0, eyeCenter.y, front + 0.2),
+  };
+  setHeadHidden(true);
  }
-
- // Where the self POV wings sit on screen (normalized device coords of the rig's
- // bounding-box centre, plus its on-screen size). Diagnostic for the smoke: the
- // wings must stay put in the frame instead of flying around with the body.
- const povBox = new THREE.Box3(), povCenter = new THREE.Vector3(), povSize = new THREE.Vector3();
- function povWingsOnScreen() {
-  if (!ejectionWings || !ejectionStage || !ejectionWings.children.length) return null;
-  ejectionWings.updateWorldMatrix(true, true);
-  povBox.setFromObject(ejectionWings);
-  if (povBox.isEmpty()) return null;
-  povBox.getCenter(povCenter); povBox.getSize(povSize);
+ const shortAngle = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
+ function applySelfPov(dt, elapsed, reducedMotion) {
+  if (!selfPov || !ejectionStage) return;
+  const stage = ejectionStage, cam = stage.camera, tp = selfPov.avatar.player;
+  const handBack = typeof stage.selfPovUntil === 'number' && elapsed >= stage.selfPovUntil;
+  const step = dt > 0 ? dt / SELF_POV_BLEND : 0;
+  selfPov.blend = Math.min(1, Math.max(0, selfPov.blend + (handBack ? -step : step)));
+  if (dt === 0) selfPov.blend = handBack ? 0 : 1; // paused/finished frames settle instantly, no drift
+  selfPov.mode = handBack ? (selfPov.blend > 0 ? 'blend-out' : 'authored') : (selfPov.blend < 1 ? 'blend-in' : 'head');
+  // Stabilise the own body; keep the stage's spin only as a mild camera wobble.
+  const spin = tp.rotation.z;
+  if (!handBack) { tp.rotation.z = 0; tp.visible = true; }
+  setHeadHidden(!handBack);
+  selfPov.roll = reducedMotion || handBack ? 0 : Math.sin(spin) * 0.18;
+  // Authored framing: the point the stage camera meant to look at.
+  const yaw = stage.baseYaw ?? 0, pitch = stage.basePitch ?? 0;
+  povAuthored.copy(cam.position);
+  povFwd.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
+  povTarget.copy(povAuthored).addScaledVector(povFwd, 3);
+  tp.updateWorldMatrix(true, true);
+  povEye.copy(selfPov.eyeLocal).applyMatrix4(selfPov.avatar.model.matrixWorld);
+  const dx = povTarget.x - povEye.x, dy = povTarget.y - povEye.y, dz = povTarget.z - povEye.z;
+  const flat = Math.hypot(dx, dz);
+  // If the authored shot was looking at (or right past) the body itself, face
+  // the way the body faces instead of staring into your own chest.
+  tp.getWorldDirection(povFwd); // +z of the player group = where the goose faces
+  const bodyYaw = Math.atan2(-povFwd.x, -povFwd.z); // camera yaw whose forward (-sin, -cos) equals the facing
+  const headYaw = flat > 0.8 ? Math.atan2(-dx, -dz) : bodyYaw;
+  // Default gaze stays near level: the authored cameras mostly shot from above,
+  // and the same target seen from the head meant looking straight down into the
+  // (large) goose body. The body shows at the bottom edge; dragging down still
+  // reveals all of it, because the user's look delta is added on top.
+  // A stage can release the band for a beat whose point IS looking down
+  // (water: watching the chain and stone pull you under, design 1.2).
+  const rawPitch = Math.atan2(dy, Math.max(flat, 1e-4));
+  const pitchFree = typeof stage.selfPovFreePitchAfter === 'number' && elapsed >= stage.selfPovFreePitchAfter;
+  const headPitch = pitchFree ? rawPitch : Math.min(SELF_POV_PITCH[1], Math.max(SELF_POV_PITCH[0], rawPitch));
+  const b = selfPov.blend * selfPov.blend * (3 - 2 * selfPov.blend);
+  cam.position.lerpVectors(povAuthored, povEye, b);
+  stage.baseYaw = shortAngle(yaw, headYaw, b);
+  stage.basePitch = pitch + (headPitch - pitch) * b;
+  selfPov.camToEye = +cam.position.distanceTo(povEye).toFixed(4);
+  if (stage.trajectory) stage.trajectory.eye = cam.position.toArray(); // audio cues follow the real eye
+  // Near-camera cull: the escorts carrying you hold their heads right beside
+  // yours, so a head would fill half the frame. Anyone whose head comes within
+  // SELF_POV_NEAR of the lens is hidden while it stays that close. We keep our
+  // own ledger and restore them ourselves: most stages set actor visibility only
+  // once in begin(), so a cull that relied on the stage to undo it stuck for the
+  // rest of the performance (the whole fire crowd vanished after the carry).
+  const culledSet = selfPov.culledSet || (selfPov.culledSet = new Set());
+  for (const id of actors.ids) {
+   if (id === playerActorId) continue;
+   const other = actors.get(id);
+   if (!other) continue;
+   other.player.getWorldPosition(povFwd);
+   povFwd.y += SELF_POV_HEAD_Y;
+   const near = b > 0.5 && povFwd.distanceTo(cam.position) < SELF_POV_NEAR;
+   if (near && other.player.visible) { other.player.visible = false; culledSet.add(id); }
+   else if (!near && culledSet.has(id)) { other.player.visible = true; culledSet.delete(id); }
+  }
+  selfPov.culled = culledSet.size;
+ }
+ function restoreSelfPovCulled() {
+  if (!selfPov || !selfPov.culledSet || !actors) return;
+  for (const id of selfPov.culledSet) { const other = actors.get(id); if (other) other.player.visible = true; }
+  selfPov.culledSet.clear();
+ }
+ // The goose's head and body are ONE mesh, so the head cannot be hidden on its
+ // own. With the lens just in front of the face, any gaze that is not the way the
+ // body faces looked straight through your own head (centre-ray diagnostic: own
+ // body mesh at 8cm). So in first person the body turns with the gaze, as in any
+ // FPS: after the final camera rotation (authored + user look) is known, the body
+ // is yawed until its facing matches the camera's horizontal heading, then the
+ // eye point is re-derived and the lens re-seated on it. Self view only -- the
+ // bystander (NPC) view keeps the stage's own choreography untouched.
+ const alignCamDir = new THREE.Vector3(), alignBodyDir = new THREE.Vector3();
+ function alignSelfBodyToGaze() {
+  if (!selfPov || !ejectionStage || selfPov.blend <= 0.5) return;
+  const cam = ejectionStage.camera, tp = selfPov.avatar.player, model = selfPov.avatar.model;
+  cam.updateMatrixWorld();
+  cam.getWorldDirection(alignCamDir);
+  model.updateWorldMatrix(true, false);
+  model.getWorldDirection(alignBodyDir); // +z of the model = where the goose faces
+  if (Math.hypot(alignCamDir.x, alignCamDir.z) < 1e-3 || Math.hypot(alignBodyDir.x, alignBodyDir.z) < 1e-3) return;
+  const delta = Math.atan2(alignCamDir.x, alignCamDir.z) - Math.atan2(alignBodyDir.x, alignBodyDir.z);
+  tp.rotation.y += Math.atan2(Math.sin(delta), Math.cos(delta));
+  tp.updateWorldMatrix(true, true);
+  povEye.copy(selfPov.eyeLocal).applyMatrix4(model.matrixWorld);
+  const b = selfPov.blend * selfPov.blend * (3 - 2 * selfPov.blend);
+  cam.position.lerpVectors(povAuthored, povEye, b);
+  selfPov.camToEye = +cam.position.distanceTo(povEye).toFixed(4);
+  if (ejectionStage.trajectory) ejectionStage.trajectory.eye = cam.position.toArray();
+ }
+ // What the centre of the self view is looking at: first visible mesh hit by a
+ // ray through the screen centre, its owner (actor id, or 'scene') and distance.
+ // Diagnostic for the smoke -- a goose filling the frame shows up as a hit < 0.4m.
+ const povRay = new THREE.Raycaster(), povNdc = new THREE.Vector2(0, 0);
+ function selfPovCenterHit() {
+  if (!ejectionStage) return null;
   const cam = ejectionStage.camera;
   cam.updateMatrixWorld();
-  const p = povCenter.clone().project(cam);
-  const inFront = povCenter.clone().applyMatrix4(cam.matrixWorldInverse).z < 0;
-  return {x: +p.x.toFixed(3), y: +p.y.toFixed(3), inFront, size: +povSize.length().toFixed(3)};
- }
-
- function destroyEjectionWings() {
-  if (ejectionWings) {
-   for (const wing of ejectionWings.children)
-    if (wing.userData.povWingOwned && wing.material && wing.material.dispose) wing.material.dispose();
-   if (ejectionWings.parent) ejectionWings.parent.remove(ejectionWings);
+  povRay.setFromCamera(povNdc, cam);
+  povRay.near = 0.01; povRay.far = 30;
+  const visibleChain = o => { for (let n = o; n; n = n.parent) if (n.visible === false) return false; return true; };
+  const hit = povRay.intersectObject(ejectionStage.scene, true).find(h => h.object.isMesh && visibleChain(h.object));
+  if (!hit) return null;
+  let owner = 'scene';
+  for (const id of actors ? actors.ids : []) {
+   const p = actors.get(id)?.player;
+   for (let n = hit.object; n; n = n.parent) if (n === p) { owner = id; break; }
+   if (owner !== 'scene') break;
   }
-  ejectionWings = null;
+  return {owner, self: owner === playerActorId, name: String(hit.object.name || '').slice(0, 40), distance: +hit.distance.toFixed(3)};
+ }
+ function selfPovState() {
+  if (!selfPov) return null;
+  return {mode: selfPov.mode, blend: +selfPov.blend.toFixed(3), camToEye: selfPov.camToEye,
+   bodyVisible: Boolean(selfPov.avatar.player.visible), headHidden: selfPov.headHidden, roll: +selfPov.roll.toFixed(3), culled: selfPov.culled || 0,
+   centerHit: selfPovCenterHit(),
+   eye: ejectionStage ? ejectionStage.camera.position.toArray().map(v => +v.toFixed(2)) : null,
+   authored: povAuthored.toArray().map(v => +v.toFixed(2)),
+   yaw: ejectionStage ? +ejectionStage.camera.rotation.y.toFixed(2) : null,
+   pitch: ejectionStage ? +ejectionStage.camera.rotation.x.toFixed(2) : null,
+   others: ejectionStage && actors ? actors.ids.filter(id => id !== playerActorId).map(id => {
+    const pl = actors.get(id)?.player;
+    if (!pl) return {id, missing: true};
+    const w = pl.getWorldPosition(new THREE.Vector3()); w.y += SELF_POV_HEAD_Y;
+    const n = w.clone().project(ejectionStage.camera);
+    return {id: id.slice(-2), vis: pl.visible, inScene: pl.parent === ejectionStage.scene, ndc: [+n.x.toFixed(2), +n.y.toFixed(2), +n.z.toFixed(3)]};
+   }) : null};
+ }
+ function destroySelfPov() {
+  if (selfPov) {
+   setHeadHidden(false);
+   restoreSelfPovCulled();
+   selfPov.avatar.player.rotation.z = 0;
+  }
+  selfPov = null;
  }
 
  function fireCue(key, cue) {
@@ -224,7 +343,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
     break;
    case 'ejection': {
     if (meetingStage) meetingStage.detachActors();
-    destroyEjectionWings();
+    destroySelfPov();
     if (ejectionStage && stageMatches(snapshot)) {
      ejectionStage.reset();
     } else {
@@ -236,7 +355,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
      lastStageKind = 'ejection';
     }
     ejectionStage.begin();
-    buildEjectionWings();
+    buildSelfPov();
     ejectionStage.projection(host.clientWidth, Math.max(1, host.clientHeight));
     const underwater = snapshot.style === 'water';
     look.enable({
@@ -298,12 +417,14 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    // finished freezes the real end frame instead of re-sampling with a fake time.
    const elapsed = phase === 'finished' ? duration : snapshot.elapsed;
    ejectionStage.update({elapsed, reducedMotion: snapshot.reducedMotion});
-   updateEjectionWings();
+   applySelfPov(phase === 'finished' ? 0 : dt, elapsed, snapshot.reducedMotion);
    if (ejectionStage.lookMode === 'free' && look.state().enabled) {
     look.apply(ejectionStage.camera, ejectionStage.baseYaw, ejectionStage.basePitch);
    } else {
     ejectionStage.camera.rotation.set(ejectionStage.basePitch ?? 0, ejectionStage.baseYaw ?? 0, 0, 'YXZ');
    }
+   if (selfPov && selfPov.roll) ejectionStage.camera.rotation.z = selfPov.roll; // mild wobble, after the look is applied
+   alignSelfBodyToGaze();
    if (snapshot.style === 'water' && elapsed >= 2.4) {
     // Wider vertical freedom once the eye passes the surface; user deltas preserved.
     look.setLimits(IMMERSION_CONFIG.underwaterPitchRange[0], IMMERSION_CONFIG.underwaterPitchRange[1]);
@@ -329,7 +450,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
 
  function cleanupSession() {
   destroyRingWings();
-  destroyEjectionWings();
+  destroySelfPov();
   if (ringCamera) {
    // drop the hidden bell camera so the roam scene graph is back to its
    // pre-session state (it is re-created on demand by ensureRingCamera).
@@ -569,7 +690,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
     look: look.state(),
     positionDrift,
     ringBell: snapshot.phase === 'ringing' ? ringBellProjection() : null,
-    povWings: ['ejection', 'finished'].includes(snapshot.phase) ? povWingsOnScreen() : null,
+    selfPov: ['ejection', 'finished'].includes(snapshot.phase) ? selfPovState() : null,
    };
   },
   dispose() {

@@ -49,6 +49,8 @@ export function buildStage(ctx) {
  const petalMats = ['#f5c6d0', '#ffffff', '#e8a0b4'].map(c => take(new THREE.MeshBasicMaterial({color: c, transparent: true, opacity: 0.95, side: THREE.DoubleSide, fog: false})));
  const dropStart = 2.2, impact = 2.72;
  stage.beats = {walkEnd: 1.2, liftEnd: dropStart, carryEnd: dropStart, pauseEnd: dropStart, dropEnd: impact};
+ // Self POV rides the head until the impact hides the body; then the authored camera takes over.
+ stage.selfPovUntil = impact;
 
  stage.update = ({elapsed, reducedMotion}) => {
   reduced.value = Boolean(reducedMotion);

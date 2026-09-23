@@ -168,6 +168,9 @@ export function buildStage(ctx) {
  // -> drop; the eye keeps watching the shore through the fall and the slow sink.
  const walkEnd = 1.7, liftEnd = 2.9, carryEnd = 4.5, pauseEnd = 5.1, dropEnd = 5.9;
  stage.beats = {walkEnd, liftEnd, carryEnd, pauseEnd, dropEnd};
+ // Self POV: once dropped, the authored gaze sinking toward the chain may look
+ // steeply down past your own body (the level-gaze band applies before that).
+ stage.selfPovFreePitchAfter = dropEnd;
  const eyeOff = eyeH * 0.9;
  const shorePoint = new THREE.Vector3(-1.1, 1.0, 0); // the crowd waiting on the dock
  const throwY = t => lerp(0.55, -0.75, ease(t)) + (reduced.value ? 0 : Math.sin(t * Math.PI) * 0.12);

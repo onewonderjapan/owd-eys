@@ -492,14 +492,20 @@ try {
     g.drawImage(bmp, 0, 0);
     const d = g.getImageData(0, 0, cv.width, cv.height).data;
     const w = cv.width, h = cv.height;
+    // Chain and stone render steel-blue (G and B well above the deep water, G above R);
+    // the purple own body (R above G) and the water do not count. Calibrated
+    // 2026-09-24: look-down frame 0.82%, empty-water frames 0.05-0.06%. (The old
+    // 'red > 90 in the bottom half' proxy was tuned for the proxy wing rig and
+    // hovered around its 3% gate once the real body replaced the wings.)
     let hot = 0, tot = 0;
-    for (let y = Math.floor(h / 2); y < h; y++) for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4; tot++;
-      if (d[i] > 90) hot++;
+      const r = d[i], gg = d[i + 1], b = d[i + 2];
+      if (r >= 28 && gg >= 55 && gg >= r && b >= gg && b - r >= 30) hot++;
     }
     return +(hot / tot).toFixed(4);
   }, readFileSync(path.join(root, 'reports', 'immersion', shotPrefix + 'water-self-look-down.png')).toString('base64'));
-  check('water-self: 低头链石入画(下半暖色像素>3%)', lookDown > 0.03, JSON.stringify({bottomWarm: lookDown}));
+  check('water-self: 低头链石入画(钢蓝链石像素>0.3%)', lookDown > 0.003, JSON.stringify({chainStone: lookDown}));
   const selfDiag = await imm();
   check('water-self: 目标是玩家且水下', selfDiag?.targetId === selfDiag?.playerActorId && selfDiag?.style === 'water' && selfDiag?.elapsed > 5.5,
     JSON.stringify({target: selfDiag?.targetId, player: selfDiag?.playerActorId, style: selfDiag?.style, elapsed: selfDiag?.elapsed}));
@@ -607,27 +613,34 @@ try {
     // capture the whole performance: one frame per ~1.2s of stage time
     const styleErrorsBefore = pageErrors.length;
     const styleElapsed = [];
-    const styleWings = [];
+    const stylePov = [];
     for (let shot = 1; shot <= 6; shot++) {
       await page.waitForTimeout(1200);
       await page.screenshot({path: path.join(root, 'reports', 'immersion', `style-${EXTRA_STYLE}-${shot}.png`), type: 'png'});
       report.screenshots.push(`style-${EXTRA_STYLE}-${shot}.png`);
-      const styleSnap = await page.evaluate(() => ({ph: window.eys.state().walk.immersion?.phase, el: window.eys.state().walk.immersion?.elapsed, wings: window.eys.state().walk.immersion?.povWings}));
-      if (styleSnap.wings) styleWings.push(styleSnap.wings);
+      const styleSnap = await page.evaluate(() => ({ph: window.eys.state().walk.immersion?.phase, el: window.eys.state().walk.immersion?.elapsed, pov: window.eys.state().walk.immersion?.selfPov}));
+      if (styleSnap.pov) stylePov.push(styleSnap.pov);
       if (styleSnap.ph !== 'ejection') break;
       styleElapsed.push(styleSnap.el);
     }
     // A thrown stage frame used to freeze the page silently (flush, 1.4.0..1.5.0):
     // identical screenshots, elapsed stuck. Require the clock to keep moving.
     const styleAdvancing = styleElapsed.length >= 2 && styleElapsed.every((v, i) => i === 0 || v > styleElapsed[i - 1]);
-    // Self POV wings must stay anchored in the frame (review 2026-09-24: they
-    // followed the tumbling/spinning body and flew around the screen).
-    const wingXs = styleWings.map(w => w.x), wingYs = styleWings.map(w => w.y);
-    const wingDrift = styleWings.length ? Math.max(Math.max(...wingXs) - Math.min(...wingXs), Math.max(...wingYs) - Math.min(...wingYs)) : null;
-    console.log('POV-WINGS', EXTRA_STYLE, JSON.stringify({drift: wingDrift, samples: styleWings}));
-    check('style-' + EXTRA_STYLE + ': 自身视角翅膀固定在画面下缘(漂移<0.25 且始终在镜头前)',
-      styleWings.length >= 2 && wingDrift < 0.25 && styleWings.every(w => w.inFront && w.y < 0),
-      `drift=${wingDrift} samples=${JSON.stringify(styleWings.slice(0, 6))}`);
+    // Self POV rides the player's own head with the real body shown (2026-09-24;
+    // the old proxy wings followed the tumbling body and flew around the frame).
+    // Whenever the head camera is active it must sit exactly on the eye point,
+    // with the body visible and the head hidden.
+    const povHead = stylePov.filter(v => v.mode === 'head');
+    console.log('SELF-POV', EXTRA_STYLE, JSON.stringify(stylePov.map(v => ({m: v.mode, hit: v.centerHit, eye: v.eye, auth: v.authored, yaw: v.yaw, pitch: v.pitch, others: v.others}))));
+    check('style-' + EXTRA_STYLE + ': 自身视角机位挂在头部且身体可见',
+      povHead.length >= 1 && povHead.every(v => v.camToEye < 0.005 && v.bodyVisible && v.headHidden),
+      `head=${povHead.length}/${stylePov.length} samples=${JSON.stringify(stylePov.slice(0, 6))}`);
+    // The goose head and body are one mesh: a gaze off the body's facing used to
+    // look through your own head (centre ray hit the own body at ~8cm).
+    const povSelfBlock = povHead.filter(v => v.centerHit && v.centerHit.self && v.centerHit.distance < 0.3);
+    check('style-' + EXTRA_STYLE + ': 自身视角画面中心不被自己身体挡住',
+      povHead.length >= 1 && povSelfBlock.length === 0,
+      `blocked=${povSelfBlock.length}/${povHead.length} ${JSON.stringify(povSelfBlock.slice(0, 2).map(v => v.centerHit))}`);
     check('style-' + EXTRA_STYLE + ': 演出全程帧持续推进且无页面异常', styleAdvancing && pageErrors.length === styleErrorsBefore,
       `elapsed=${JSON.stringify(styleElapsed.map(v => +(v ?? -1).toFixed(2)))} newErrors=${JSON.stringify(pageErrors.slice(styleErrorsBefore).map(e => e.slice(0, 160)))}`);
     // V1 2026-09-24: fire self-view shot 5 (~6s, inside the pit looking back at
