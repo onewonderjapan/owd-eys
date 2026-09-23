@@ -51,9 +51,14 @@ npm start
 
 ```sh
 npm test                         # 纯逻辑（状态机 + 寻路共 38 项）+ 产物检查
-node scripts/smoke-immersion.mjs # 端到端桌面冒烟（进入→行走→按铃→会议→出局→镇民，74 项）
-MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion-mobile  # 手机断言（61 项）
+node scripts/smoke-immersion.mjs # 端到端桌面冒烟（进入→行走→按铃→会议→出局→镇民）
+MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion-mobile  # 手机断言
+STYLE=<water|fire|bridge|flush|quicksand|space|chandelier|boulder> \
+  node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ style-<style>            # 单风格出局全程（含画面门）
 node scripts/smoke-perf.mjs      # 性能门（相对指标、无灾难性卡顿；reports/local/perf.json，发布门之一）
+node scripts/smoke-visual.mjs    # 画面健全门（关键帧方差/色块/过曝/全黑；reports/local/visual.json，发布门之一）
+python -X utf8 scripts/contact-sheet.py  # 把关键帧拼成 reports/local/contact-sheet.jpg，发布前肉眼扫一遍
+node scripts/check-undeclared.mjs # 静态检查：未声明标识符（1.4.0 splash 冻结 bug 的类别），发布门之一
 ```
 
 ## 许可与边界

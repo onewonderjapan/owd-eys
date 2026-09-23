@@ -5,7 +5,7 @@
 复用 pet 站点的已签发通配符证书、静态缓存策略及安全响应头策略。eys.onewonder.co.jp 只新建 A 记录；该名称在发布前查询为空，公网 NS 与 Hosted Zone Z049829035FWZ7KYTMXD4 一致。
 
 1. `npm ci`；先由原始工作区整理资产，或上线后 `npm run fetch-assets` 恢复哈希锁定的资产。
-2. 增加 `package.json` 版本后执行 `npm run build`、`npm test`，再运行 `scripts/smoke.mjs`、`scripts/smoke-first-person.mjs`、`scripts/smoke-entry-recovery.mjs` 和 `scripts/smoke-perf.mjs`（性能门：只看相对指标——漫游最差帧 ≤500ms、p95 ≤ 4×中位、water/fire 出局节拍最低 fps ≥ 漫游中位 fps 的 50%，写入 `reports/local/perf.json`）；核对实际网页角色选择、进入地图与加载失败重试。
+2. 增加 `package.json` 版本后执行 `npm run build`、`npm test`，再运行 `scripts/smoke.mjs`、`scripts/smoke-first-person.mjs`、`scripts/smoke-entry-recovery.mjs`、`scripts/smoke-perf.mjs`（性能门：只看相对指标——漫游最差帧 ≤500ms、p95 ≤ 4×中位、water/fire 出局节拍最低 fps ≥ 漫游中位 fps 的 50%，写入 `reports/local/perf.json`）、`scripts/smoke-immersion.mjs`（桌面）、`MOBILE=1 node scripts/smoke-immersion.mjs http://127.0.0.1:8870/ immersion-mobile`、八个 `STYLE=<style>` 出局冒烟，然后 `scripts/smoke-visual.mjs`（画面健全门：对当次构建的关键帧做方差/色块/过曝/全黑相对检查，写入 `reports/local/visual.json`）与 `python -X utf8 scripts/contact-sheet.py`（拼出 `reports/local/contact-sheet.jpg`，发布前肉眼扫一遍）；`node scripts/check-undeclared.mjs` 静态检查未声明标识符（publish 门会直接运行它）。核对实际网页角色选择、进入地图与加载失败重试。
 3. `aws cloudformation deploy --profile onewonder.root --region ap-northeast-1 --stack-name onewonder-eys --template-file infra/site.yaml --parameter-overrides PublishDns=false` 创建独立基础设施。
 4. 按 `scripts/publish.py` 的清单上传 `dist/`，先内容哈希资产、后 HTML；不删除远端旧文件。
 5. 核对 CloudFront 实际资源，再将 `PublishDns=true` 应用到同一 stack，创建 eys 的 Alias A。

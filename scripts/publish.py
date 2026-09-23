@@ -31,6 +31,14 @@ for report_path in ('reports/immersion/immersion.json','reports/immersion/p0-tes
     ok=immersion_check.get('passed') if report_path=='reports/immersion/immersion.json' else immersion_check.get('failed')==0
     assert ok,f'{report_path} did not pass; re-run it against the current build.'
     assert immersion_check.get('build_sha256')==build_digest,f'{report_path} is stale (build hash mismatch); re-run it against the current build.'
+# visual gate (V6 2026-09-24): pixel sanity on the key frames of the exact build
+# about to ship — 门全绿不等于画面对, so the publish also requires the visual audit
+visual_gate=json.loads((root/'reports/local/visual.json').read_text(encoding='utf-8'))
+assert visual_gate['passed'] and visual_gate['build_sha256']==build_digest,'Verify the visual sanity gate against the current build before publication.'
+# undeclared-identifier gate (V6 2026-09-24): the 1.4.0 splash bug class — a
+# stage module referencing a name that stopped existing — must fail the publish
+undeclared=subprocess.run(['node',str(root/'scripts/check-undeclared.mjs')],capture_output=True,text=True,cwd=str(root))
+assert undeclared.returncode==0,'check-undeclared failed:\n'+(undeclared.stdout+undeclared.stderr).strip()[-600:]
 plan={'bucket':bucket,'prefix':'out/','distribution':distribution,'files':len(build['files']),'bytes':build['bytes'],'deletes':0,'upload_order':'hashed assets and scripts first, HTML last'}
 (root/'reports/publish-plan.json').write_text(json.dumps(plan,ensure_ascii=False,indent=2)+'\n',encoding='utf-8');print(json.dumps(plan),flush=True)
 if not args.apply:raise SystemExit(0)
