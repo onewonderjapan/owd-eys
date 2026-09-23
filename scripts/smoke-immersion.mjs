@@ -13,6 +13,7 @@ const {chromium} = require('playwright');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const url = process.argv[2] || 'http://127.0.0.1:8870/';
 const label = process.argv[3] || 'immersion';
+const LOOK = process.env.LOOK || ''; // V8 sample: LOOK=court renames meeting shots
 
 const simModule = await import('../src/map-walk-simulation.js').catch(() => ({}));
 // findPath lives in src (shared with the walk NPCs); nav is passed per call.
@@ -382,10 +383,13 @@ try {
     `phase=${discussion?.phase} speaker=${discussion?.speakerIndex}`);
   const captionText = await page.evaluate(() => document.querySelector('#immersion-caption')?.textContent || '');
   check('flow: 字幕包含说话者标签', captionText.includes('：'), captionText);
-  await SHOT('meeting-pov.png');
+  // V8 sample: LOOK=court renames the meeting frames so the ?look=court sample
+  // never overwrites the default evidence; default runs keep the old names.
+  const meetingShot = LOOK === 'court' ? 'look-court-desktop.png' : 'meeting-pov.png';
+  await SHOT(meetingShot);
   await page.setViewportSize({width: 390, height: 844});
   await page.waitForTimeout(500);
-  await SHOT('meeting-mobile.png');
+  await SHOT(LOOK === 'court' ? 'look-court-mobile.png' : 'meeting-mobile.png');
   await page.setViewportSize({width: 1440, height: 960});
   await page.waitForTimeout(400);
 

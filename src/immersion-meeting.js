@@ -59,6 +59,11 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
  scene.background = new THREE.Color('#262019');
  const meeting = config.meeting;
  const owned = [];
+ // V8 2026-09-24 SAMPLE (?look=court): a brighter courtroom interior — back
+ // windows, wainscot ring and a hanging chandelier — plus a slightly wider
+ // camera so all eight seats fit. SAMPLE ONLY: the default path (no query
+ // param) builds exactly the 1.5.1 backdrop and camera.
+ const courtLook = typeof location !== 'undefined' && new URLSearchParams(location.search).get('look') === 'court';
 
  const table = props.instantiate('prop_round_table');
  scene.add(table);
@@ -72,6 +77,41 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
   scene.add(chair);
   chairRoots.push(chair);
   owned.push(chair);
+ }
+ if (courtLook) {
+  const court = new THREE.Group();
+  // three warm window panes on the far wall (emissive, no real-time cost)
+  const paneMat = new THREE.MeshStandardMaterial({color: '#f2e3b8', emissive: '#d8b36a', emissiveIntensity: 0.85, roughness: 0.6});
+  const frameMat = new THREE.MeshStandardMaterial({color: '#57331f', roughness: 0.8});
+  for (const a of [-0.55, 0, 0.55]) {
+   const x = Math.sin(a) * 4.28, z = -Math.cos(a) * 4.28;
+   const pane = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.06), paneMat);
+   pane.position.set(x, 1.7, z);
+   pane.rotation.y = a;
+   court.add(pane);
+   const frame = new THREE.Mesh(new THREE.BoxGeometry(1.31, 1.66, 0.05), frameMat);
+   frame.position.set(x, 1.7, z - 0.01);
+   frame.rotation.y = a;
+   court.add(frame);
+  }
+  // chandelier: gold ring + emissive bulbs, hanging over the table
+  const gold = new THREE.MeshStandardMaterial({color: '#c9a13b', roughness: 0.35, metalness: 0.6});
+  const bulb = new THREE.MeshStandardMaterial({color: '#ffe6b0', emissive: '#ffd684', emissiveIntensity: 1.1});
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 8), gold);
+  rod.position.set(0, 3.05, 0);
+  court.add(rod);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.045, 8, 32), gold);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.set(0, 2.5, 0);
+  court.add(ring);
+  for (let b = 0; b < 5; b++) {
+   const a = b / 5 * Math.PI * 2;
+   const bulbMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), bulb);
+   bulbMesh.position.set(Math.cos(a) * 0.55, 2.42, Math.sin(a) * 0.55);
+   court.add(bulbMesh);
+  }
+  for (const o of court.children) owned.push(o);
+  scene.add(court);
  }
 
  scene.add(new THREE.HemisphereLight('#8a7660', '#221a1c', 0.95));
@@ -125,6 +165,11 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
  const camera = new THREE.PerspectiveCamera(meeting.camera.fov, 1, 0.035, 60);
  camera.position.set(...meeting.camera.position);
  camera.lookAt(0, meeting.camera.lookY, 0);
+ if (courtLook) {
+  // sample camera: pulled back/up so all eight seats read inside the frame
+  camera.position.set(0, 1.32, 2.12);
+  camera.lookAt(0, 0.78, 0);
+ }
  scene.add(camera);
  if (wingsRig) camera.add(wingsRig);
 
