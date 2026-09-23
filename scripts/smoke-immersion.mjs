@@ -353,8 +353,9 @@ try {
   if (!await waitPhase('ringing', 40000)) check('flow: ringing', false, JSON.stringify(await imm()));
   await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing' && window.eys.state().walk.immersion.elapsed > 0.4, {timeout: 20000}).catch(() => {});
   await SHOT('ring-pov.png');
-  // V5 2026-09-24: the sky dome must give a vertical gradient — compare the high
-  // sky band against the horizon band of the same frame (flat 1.5.1 bg ≈ 0 diff).
+  // V5 2026-09-24: the sky dome must give a vertical gradient — measure how much
+  // the row mean color varies across the 8-28% height band (clear of the mobile
+  // UI): a flat 1.5.1 background measures ≈0, the dome gradient is prominent.
   const skyGrad = await page.evaluate(async src => {
     const blob = await (await fetch('data:image/png;base64,' + src)).blob();
     const bmp = await createImageBitmap(blob);
@@ -364,17 +365,18 @@ try {
     g.drawImage(bmp, 0, 0);
     const d = g.getImageData(0, 0, cv.width, cv.height).data;
     const w = cv.width, h = cv.height;
-    const band = (y0, y1) => {
+    const mn = [255, 255, 255], mx = [0, 0, 0];
+    for (let y = Math.floor(h * 0.08); y < Math.floor(h * 0.28); y++) {
       let r = 0, gr = 0, b = 0, n = 0;
-      for (let y = Math.floor(h * y0); y < Math.floor(h * y1); y++) for (let x = Math.floor(w * 0.3); x < Math.floor(w * 0.7); x++) {
+      for (let x = Math.floor(w * 0.3); x < Math.floor(w * 0.7); x++) {
         const i = (y * w + x) * 4; r += d[i]; gr += d[i + 1]; b += d[i + 2]; n++;
       }
-      return [r / n, gr / n, b / n];
-    };
-    const t = band(0.03, 0.08), m = band(0.24, 0.29);
-    return +(Math.abs(t[0] - m[0]) + Math.abs(t[1] - m[1]) + Math.abs(t[2] - m[2])).toFixed(1);
+      const c = [r / n, gr / n, b / n];
+      for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], c[k]); mx[k] = Math.max(mx[k], c[k]); }
+    }
+    return +((mx[0] - mn[0]) + (mx[1] - mn[1]) + (mx[2] - mn[2])).toFixed(1);
   }, readFileSync(path.join(root, 'reports', 'immersion', shotPrefix + 'ring-pov.png')).toString('base64'));
-  check('sky: 天顶-地平线色差>25', skyGrad > 25, JSON.stringify({diff: skyGrad}));
+  check('sky: 天空竖向渐变幅度>25', skyGrad > 25, JSON.stringify({diff: skyGrad}));
   if (!await waitPhase('seating', 15000)) check('flow: seating', false, JSON.stringify(await imm()));
   check('flow: seating入discussion', await waitPhase('discussion', 15000), 'discussion reached');
   await page.waitForTimeout(1200);
