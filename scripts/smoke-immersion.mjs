@@ -92,9 +92,10 @@ const check = (name, passed, detail = '') => {
 };
 
 // Decode a screenshot PNG inside the browser page (createImageBitmap + canvas,
-// no packages) and measure wash ratios: strict overexposure (all channels > 245)
-// and warm near-white wash (the additive-flame whiteout signature; the strict
-// threshold misses it because the wash is orange-tinted, not pure white).
+// no packages) and measure wash ratios: strict overexposure (all channels > 245),
+// warm near-white wash (the additive-flame whiteout signature; the strict
+// threshold misses it because the wash is orange-tinted, not pure white), and
+// light gray slabs (all channels > 200 — the "material-less white board" look).
 async function pixelWash(page, relPath) {
   const b64 = readFileSync(path.join(root, 'reports', 'immersion', relPath)).toString('base64');
   return await page.evaluate(async src => {
@@ -105,13 +106,14 @@ async function pixelWash(page, relPath) {
     const g = cv.getContext('2d');
     g.drawImage(bmp, 0, 0);
     const d = g.getImageData(0, 0, cv.width, cv.height).data;
-    let over = 0, warm = 0;
+    let over = 0, warm = 0, light = 0;
     for (let i = 0; i < d.length; i += 4) {
       if (d[i] > 245 && d[i + 1] > 245 && d[i + 2] > 245) over++;
       if (d[i] > 240 && d[i + 1] > 215 && d[i + 2] > 170) warm++;
+      if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) light++;
     }
     const total = d.length / 4;
-    return {over: +(over / total).toFixed(4), warm: +(warm / total).toFixed(4)};
+    return {over: +(over / total).toFixed(4), warm: +(warm / total).toFixed(4), light: +(light / total).toFixed(4)};
   }, b64);
 }
 
@@ -560,6 +562,16 @@ try {
         check('style-fire: 第5拍暖白泛光<18%', fireWash.warm < 0.18, JSON.stringify(fireWash));
       } catch (e) {
         check('style-fire: 第5拍过曝门可测', false, String(e && e.message || e).slice(0, 160));
+      }
+    }
+    // V2 2026-09-24: bridge shot 4 (underwater look back) used to be dominated by
+    // the stacked crowd rendered as blown-out slabs (1.5.1 before: light=16.0%).
+    if (EXTRA_STYLE === 'bridge') {
+      try {
+        const bridgeWash = await pixelWash(page, 'style-bridge-4.png');
+        check('style-bridge: 第4拍浅灰大板占比<5%', bridgeWash.light < 0.05, JSON.stringify(bridgeWash));
+      } catch (e) {
+        check('style-bridge: 第4拍画面门可测', false, String(e && e.message || e).slice(0, 160));
       }
     }
     await page.evaluate(() => document.querySelector('#immersion-skip')?.click());
