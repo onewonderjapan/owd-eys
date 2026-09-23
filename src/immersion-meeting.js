@@ -63,6 +63,7 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
  // windows, wainscot ring and a hanging chandelier — plus a slightly wider
  // camera so all eight seats fit. SAMPLE ONLY: the default path (no query
  // param) builds exactly the 1.5.1 backdrop and camera.
+ const courtParts = [];
  const courtLook = typeof location !== 'undefined' && new URLSearchParams(location.search).get('look') === 'court';
 
  const table = props.instantiate('prop_round_table');
@@ -110,7 +111,11 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
    bulbMesh.position.set(Math.cos(a) * 0.55, 2.42, Math.sin(a) * 0.55);
    court.add(bulbMesh);
   }
-  for (const o of court.children) owned.push(o);
+  owned.push(court); // the group is the scene child; removing it takes the sample with it
+  // sample geometries/materials are created here, so release them with the backdrop
+  const courtRes = new Set();
+  court.traverse(o => { if (o.geometry) courtRes.add(o.geometry); if (o.material) courtRes.add(o.material); });
+  courtParts.push(...courtRes);
   scene.add(court);
  }
 
@@ -225,6 +230,7 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
    for (const object of owned) if (object.parent === scene) scene.remove(object);
    if (wingsRig) wingsRig.clear();
    for (const part of backdropParts) if (part.dispose) part.dispose();
+   for (const part of courtParts) part.dispose();
    scene.clear();
   },
  };

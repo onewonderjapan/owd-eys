@@ -103,24 +103,35 @@ try {
     const p = path.join(root, 'reports', v.image);
     if (!existsSync(p)) { report.errors.push(`missing screenshot ${v.image}`); continue; }
     const metrics = await page.evaluate(analyzeInPage, readFileSync(p).toString('base64'));
-    const base = baselines[v.view];
-    const varianceCheck = typeof base === 'number' && base > 0 ? (metrics.variance >= base * 0.5 ? 'pass' : 'fail') : 'baseline-established';
-    // maxBlock is a REGRESSION check against the per-view baseline (±25%, capped
-    // 0.97): four ejection stages are intentionally dark-void scenes today
-    // (space/chandelier/boulder/quicksand measure 0.73-0.91 on the unchanged
-    // 1.5.1 look), so the plan's absolute <70% would fail frames R1 never
-    // touched. The R2 environment round is what lifts those baselines.
-    const maxBlockLimit = typeof base === 'number' ? Math.max(0.70, Math.min(base * 1.25, 0.97)) : 0.70;
+    // Baselines are per view {variance, maxBlock}. (The first version stored only
+    // variance and multiplied THAT by 1.25 for the colour-block limit, so every
+    // view silently got the 0.97 cap.) Older numeric entries mean {variance}.
+    const raw = baselines[v.view];
+    const base = typeof raw === 'number' ? {variance: raw} : (raw || {});
+    const varianceCheck = typeof base.variance === 'number' && base.variance > 0 ? (metrics.variance >= base.variance * 0.5 ? 'pass' : 'fail') : 'baseline-established';
+    // maxBlock is a REGRESSION check against this view's own baseline (+25%,
+    // floor 0.70, cap 0.97): four ejection stages are dark-void scenes today
+    // (space/chandelier/boulder/quicksand measure 0.73-0.91), so an absolute 70%
+    // would fail frames R1 never touched; R2 lifts those baselines.
+    // What this gate can NOT see: a near-camera occluder with normal colour
+    // statistics. The 1.5.0 first-person bug (own head filling the view)
+    // measures maxBlock 0.23 / variance 1791 -- indistinguishable from a healthy
+    // frame. That class is caught by smoke-first-person's after-frames check.
+    const maxBlockLimit = typeof base.maxBlock === 'number' ? Math.max(0.70, Math.min(base.maxBlock * 1.25, 0.97)) : 0.70;
     const checks = {
       maxBlock: metrics.maxBlock < maxBlockLimit ? 'pass' : 'fail',
       overexposed: metrics.over < 0.25 ? 'pass' : 'fail',
       allBlack: metrics.black < 0.60 ? 'pass' : 'fail',
       variance: varianceCheck,
     };
-    if (typeof base !== 'number') baselines[v.view] = metrics.variance;
+    // Only fill in missing fields; existing baselines are never overwritten by a run.
+    const nextBase = {...base};
+    if (typeof nextBase.variance !== 'number') nextBase.variance = metrics.variance;
+    if (typeof nextBase.maxBlock !== 'number') nextBase.maxBlock = metrics.maxBlock;
+    baselines[v.view] = nextBase;
     const failed = Object.values(checks).some(c => c === 'fail');
     if (failed) report.errors.push(`${v.view}: ${JSON.stringify(metrics)}`);
-    report.views.push({view: v.view, image: `reports/${v.image}`, metrics, checks, maxBlockLimit: +maxBlockLimit.toFixed(3), baseline: typeof base === 'number' ? base : null});
+    report.views.push({view: v.view, image: `reports/${v.image}`, metrics, checks, maxBlockLimit: +maxBlockLimit.toFixed(3), baseline: base.variance != null ? base : null});
   }
 
   writeFileSync(baselinePath, JSON.stringify(baselines, null, 2) + '\n');

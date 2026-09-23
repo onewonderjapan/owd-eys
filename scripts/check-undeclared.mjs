@@ -135,7 +135,12 @@ function collectIdentifiers(skeleton) {
   // function declarations, method shorthand `name(args) {`, and their parameters
   // (one level of paren nesting so `(a, {b = () => {}}) = {}` params still parse)
   const callBlockRe = /(?<![\w$.])([A-Za-z_$][\w$]*)\s*\(((?:[^()]|\([^()]*\))*)\)\s*{/g;
+  // `if (...) {`, `for (...) {` etc. are NOT parameter lists. Treating their
+  // conditions as declarations is exactly how the first version of this gate
+  // passed the 1.4.0 flush bug (`if (k >= 1 && splash.userData...) {`).
+  const CONTROL = new Set(['if', 'for', 'while', 'switch', 'with']);
   while ((m = callBlockRe.exec(skeleton))) {
+    if (CONTROL.has(m[1])) continue;
     push(m[1]);
     for (const name of idIn(m[2])) push(name);
   }
@@ -143,6 +148,11 @@ function collectIdentifiers(skeleton) {
   while ((m = arrowIdentRe.exec(skeleton))) push(m[1]);
   const parenRe = /\(((?:[^()]|\([^()]*\))*)\)\s*(?:=>|{)/g;
   while ((m = parenRe.exec(skeleton))) {
+    let j = m.index - 1;
+    while (j >= 0 && /\s/.test(skeleton[j])) j--;
+    let k = j;
+    while (k >= 0 && /[\w$]/.test(skeleton[k])) k--;
+    if (CONTROL.has(skeleton.slice(k + 1, j + 1))) continue;
     for (const name of idIn(m[1])) push(name);
   }
   // imports: default, named {a, b as c}, namespace * as ns
@@ -156,6 +166,14 @@ function collectIdentifiers(skeleton) {
     }
   }
   return declared;
+}
+
+// Self-test on every run: the exact shape of the 1.4.0 flush bug must be
+// reported. If this ever stops firing, the gate has gone blind again.
+{
+  const sample = toCodeSkeleton("export function f(k) {\n if (k >= 1 && splash.userData.last !== 1) { splash.userData.last = 1; }\n}\n");
+  const known = collectIdentifiers(sample);
+  if (known.has('splash')) { console.log('check-undeclared: FAIL — self-test: a control-statement condition was treated as a declaration'); process.exit(1); }
 }
 
 const findings = [];

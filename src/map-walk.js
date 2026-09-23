@@ -119,7 +119,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   const geo=new THREE.SphereGeometry(150,24,12);
   geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count*3),3));
   skyDome=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));
-  skyDome.renderOrder=-1;scene.add(skyDome);paintSky(SKY_DAY);
+  skyDome.renderOrder=-1;paintSky(SKY_DAY); // attached in start(), detached in stop()
   const glow=new Set();
   root.traverse(o=>{if(o.isMesh&&o.material&&/warm amber glass/i.test(o.material.name||''))glow.add(o.material);});
   duskGlow=[...glow];

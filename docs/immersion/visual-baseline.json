@@ -1,24 +1,90 @@
 {
-  "dusk-off": 1522.7,
-  "dusk-on": 1072.3,
-  "first-person": 1639.5,
-  "overview": 1541.7,
-  "meeting-pov": 3781.6,
-  "voting": 4057.3,
-  "vote-result": 3871.2,
-  "water-self": 737,
-  "water-self-look-down": 416.8,
-  "water-npc": 781.7,
-  "fire-self": 556,
-  "fire-self-lit": 1326.3,
-  "fire-npc": 821.5,
-  "ring-pov": 2863.1,
-  "style-water-3": 790.9,
-  "style-fire-3": 2204.8,
-  "style-bridge-3": 1125,
-  "style-flush-3": 425.6,
-  "style-quicksand-3": 876.1,
-  "style-space-3": 678.7,
-  "style-chandelier-3": 790.7,
-  "style-boulder-3": 148.1
+  "dusk-off": {
+    "variance": 1522.7,
+    "maxBlock": 0.1606
+  },
+  "dusk-on": {
+    "variance": 1072.3,
+    "maxBlock": 0.1603
+  },
+  "first-person": {
+    "variance": 1639.5,
+    "maxBlock": 0.198
+  },
+  "overview": {
+    "variance": 1541.7,
+    "maxBlock": 0.1606
+  },
+  "meeting-pov": {
+    "variance": 3781.6,
+    "maxBlock": 0.265
+  },
+  "voting": {
+    "variance": 4057.3,
+    "maxBlock": 0.2657
+  },
+  "vote-result": {
+    "variance": 3871.2,
+    "maxBlock": 0.2879
+  },
+  "water-self": {
+    "variance": 737,
+    "maxBlock": 0.3636
+  },
+  "water-self-look-down": {
+    "variance": 416.8,
+    "maxBlock": 0.3982
+  },
+  "water-npc": {
+    "variance": 781.7,
+    "maxBlock": 0.2424
+  },
+  "fire-self": {
+    "variance": 556,
+    "maxBlock": 0.4242
+  },
+  "fire-self-lit": {
+    "variance": 1326.3,
+    "maxBlock": 0.4333
+  },
+  "fire-npc": {
+    "variance": 821.5,
+    "maxBlock": 0.5778
+  },
+  "ring-pov": {
+    "variance": 2863.1,
+    "maxBlock": 0.2291
+  },
+  "style-water-3": {
+    "variance": 790.9,
+    "maxBlock": 0.301
+  },
+  "style-fire-3": {
+    "variance": 2204.8,
+    "maxBlock": 0.6532
+  },
+  "style-bridge-3": {
+    "variance": 1125,
+    "maxBlock": 0.6018
+  },
+  "style-flush-3": {
+    "variance": 425.6,
+    "maxBlock": 0.6586
+  },
+  "style-quicksand-3": {
+    "variance": 876.1,
+    "maxBlock": 0.7298
+  },
+  "style-space-3": {
+    "variance": 678.7,
+    "maxBlock": 0.9065
+  },
+  "style-chandelier-3": {
+    "variance": 790.7,
+    "maxBlock": 0.7975
+  },
+  "style-boulder-3": {
+    "variance": 148.1,
+    "maxBlock": 0.8138
+  }
 }
