@@ -8,7 +8,7 @@ function softFlameTexture() {
  canvas.width = canvas.height = 128;
  const g = canvas.getContext('2d');
  const grad = g.createRadialGradient(64, 80, 6, 64, 74, 62);
- grad.addColorStop(0, 'rgba(255,242,200,0.92)');
+ grad.addColorStop(0, 'rgba(255,230,164,0.92)');
  grad.addColorStop(0.32, 'rgba(255,196,110,0.7)');
  grad.addColorStop(0.62, 'rgba(255,128,48,0.32)');
  grad.addColorStop(1, 'rgba(255,90,20,0)');
@@ -67,9 +67,12 @@ export function buildStage(ctx) {
  flameTex = take(softFlameTexture());
  const flameGeo = take(new THREE.PlaneGeometry(0.34, 0.62));
  flameGeo.translate(0, 0.31, 0); // origin at the flame root
+ // Warm cap on the additive color: stacked flame planes used to converge on pure
+ // white when the camera stood inside the pit (self view read as a whiteout).
  flameMat = take(new THREE.MeshBasicMaterial({map: flameTex, transparent: true, opacity: 0.85,
-  blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
+  color: '#ffc07a', blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
  flames = [];
+ const flameCenter = new THREE.Vector3(pitX, 0.45, 0);
  const {flameRings, flameLayers} = config.limits;
  for (let i = 0; i < flameRings; i++) {
   const a = (i / flameRings) * Math.PI * 2;
@@ -183,7 +186,14 @@ export function buildStage(ctx) {
 
   const flicker = reduced.value ? 0.8 : 0.72 + Math.sin(elapsed * 11) * 0.12 + Math.sin(elapsed * 23.7) * 0.08;
   const feed = elapsed > dropEnd + 0.1 ? 1.15 : 1; // fire rises a little as the body lands
-  fireLight.intensity = 7 * flicker * feed;
+  // Inside the pit the near flames stack into a whiteout and the pit light blows
+  // the surrounding stones out: fade both with camera proximity (auto-exposure
+  // stand-in) so the "looking back at the crowd" beat stays readable. Purely
+  // brightness scaling — no new temporal modulation, reduced-motion unaffected.
+  const camDist = camera.position.distanceTo(flameCenter);
+  const proximity = clamp01((camDist - 0.4) / 0.9); // 0 inside the pit -> 1 beyond ~1.3
+  flameMat.opacity = 0.85 * clamp01((camDist - 0.55) / 0.75);
+  fireLight.intensity = 7 * flicker * feed * (0.35 + 0.65 * proximity);
   for (const flame of flames) {
    const w = 0.8 + Math.sin(elapsed * 9 + flame.userData.phase) * 0.22;
    flame.scale.set(w, (0.85 + Math.sin(elapsed * 7.3 + flame.userData.phase * 1.7) * 0.25) * feed, 1);

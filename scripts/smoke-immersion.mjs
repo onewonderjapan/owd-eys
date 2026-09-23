@@ -91,6 +91,30 @@ const check = (name, passed, detail = '') => {
   if (!passed) report.errors.push(`${name}: ${detail}`);
 };
 
+// Decode a screenshot PNG inside the browser page (createImageBitmap + canvas,
+// no packages) and measure wash ratios: strict overexposure (all channels > 245)
+// and warm near-white wash (the additive-flame whiteout signature; the strict
+// threshold misses it because the wash is orange-tinted, not pure white).
+async function pixelWash(page, relPath) {
+  const b64 = readFileSync(path.join(root, 'reports', 'immersion', relPath)).toString('base64');
+  return await page.evaluate(async src => {
+    const blob = await (await fetch('data:image/png;base64,' + src)).blob();
+    const bmp = await createImageBitmap(blob);
+    const cv = document.createElement('canvas');
+    cv.width = bmp.width; cv.height = bmp.height;
+    const g = cv.getContext('2d');
+    g.drawImage(bmp, 0, 0);
+    const d = g.getImageData(0, 0, cv.width, cv.height).data;
+    let over = 0, warm = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > 245 && d[i + 1] > 245 && d[i + 2] > 245) over++;
+      if (d[i] > 240 && d[i + 1] > 215 && d[i + 2] > 170) warm++;
+    }
+    const total = d.length / 4;
+    return {over: +(over / total).toFixed(4), warm: +(warm / total).toFixed(4)};
+  }, b64);
+}
+
 const browser = await chromium.launch({executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--enable-unsafe-swiftshader']});
 try {
   // Small viewport while software-rendering the walk (RAF-bound dt), full desktop for shots.
@@ -431,6 +455,11 @@ try {
   await SHOT('fire-self.png');
   await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.elapsed > 5.8, {timeout: 30000}).catch(() => {});
   await SHOT('fire-self-lit.png');
+  // V1 2026-09-24: the in-pit look-back used to be a warm whiteout (before:
+  // over=21.0%, warm=38.6% on 1.5.1). Both ratios are measured on the actual shot.
+  const litWash = await pixelWash(page, shotPrefix + 'fire-self-lit.png');
+  check('fire-self: 入坑回望过曝像素占比<25%', litWash.over < 0.25, JSON.stringify(litWash));
+  check('fire-self: 入坑回望暖白泛光<18%', litWash.warm < 0.18, JSON.stringify(litWash));
   const fireSelfDiag = await imm();
   check('fire-self: 目标是玩家且火堆', fireSelfDiag?.targetId === fireSelfDiag?.playerActorId && fireSelfDiag?.style === 'fire',
     JSON.stringify({target: fireSelfDiag?.targetId, player: fireSelfDiag?.playerActorId, style: fireSelfDiag?.style}));
@@ -522,6 +551,17 @@ try {
     const styleAdvancing = styleElapsed.length >= 2 && styleElapsed.every((v, i) => i === 0 || v > styleElapsed[i - 1]);
     check('style-' + EXTRA_STYLE + ': 演出全程帧持续推进且无页面异常', styleAdvancing && pageErrors.length === styleErrorsBefore,
       `elapsed=${JSON.stringify(styleElapsed.map(v => +(v ?? -1).toFixed(2)))} newErrors=${JSON.stringify(pageErrors.slice(styleErrorsBefore).map(e => e.slice(0, 160)))}`);
+    // V1 2026-09-24: fire self-view shot 5 (~6s, inside the pit looking back at
+    // the crowd) — whiteout gate on the real pixels (1.5.1 before: over=12.7%, warm=25.3%).
+    if (EXTRA_STYLE === 'fire') {
+      try {
+        const fireWash = await pixelWash(page, 'style-fire-5.png');
+        check('style-fire: 第5拍过曝像素占比<25%', fireWash.over < 0.25, JSON.stringify(fireWash));
+        check('style-fire: 第5拍暖白泛光<18%', fireWash.warm < 0.18, JSON.stringify(fireWash));
+      } catch (e) {
+        check('style-fire: 第5拍过曝门可测', false, String(e && e.message || e).slice(0, 160));
+      }
+    }
     await page.evaluate(() => document.querySelector('#immersion-skip')?.click());
     await page.waitForFunction(() => ['finished', 'returning', 'roam'].includes(window.eys?.state?.().walk?.immersion?.phase), null, {timeout: 20000}).catch(() => {});
     await page.evaluate(() => document.querySelector('#immersion-return')?.click());
