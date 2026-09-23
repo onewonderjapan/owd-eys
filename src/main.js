@@ -40,9 +40,17 @@ async function enter(){
 window.eys={state:()=>({ready,error,selected,preparing,actorCount:manifest?Object.keys(manifest.presets).length:0,walk:walking?.state()||null})};
 try{
  const response=await fetch(new URL('assets/manifest.json',import.meta.url));if(!response.ok)throw Error('角色册未能打开，请刷新页面');manifest=await response.json();
+ let cardIndex=0;
  for(const [id,p] of Object.entries(manifest.presets)){
   const b=document.createElement('button');b.className='character-card';b.dataset.actor=id;b.type='button';b.setAttribute('aria-pressed','false');b.setAttribute('aria-label','选择'+label(p));
-  const image=document.createElement('img');image.src=p.thumbnail;image.alt='';image.loading='lazy';image.width=100;image.height=90;
+  // V7 2026-09-24: first two grid rows (5 columns) load eagerly so the landing
+  // screen never shows empty cards; the rest stay lazy.
+  const image=document.createElement('img');image.src=p.thumbnail;image.alt='';image.loading=cardIndex<10?'eager':'lazy';image.decoding='async';image.width=100;image.height=90;cardIndex++;
+  // the CSS silhouette behind the img is the pre-load placeholder; once the
+  // (transparent) thumbnail paints, clear it so cards keep the flat look
+  const clearPlaceholder=()=>{image.style.background='none';};
+  image.addEventListener('load',clearPlaceholder,{once:true});
+  if(image.complete&&image.naturalWidth>0)clearPlaceholder();
   const name=document.createElement('strong');name.textContent=label(p);b.append(image,name);b.onclick=()=>choose(id);$('#character-grid').append(b);
  }
  $('#actor-count').textContent=Object.keys(manifest.presets).length+' 位角色';const requested=new URLSearchParams(location.search).get('actor');choose(Object.hasOwn(manifest.presets,requested)?requested:'cast.14');
