@@ -5,15 +5,16 @@ import {UP, TWIST_Q, tmpMat, tmpVecA, tmpVecB, tmpVecC, tmpVecD, tmpVecE,
  tmpLink, tmpEnd, tmpScale, tmpQuat, lerp, clamp01, ease} from './common.js';
 
 function softBubbleTexture() {
- // Faint filled core with a brighter rim: reads as a transparent bubble outline
- // instead of a solid gray polygon.
+ // Soft filled bubble: a gentle core with only a slightly brighter rim. The old
+ // near-transparent core + bright rim read as a hollow RING when a bubble drifted
+ // close past the camera (reviewed as "circle artifacts", V3 2026-09-24).
  const canvas = document.createElement('canvas');
  canvas.width = canvas.height = 64;
  const g = canvas.getContext('2d');
  const grad = g.createRadialGradient(32, 32, 4, 32, 32, 30);
- grad.addColorStop(0, 'rgba(215,238,250,0.10)');
- grad.addColorStop(0.62, 'rgba(210,235,248,0.16)');
- grad.addColorStop(0.88, 'rgba(222,242,252,0.42)');
+ grad.addColorStop(0, 'rgba(215,238,250,0.30)');
+ grad.addColorStop(0.62, 'rgba(210,235,248,0.26)');
+ grad.addColorStop(0.88, 'rgba(222,242,252,0.34)');
  grad.addColorStop(1, 'rgba(222,242,252,0)');
  g.fillStyle = grad;
  g.beginPath();
@@ -45,14 +46,18 @@ export function buildStage(ctx) {
  scene.add(new THREE.Mesh(domeGeo, take(new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.BackSide, fog: false}))));
 
  const water = new THREE.Mesh(take(new THREE.PlaneGeometry(34, 34)),
-  take(new THREE.MeshStandardMaterial({color: '#123f66', roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.82})));
+  // 0.55 (was 0.82): the sink column and stone sit below the surface; an almost
+  // opaque plane hid them entirely on the look-down beat (V3 2026-09-24).
+  take(new THREE.MeshStandardMaterial({color: '#123f66', roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.55})));
  water.rotation.x = -Math.PI / 2;
  scene.add(water);
 
  const sun = new THREE.DirectionalLight('#bfe2ff', 1.35);
  sun.position.set(0.5, 8, 2.5);
  scene.add(sun);
- scene.add(new THREE.HemisphereLight('#8fc0e2', '#0a1a2a', 0.95));
+ // Ground lift so the dock underside reads as dark wood from below instead of a
+ // pure-black slab (V3 2026-09-24).
+ scene.add(new THREE.HemisphereLight('#8fc0e2', '#2c3c4c', 0.95));
 
  const dock = props.instantiate('prop_dock');
  dock.position.set(-2.6, 0.02, 0);
@@ -67,15 +72,19 @@ export function buildStage(ctx) {
  if (stoneBody && stoneBody.material) {
   stoneBody.material = stoneBody.material.clone();
   take(stoneBody.material);
-  stoneBody.material.color = new THREE.Color('#525d68');
-  stoneBody.material.emissive = new THREE.Color('#13171c');
+  // Brightened so the stone reads against the deep water on the look-down beat
+  // (V3 2026-09-24 — design 1.2: the chain and stone must be visible).
+  stoneBody.material.color = new THREE.Color('#77848f');
+  stoneBody.material.emissive = new THREE.Color('#161c22');
  }
  const stoneAnchorNode = stoneRoot.getObjectByName(props.nodeNames().chainAnchor);
 
  const chainProto = props.chainPrototype();
  const chainMat = take(chainProto.material.clone());
- chainMat.color = new THREE.Color('#4c565f'); // faint lift so links read in deep water
- chainMat.emissive = new THREE.Color('#12161c');
+ // Bright steel tones so the links read against the deep water (V3 2026-09-24;
+ // the old #4c565f vanished into the background on the look-down beat).
+ chainMat.color = new THREE.Color('#93a3b2');
+ chainMat.emissive = new THREE.Color('#1c242c');
  const chainCount = config.chainLinks;
  // library geometry is BORROWED read-only (see immersion-props.js contract):
  // never take() it into the stage's owned list — disposing it here would free
@@ -92,7 +101,7 @@ export function buildStage(ctx) {
  camera.add(splash);
 
  const bubbleTex = take(softBubbleTexture());
- const bubbleMat = take(new THREE.SpriteMaterial({map: bubbleTex, transparent: true, opacity: 0.4, depthWrite: false, fog: false}));
+ const bubbleMat = take(new THREE.SpriteMaterial({map: bubbleTex, transparent: true, opacity: 0.32, depthWrite: false, fog: false}));
  const bubbles = [];
  for (let i = 0; i < config.limits.bubbles; i++) {
   const b = new THREE.Sprite(bubbleMat);
@@ -181,7 +190,7 @@ export function buildStage(ctx) {
   let yaw = -Math.PI / 2, pitch = 0;
   const by = bodyY(elapsed);
   const bx = bodyX(elapsed);
-  stoneRoot.position.set(sinkX + 0.06, stoneTrack(elapsed), 0.55);
+  stoneRoot.position.set(sinkX + 0.06, stoneTrack(elapsed), 0.3); // z pulled toward the body axis so the look-down beat frames it (V3)
 
   // The target: carried the whole way, released at the edge.
   poseOnce(targetId, 'carried');
@@ -215,8 +224,11 @@ export function buildStage(ctx) {
     const g = shoreGaze(position);
     yaw = Math.PI * 1.5 - t * Math.PI; pitch = lerp(-0.42, g[1], t);
    } else {
-    // Slow sink: keep watching the geese on the shore.
-    [yaw, pitch] = shoreGaze(position);
+    // Slow sink: start on the shore gaze, then let the gaze sink toward the
+    // chain/stone below so the look-down beat (design 1.2) actually frames them.
+    const g = shoreGaze(position);
+    const sinkK = clamp01((elapsed - dropEnd) / 1.1);
+    [yaw, pitch] = [g[0], lerp(g[1], -1.0, sinkK)];
    }
   } else if (elapsed < dropEnd) {
    position.set(-1.75, dockDeckY + eyeH + 0.3, 0.35);
@@ -270,7 +282,10 @@ export function buildStage(ctx) {
    const seed = b.userData.seed;
    const local = (elapsed * 0.4 + seed * 0.13) % 1;
    b.position.set(sinkX + Math.sin(seed * 3.1) * 0.5, by - 0.25 + local * 1.4, Math.cos(seed * 2.3) * 0.42 + 0.3);
-   b.visible = eyeUnder && elapsed < dropEnd + 3.5 && local < 0.7;
+   // Hide bubbles drifting right past the eye: a close sprite swelled into the
+   // "ring artifact" the review flagged (V3 2026-09-24).
+   const bx = b.position.x - position.x, byd = b.position.y - position.y, bz = b.position.z - position.z;
+   b.visible = eyeUnder && elapsed < dropEnd + 3.5 && local < 0.7 && (bx * bx + byd * byd + bz * bz) > 0.2;
   }
   for (let i = 0; i < fishes.length; i++) {
    const f = fishes[i];
@@ -296,9 +311,10 @@ export function buildStage(ctx) {
   const span = tmpVecD.subVectors(anchorWorld, bindWorld);
   const len = Math.max(0.2, span.length());
   const dir = tmpVecE.copy(span).normalize();
-  const linkLen = len / chainCount;
-  const scaleLong = (linkLen * 1.14) / 0.126;
-  tmpScale.set(0.8, scaleLong, 0.8);
+ const linkLen = len / chainCount;
+ const scaleLong = (linkLen * 1.14) / 0.126;
+ // Slightly beefier links so they read at 1-2m on the look-down beat (V3).
+ tmpScale.set(1.05, scaleLong, 1.05);
   for (let i = 0; i < chainCount; i++) {
    const t = (i + 0.5) / chainCount;
    tmpLink.copy(bindWorld).addScaledVector(span, t);

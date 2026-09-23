@@ -433,6 +433,26 @@ try {
   await page.mouse.up();
   await page.waitForTimeout(400);
   await SHOT('water-self-look-down.png');
+  // V3 2026-09-24: design 1.2 — the look-down beat must show the chain & stone.
+  // Water is a low-red-color (r<90 counts: chain steel, stone, skin/feathers);
+  // the uniform-blue 1.5.1 frame measured 0.2%. Gate: bottom half >3% warm pixels.
+  const lookDown = await page.evaluate(async src => {
+    const blob = await (await fetch('data:image/png;base64,' + src)).blob();
+    const bmp = await createImageBitmap(blob);
+    const cv = document.createElement('canvas');
+    cv.width = bmp.width; cv.height = bmp.height;
+    const g = cv.getContext('2d');
+    g.drawImage(bmp, 0, 0);
+    const d = g.getImageData(0, 0, cv.width, cv.height).data;
+    const w = cv.width, h = cv.height;
+    let hot = 0, tot = 0;
+    for (let y = Math.floor(h / 2); y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4; tot++;
+      if (d[i] > 90) hot++;
+    }
+    return +(hot / tot).toFixed(4);
+  }, readFileSync(path.join(root, 'reports', 'immersion', shotPrefix + 'water-self-look-down.png')).toString('base64'));
+  check('water-self: 低头链石入画(下半暖色像素>3%)', lookDown > 0.03, JSON.stringify({bottomWarm: lookDown}));
   const selfDiag = await imm();
   check('water-self: 目标是玩家且水下', selfDiag?.targetId === selfDiag?.playerActorId && selfDiag?.style === 'water' && selfDiag?.elapsed > 5.5,
     JSON.stringify({target: selfDiag?.targetId, player: selfDiag?.playerActorId, style: selfDiag?.style, elapsed: selfDiag?.elapsed}));
