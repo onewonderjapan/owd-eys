@@ -63,6 +63,30 @@ export function buildStage(ctx) {
  dock.position.set(-2.6, 0.02, 0);
  scene.add(dock);
  take(dock);
+ // R2 2026-09-24: from underwater the dock read as a pure-black slab (the GLB's
+ // planks only face up). A plank-toned underside panel with a faint emissive
+ // lift sits just below the deck so it reads as wood seen from below.
+ {
+  dock.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(dock);
+  if (!box.isEmpty()) {
+   const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+   const under = new THREE.Mesh(take(new THREE.PlaneGeometry(size.x * 0.98, size.z * 0.98, 1, 8)),
+    take(new THREE.MeshStandardMaterial({color: '#5b4330', emissive: '#2a1c12', emissiveIntensity: 0.9, roughness: 0.95})));
+   under.rotation.x = Math.PI / 2; // face down, toward the water
+   under.position.set(center.x, box.min.y + 0.004, center.z);
+   scene.add(under);
+   // plank seams so it does not read as a flat board
+   const seamMat = take(new THREE.MeshBasicMaterial({color: '#2b1d13'}));
+   const seamGeo = take(new THREE.PlaneGeometry(size.x * 0.98, 0.025));
+   for (let k = 1; k < 8; k++) {
+    const seam = new THREE.Mesh(seamGeo, seamMat);
+    seam.rotation.x = Math.PI / 2;
+    seam.position.set(center.x, box.min.y + 0.002, box.min.z + size.z * k / 8);
+    scene.add(seam);
+   }
+  }
+ }
 
  const stoneRoot = props.instantiate('prop_sink_stone');
  stoneRoot.scale.setScalar(stoneScale * 1.2);

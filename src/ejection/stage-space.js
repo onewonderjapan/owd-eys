@@ -1,38 +1,37 @@
 // SPACE (E1) ejection stage — mechanically moved from immersion-ejection.js
 // (2026-09-23 night split; branch body unchanged, see docs/immersion/ejection-split-map.md).
 import * as THREE from 'three';
-import {lerp, clamp01, ease, track} from './common.js';
+import {lerp, clamp01, ease, track, addSkyDome, addTownBelow, seededRandom} from './common.js';
 
 export function buildStage(ctx) {
  const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, poseOnce, lastPose, setHiddenParts} = ctx;
  // 钟楼夜空弹射: carried to the tower top, then launched into the star field.
  scene.background = new THREE.Color('#05070f');
- const starGeo = new THREE.BufferGeometry();
- const starCount = 700;
- const starPos = new Float32Array(starCount * 3);
- for (let i = 0; i < starCount; i++) {
-  const a = Math.random() * Math.PI * 2, bm = Math.acos(Math.random() * 1.6 - 0.6), r = 20;
-  starPos[i * 3] = r * Math.sin(bm) * Math.cos(a);
-  starPos[i * 3 + 1] = Math.abs(r * Math.cos(bm)) + 0.5;
-  starPos[i * 3 + 2] = r * Math.sin(bm) * Math.sin(a);
- }
- starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
- const starMat = take(new THREE.PointsMaterial({color: '#cfe0ff', size: 0.1, sizeAttenuation: true, fog: false, transparent: true, opacity: 0.9}));
- scene.add(new THREE.Points(starGeo, starMat));
- scene.add(new THREE.Mesh(take(new THREE.CircleGeometry(9, 40)), take(new THREE.MeshStandardMaterial({color: '#1c2742', roughness: 1})))).children;
- const voidFloor = scene.children[scene.children.length - 1];
- voidFloor.rotation.x = -Math.PI / 2; voidFloor.position.y = -9;
- // town lights below so the drift has something to look at
- const townGeo = new THREE.BufferGeometry();
- const townPos = new Float32Array(240 * 3);
- for (let i = 0; i < 240; i++) {
-  townPos[i * 3] = (Math.random() - 0.5) * 26;
-  townPos[i * 3 + 1] = -8.9;
-  townPos[i * 3 + 2] = (Math.random() - 0.5) * 26;
- }
- townGeo.setAttribute('position', new THREE.BufferAttribute(townPos, 3));
- const townLights = take(new THREE.Points(townGeo, new THREE.PointsMaterial({color: '#ffd98a', size: 0.14, sizeAttenuation: true, fog: false})));
- townLights.position.y = -8.9; scene.add(townLights);
+ // R2 2026-09-24: deep night gradient instead of a flat black void.
+ addSkyDome(ctx, {top: '#0a1233', mid: '#141a3a', bottom: '#03040a', horizon: -0.05});
+ // Two star layers from a fixed seed: many faint pinpricks plus a sparse set of
+ // brighter stars, so the sky has depth and every run frames the same sky.
+ const starRand = seededRandom(1409);
+ const makeStars = (count, size, opacity, color) => {
+  const geo = take(new THREE.BufferGeometry());
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+   const a = starRand() * Math.PI * 2, bm = Math.acos(starRand() * 1.6 - 0.6), r = 20 + starRand() * 6;
+   pos[i * 3] = r * Math.sin(bm) * Math.cos(a);
+   pos[i * 3 + 1] = Math.abs(r * Math.cos(bm)) + 0.5;
+   pos[i * 3 + 2] = r * Math.sin(bm) * Math.sin(a);
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = take(new THREE.PointsMaterial({color, size, sizeAttenuation: true, fog: false, transparent: true, opacity}));
+  scene.add(new THREE.Points(geo, mat));
+  return mat;
+ };
+ const starMat = makeStars(700, 0.1, 0.85, '#cfe0ff'); // the faint layer keeps the gentle twinkle in update()
+ makeStars(90, 0.24, 1.0, '#fff4dc');
+ // The town below: the old version put its lights at y=-8.9 AND offset the
+ // group by another -8.9, i.e. under its own floor at y=-9 -- the promised
+ // "town shrinking into lights beneath you" was never visible.
+ addTownBelow(ctx, {y: -9, span: 24, count: 150, seed: 20260924});
  const platformGlow = new THREE.PointLight('#ffd9a2', 2.5, 5);
  platformGlow.position.set(0, 1.2, 0); scene.add(platformGlow);
  const towerTop = take(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.3, 2.4), new THREE.MeshStandardMaterial({color: '#3a3440', roughness: 0.9})));

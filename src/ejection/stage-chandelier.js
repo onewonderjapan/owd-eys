@@ -1,7 +1,7 @@
 // CHANDELIER (E3) ejection stage — mechanically moved from immersion-ejection.js
 // (2026-09-23 night split; branch body unchanged, see docs/immersion/ejection-split-map.md).
 import * as THREE from 'three';
-import {tmpVecA, lerp, clamp01, ease, track} from './common.js';
+import {tmpVecA, lerp, clamp01, ease, track, seededRandom} from './common.js';
 
 export function buildStage(ctx) {
  const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, poseOnce, lastPose, setHiddenParts} = ctx;
@@ -119,6 +119,65 @@ export function buildStage(ctx) {
   else scene.background.set('#120d0a');
  };
 
+
+ // R2 2026-09-24 set dressing: the drop used to happen in a black box, so the
+ // swing and fall had no room to read against. A chapel shell (walls with a
+ // wainscot band, moonlit arched windows, pillars, pew rows, a carpet runner),
+ // a cool window fill light, and a floor shadow that darkens and tightens as
+ // the chandelier comes down -- the classic "look up!" warning.
+ scene.fog = new THREE.Fog('#1d1510', 10, 26);
+ const wallMat = take(new THREE.MeshStandardMaterial({color: '#5a4230', roughness: 0.95}));
+ const wainMat = take(new THREE.MeshStandardMaterial({color: '#33241a', roughness: 0.9}));
+ const paneMat = take(new THREE.MeshStandardMaterial({color: '#9fb6de', emissive: '#6d86b8', emissiveIntensity: 0.9, roughness: 0.6}));
+ const frameMat = take(new THREE.MeshStandardMaterial({color: '#2a1d14', roughness: 0.9}));
+ const boxGeo = take(new THREE.BoxGeometry(1, 1, 1));
+ const room = 5.2, wallH = 5.2;
+ for (const [x, z, w, d] of [[0, -room, room * 2, 0.3], [0, room, room * 2, 0.3], [-room, 0, 0.3, room * 2], [room, 0, 0.3, room * 2]]) {
+  const wall = new THREE.Mesh(boxGeo, wallMat);
+  wall.position.set(x, wallH / 2, z); wall.scale.set(w, wallH, d); scene.add(wall);
+  const wain = new THREE.Mesh(boxGeo, wainMat);
+  wain.position.set(x * 0.97, 0.55, z * 0.97); wain.scale.set(Math.max(w, 0.3), 1.1, Math.max(d, 0.3)); scene.add(wain);
+ }
+ const paneGeo = take(new THREE.PlaneGeometry(1, 2.2));
+ const archGeo = take(new THREE.CircleGeometry(0.5, 16, 0, Math.PI));
+ const frameGeo = take(new THREE.PlaneGeometry(1.2, 2.9));
+ const windowAt = (x, z, rotY) => {
+  const g = new THREE.Group();
+  const frame = new THREE.Mesh(frameGeo, frameMat); frame.position.set(0, 2.75, -0.01); g.add(frame);
+  const pane = new THREE.Mesh(paneGeo, paneMat); pane.position.set(0, 2.5, 0); g.add(pane);
+  const arch = new THREE.Mesh(archGeo, paneMat); arch.position.set(0, 3.6, 0); g.add(arch);
+  g.position.set(x, 0, z); g.rotation.y = rotY; scene.add(g);
+ };
+ for (const x of [-3, 0, 3]) windowAt(x, -room + 0.17, 0);
+ for (const z of [-2.6, 1.2]) { windowAt(-room + 0.17, z, Math.PI / 2); windowAt(room - 0.17, z, -Math.PI / 2); }
+ const pillarGeo = take(new THREE.CylinderGeometry(0.22, 0.26, wallH, 12));
+ const pillarMat = take(new THREE.MeshStandardMaterial({color: '#6b523c', roughness: 0.85}));
+ for (const [x, z] of [[-2.6, -2.6], [2.6, -2.6], [-2.6, 2.6], [2.6, 2.6]]) {
+  const pillar = new THREE.Mesh(pillarGeo, pillarMat); pillar.position.set(x, wallH / 2, z); scene.add(pillar);
+ }
+ const pewGeo = take(new THREE.BoxGeometry(1.7, 0.42, 0.42));
+ const pewMat = take(new THREE.MeshStandardMaterial({color: '#4a3020', roughness: 0.8}));
+ for (let row = 0; row < 3; row++) for (const x of [-2.2, 2.2]) {
+  const pew = new THREE.Mesh(pewGeo, pewMat); pew.position.set(x, 0.21, -1.4 - row * 1.0); scene.add(pew);
+ }
+ const runner = new THREE.Mesh(take(new THREE.PlaneGeometry(1.3, room * 2)),
+  take(new THREE.MeshStandardMaterial({color: '#6a1f24', roughness: 1})));
+ runner.rotation.x = -Math.PI / 2; runner.position.y = 0.004; scene.add(runner);
+ const windowFill = new THREE.DirectionalLight('#9fb4e0', 0.55);
+ windowFill.position.set(-3, 4, -5); scene.add(windowFill);
+ // Floor warning shadow: grows darker and tighter as the chandelier drops.
+ const shadow = new THREE.Mesh(take(new THREE.CircleGeometry(0.8, 28)),
+  take(new THREE.MeshBasicMaterial({color: '#000000', transparent: true, opacity: 0.2, depthWrite: false})));
+ shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.008; scene.add(shadow);
+ const dressedUpdate = stage.update;
+ stage.update = args => {
+  dressedUpdate(args);
+  const hK = clamp01(1 - (chandelier.position.y - 0.1) / 3.1); // 0 hanging high -> 1 on the floor
+  shadow.position.x = chandelier.position.x; shadow.position.z = chandelier.position.z;
+  shadow.scale.setScalar(1.35 - hK * 0.55);
+  shadow.material.opacity = 0.18 + hK * 0.5;
+  shadow.visible = chandelier.visible !== false;
+ };
  stage.diagnostics = () => ({trajectory: stage.trajectory});
 
  stage.begin = () => {

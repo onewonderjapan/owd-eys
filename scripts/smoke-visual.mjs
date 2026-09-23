@@ -18,7 +18,7 @@ import {fileURLToPath} from 'node:url';
 const require = createRequire(import.meta.url);
 const {chromium} = require('playwright');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const url = process.argv[2] || 'http://127.0.0.1:8870/';
+const url = process.argv.slice(2).filter(a => !a.startsWith('--'))[0] || 'http://127.0.0.1:8870/';
 
 const buildDigest = createHash('sha256').update(readFileSync(path.join(root, 'reports', 'build.json'))).digest('hex');
 const baselinePath = path.join(root, 'docs', 'immersion', 'visual-baseline.json');
@@ -124,8 +124,10 @@ try {
       allBlack: metrics.black < 0.60 ? 'pass' : 'fail',
       variance: varianceCheck,
     };
-    // Only fill in missing fields; existing baselines are never overwritten by a run.
-    const nextBase = {...base};
+    // Only fill in missing fields; existing baselines are never overwritten by a
+    // normal run. `--rebaseline` (after a deliberate, reviewed look change such
+    // as R2) replaces both numbers so the regression bands tighten again.
+    const nextBase = process.argv.includes('--rebaseline') ? {} : {...base};
     if (typeof nextBase.variance !== 'number') nextBase.variance = metrics.variance;
     if (typeof nextBase.maxBlock !== 'number') nextBase.maxBlock = metrics.maxBlock;
     baselines[v.view] = nextBase;

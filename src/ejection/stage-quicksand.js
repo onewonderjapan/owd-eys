@@ -1,7 +1,7 @@
 // QUICKSAND (E2) ejection stage — mechanically moved from immersion-ejection.js
 // (2026-09-23 night split; branch body unchanged, see docs/immersion/ejection-split-map.md).
 import * as THREE from 'three';
-import {tmpVecA, lerp, clamp01, ease, track} from './common.js';
+import {tmpVecA, lerp, clamp01, ease, track, addSkyDome, seededRandom} from './common.js';
 
 export function buildStage(ctx) {
  const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, poseOnce, lastPose, setHiddenParts} = ctx;
@@ -79,6 +79,40 @@ export function buildStage(ctx) {
   stage.basePitch = pitch;
  };
 
+
+ // R2 2026-09-24 set dressing: the whole frame used to be one flat tan. A real
+ // sky gradient, a ring of shaded dunes and a slow vortex in the pit give the
+ // sink a place and a direction. The vortex is driven by performance time (so
+ // it pauses with the performance) and holds still under reduced motion.
+ addSkyDome(ctx, {top: '#79a2c4', mid: '#ead3a2', bottom: '#c7a56a', horizon: 0.0});
+ scene.fog = new THREE.Fog('#dcc38f', 10, 32);
+ const duneRand = seededRandom(311);
+ const duneMats = ['#c9a86f', '#b38f57', '#d6b77d'].map(c => take(new THREE.MeshStandardMaterial({color: c, roughness: 1})));
+ const duneGeo = take(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2));
+ for (let i = 0; i < 16; i++) {
+  const a = i / 16 * Math.PI * 2 + duneRand() * 0.3, r = 6 + duneRand() * 7;
+  const dune = new THREE.Mesh(duneGeo, duneMats[i % 3]);
+  dune.position.set(Math.cos(a) * r, -0.05, Math.sin(a) * r);
+  dune.scale.set(2.2 + duneRand() * 2.6, 0.35 + duneRand() * 0.7, 1.6 + duneRand() * 2.2);
+  dune.rotation.y = duneRand() * Math.PI;
+  scene.add(dune);
+ }
+ // FrontSide: once the sinking self-camera is below ground the arms must not
+ // show up as huge arcs across the sky (seen from underneath).
+ const vortexMat = take(new THREE.MeshBasicMaterial({color: '#6a4d2b', transparent: true, opacity: 0.5, side: THREE.FrontSide, depthWrite: false}));
+ const vortex = new THREE.Group();
+ vortex.position.y = 0.02;
+ for (let k = 0; k < 3; k++) {
+  const arm = new THREE.Mesh(take(new THREE.RingGeometry(0.22 + k * 0.34, 0.3 + k * 0.34, 32, 1, k * 2.1, Math.PI * 1.1)), vortexMat);
+  arm.rotation.x = -Math.PI / 2;
+  vortex.add(arm);
+ }
+ scene.add(vortex);
+ const dressedUpdate = stage.update;
+ stage.update = args => {
+  dressedUpdate(args);
+  vortex.rotation.y = reduced.value ? 0 : -args.elapsed * 0.9;
+ };
  stage.diagnostics = () => ({trajectory: stage.trajectory});
 
  stage.begin = () => {

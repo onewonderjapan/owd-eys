@@ -1,90 +1,90 @@
 {
   "dusk-off": {
-    "variance": 1522.7,
-    "maxBlock": 0.1606
+    "variance": 1548.6,
+    "maxBlock": 0.1591
   },
   "dusk-on": {
-    "variance": 1072.3,
-    "maxBlock": 0.1603
+    "variance": 1084.4,
+    "maxBlock": 0.1596
   },
   "first-person": {
-    "variance": 1639.5,
+    "variance": 1642.4,
     "maxBlock": 0.198
   },
   "overview": {
-    "variance": 1541.7,
-    "maxBlock": 0.1606
+    "variance": 1564.1,
+    "maxBlock": 0.1591
   },
   "meeting-pov": {
-    "variance": 3781.6,
-    "maxBlock": 0.265
+    "variance": 3539.8,
+    "maxBlock": 0.1901
   },
   "voting": {
-    "variance": 4057.3,
-    "maxBlock": 0.2657
+    "variance": 3850.1,
+    "maxBlock": 0.1912
   },
   "vote-result": {
-    "variance": 3871.2,
-    "maxBlock": 0.2879
+    "variance": 3621.5,
+    "maxBlock": 0.2038
   },
   "water-self": {
-    "variance": 737,
-    "maxBlock": 0.3636
+    "variance": 727.4,
+    "maxBlock": 0.365
   },
   "water-self-look-down": {
-    "variance": 416.8,
-    "maxBlock": 0.3982
+    "variance": 417.7,
+    "maxBlock": 0.3983
   },
   "water-npc": {
-    "variance": 781.7,
-    "maxBlock": 0.2424
+    "variance": 677.3,
+    "maxBlock": 0.2412
   },
   "fire-self": {
-    "variance": 556,
-    "maxBlock": 0.4242
+    "variance": 531.9,
+    "maxBlock": 0.4325
   },
   "fire-self-lit": {
-    "variance": 1326.3,
+    "variance": 1311.5,
     "maxBlock": 0.4333
   },
   "fire-npc": {
-    "variance": 821.5,
-    "maxBlock": 0.5778
+    "variance": 815.7,
+    "maxBlock": 0.582
   },
   "ring-pov": {
-    "variance": 2863.1,
+    "variance": 2862.7,
     "maxBlock": 0.2291
   },
   "style-water-3": {
-    "variance": 790.9,
-    "maxBlock": 0.301
+    "variance": 788.4,
+    "maxBlock": 0.3016
   },
   "style-fire-3": {
-    "variance": 2204.8,
-    "maxBlock": 0.6532
+    "variance": 2437.5,
+    "maxBlock": 0.6321
   },
   "style-bridge-3": {
-    "variance": 1125,
-    "maxBlock": 0.6018
+    "variance": 1125.9,
+    "maxBlock": 0.6019
   },
   "style-flush-3": {
-    "variance": 425.6,
-    "maxBlock": 0.6586
+    "variance": 2807.3,
+    "maxBlock": 0.4347
   },
   "style-quicksand-3": {
-    "variance": 876.1,
-    "maxBlock": 0.7298
+    "variance": 1954.5,
+    "maxBlock": 0.5758
   },
   "style-space-3": {
-    "variance": 678.7,
-    "maxBlock": 0.9065
+    "variance": 747.8,
+    "maxBlock": 0.8648
   },
   "style-chandelier-3": {
-    "variance": 790.7,
-    "maxBlock": 0.7975
+    "variance": 1742.8,
+    "maxBlock": 0.5423
   },
   "style-boulder-3": {
-    "variance": 148.1,
-    "maxBlock": 0.8138
+    "variance": 3262.9,
+    "maxBlock": 0.3869
   }
 }

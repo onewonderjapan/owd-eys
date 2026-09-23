@@ -2,14 +2,14 @@
 // (2026-09-23 night split; branch body unchanged, see docs/immersion/ejection-split-map.md).
 // Also plays for any unknown style: the original file's trailing `else` branch.
 import * as THREE from 'three';
-import {lerp, clamp01, ease, track} from './common.js';
+import {lerp, clamp01, ease, track, addSkyDome} from './common.js';
 
 export function buildStage(ctx) {
  const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, lastPose, setHiddenParts} = ctx;
  // 冲水飞湖: comedy spiral into a drain, launched over the town, splash landing.
  scene.background = new THREE.Color('#1c2a33');
  const ground = new THREE.Mesh(take(new THREE.PlaneGeometry(24, 24)),
-  take(new THREE.MeshStandardMaterial({color: '#24343a', roughness: 0.6})));
+  take(new THREE.MeshStandardMaterial({color: '#34503e', roughness: 0.9}))); // R2: night lawn around the lake, the washroom sits on its own tiles
  ground.rotation.x = -Math.PI / 2; scene.add(ground);
  const basin = new THREE.Mesh(take(new THREE.CylinderGeometry(1.05, 0.85, 0.5, 28)),
   take(new THREE.MeshStandardMaterial({color: '#e8e8e2', roughness: 0.35})));
@@ -75,6 +75,54 @@ export function buildStage(ctx) {
   stage.basePitch = elapsed < spiralEnd ? -0.5 : Math.atan2(look.y - position.y, Math.hypot(dx, dz) || 1) * 0.6;
  };
 
+
+ // R2 2026-09-24 set dressing: the flush read as abstract blue discs. The spiral
+ // now happens in a tiled washroom corner (tiled floor, back wall, a cistern and
+ // seat that make the basin read as a toilet), and the landing is a lake under an
+ // evening sky with ripples that spread after the splash (performance-time
+ // driven; reduced motion keeps a single static ring).
+ addSkyDome(ctx, {top: '#23324a', mid: '#6f8ea6', bottom: '#1c2a33', horizon: -0.05});
+ if (typeof document !== 'undefined') {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const g2 = cv.getContext('2d');
+  g2.fillStyle = '#d9e3e6'; g2.fillRect(0, 0, 128, 128);
+  g2.strokeStyle = '#9fb0b6'; g2.lineWidth = 4;
+  for (let t = 0; t <= 128; t += 32) {
+   g2.beginPath(); g2.moveTo(t, 0); g2.lineTo(t, 128); g2.stroke();
+   g2.beginPath(); g2.moveTo(0, t); g2.lineTo(128, t); g2.stroke();
+  }
+  const tiles = take(new THREE.CanvasTexture(cv));
+  tiles.wrapS = tiles.wrapT = THREE.RepeatWrapping; tiles.repeat.set(3, 3); tiles.colorSpace = THREE.SRGBColorSpace;
+  const floorTile = new THREE.Mesh(take(new THREE.PlaneGeometry(6, 6)), take(new THREE.MeshStandardMaterial({map: tiles, roughness: 0.4})));
+  floorTile.rotation.x = -Math.PI / 2; floorTile.position.set(0, 0.004, 0); scene.add(floorTile);
+  const backWall = new THREE.Mesh(take(new THREE.PlaneGeometry(6, 3)), take(new THREE.MeshStandardMaterial({map: tiles, roughness: 0.5, color: '#bcd0d8'})));
+  backWall.position.set(0, 1.5, -3); scene.add(backWall);
+ }
+ const porcelain = take(new THREE.MeshStandardMaterial({color: '#f2f2ec', roughness: 0.3}));
+ const cistern = new THREE.Mesh(take(new THREE.BoxGeometry(1.5, 0.95, 0.42)), porcelain);
+ cistern.position.set(0, 0.95, -1.18); scene.add(cistern);
+ const seat = new THREE.Mesh(take(new THREE.TorusGeometry(0.96, 0.07, 10, 32)), porcelain);
+ seat.rotation.x = Math.PI / 2; seat.position.set(0, 0.54, 0); scene.add(seat);
+ const shore = new THREE.Mesh(take(new THREE.RingGeometry(1.4, 2.2, 30)),
+  take(new THREE.MeshStandardMaterial({color: '#3f6b45', roughness: 1, side: THREE.DoubleSide})));
+ shore.rotation.x = -Math.PI / 2; shore.position.set(7.5, 0.008, 0); scene.add(shore);
+ const rippleGeo = take(new THREE.RingGeometry(0.2, 0.27, 28));
+ const ripples = [0, 1, 2].map(() => {
+  const mat = take(new THREE.MeshBasicMaterial({color: '#d8eef7', transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false}));
+  const r = new THREE.Mesh(rippleGeo, mat);
+  r.rotation.x = -Math.PI / 2; r.position.set(7.5, 0.02, 0); r.visible = false; scene.add(r);
+  return r;
+ });
+ const dressedUpdate = stage.update;
+ stage.update = args => {
+  dressedUpdate(args);
+  const since = args.elapsed - splashEnd;
+  ripples.forEach((r, i) => {
+   const t = reduced.value ? (i === 0 && since > 0 ? 0.6 : -1) : since - i * 0.35;
+   r.visible = t > 0;
+   if (t > 0) { r.scale.setScalar(1 + t * 3.2); r.material.opacity = Math.max(0, 0.7 - t * 0.35); }
+  });
+ };
  stage.diagnostics = () => ({trajectory: stage.trajectory});
 
  stage.begin = () => {

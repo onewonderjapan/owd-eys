@@ -1,7 +1,7 @@
 // BOULDER (E4) ejection stage — mechanically moved from immersion-ejection.js
 // (2026-09-23 night split; branch body unchanged, see docs/immersion/ejection-split-map.md).
 import * as THREE from 'three';
-import {lerp, clamp01, track} from './common.js';
+import {lerp, clamp01, track, addSkyDome, seededRandom} from './common.js';
 
 export function buildStage(ctx) {
  const {actors, targetId, isSelf, target, scene, camera, take, eyePos, stage, reduced, lastPose, setHiddenParts} = ctx;
@@ -10,14 +10,14 @@ export function buildStage(ctx) {
  scene.background = new THREE.Color('#1a1610');
  scene.fog = new THREE.Fog('#241d14', 8, 26);
  const ground = new THREE.Mesh(take(new THREE.PlaneGeometry(26, 14)),
-  take(new THREE.MeshStandardMaterial({color: '#4a3a28', roughness: 1})));
+  take(new THREE.MeshStandardMaterial({color: '#5c4832', roughness: 1})));
  ground.rotation.x = -Math.PI / 2; scene.add(ground);
  for (const zSide of [-2.6, 2.6]) {
   const wall = new THREE.Mesh(take(new THREE.BoxGeometry(17, 2.0, 0.6)),
    take(new THREE.MeshStandardMaterial({color: '#3a2f22', roughness: 1})));
   wall.position.set(0, 1.0, zSide); scene.add(wall);
  }
- const boulder = take(new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, 0),
+ const boulder = take(new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, 1),
   new THREE.MeshStandardMaterial({color: '#6b6157', roughness: 0.95, flatShading: true})));
  boulder.position.set(-9, 1.15, 0); scene.add(boulder);
  const sun = new THREE.DirectionalLight('#ffd9a0', 1.3);
@@ -70,6 +70,42 @@ export function buildStage(ctx) {
   stage.basePitch = elapsed < flatten ? Math.atan2(1.0 - position.y, Math.hypot(dx, dz) || 1) * 0.8 : -0.15;
  };
 
+
+ // R2 2026-09-24 set dressing: the corridor was two blank walls in a brown
+ // void. An open sky over the temple run, stone coursing along both walls
+ // (instanced, colour-varied), torches with warm glow, and a rounder boulder.
+ addSkyDome(ctx, {top: '#4d6e80', mid: '#c49a66', bottom: '#2a2218', horizon: 0.05});
+ scene.fog = new THREE.Fog('#3a2e20', 10, 30);
+ const stoneRand = seededRandom(77);
+ const stoneGeo = take(new THREE.BoxGeometry(1, 1, 1));
+ const stoneMat = take(new THREE.MeshStandardMaterial({color: '#ffffff', roughness: 0.95}));
+ const perWall = 34;
+ const stones = new THREE.InstancedMesh(stoneGeo, stoneMat, perWall * 2 * 2);
+ const sm = new THREE.Matrix4(), sq = new THREE.Quaternion(), ss = new THREE.Vector3(), sp = new THREE.Vector3(), sc = new THREE.Color();
+ let si = 0;
+ for (const zSide of [-2.6, 2.6]) for (let course = 0; course < 2; course++) for (let k = 0; k < perWall; k++) {
+  const w = 0.42 + stoneRand() * 0.12;
+  const x = -8.3 + k * 0.5 + (course ? 0.25 : 0);
+  sm.compose(sp.set(x, 0.5 + course * 0.95 + stoneRand() * 0.04, zSide - Math.sign(zSide) * 0.33), sq, ss.set(w, 0.86, 0.1));
+  stones.setMatrixAt(si, sm);
+  sc.set('#8a7456').offsetHSL(0, (stoneRand() - 0.5) * 0.08, (stoneRand() - 0.5) * 0.14);
+  stones.setColorAt(si, sc);
+  si++;
+ }
+ stones.count = si;
+ scene.add(take(stones));
+ const torchGeo = take(new THREE.PlaneGeometry(0.16, 0.3));
+ const torchMat = take(new THREE.MeshBasicMaterial({color: '#ffb35a', transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
+ const postGeo = take(new THREE.CylinderGeometry(0.035, 0.045, 0.5, 6));
+ const postMat = take(new THREE.MeshStandardMaterial({color: '#2a1d12', roughness: 1}));
+ for (const x of [-6, -2, 2, 6]) for (const zSide of [-2.2, 2.2]) {
+  const post = new THREE.Mesh(postGeo, postMat); post.position.set(x, 2.1, zSide); scene.add(post);
+  const flame = new THREE.Mesh(torchGeo, torchMat); flame.position.set(x, 2.45, zSide); scene.add(flame);
+ }
+ for (const x of [-4, 4]) {
+  const glow = new THREE.PointLight('#ffb35a', 3.2, 6, 1.6);
+  glow.position.set(x, 2.4, 0); scene.add(glow);
+ }
  stage.diagnostics = () => ({trajectory: stage.trajectory});
 
  stage.begin = () => {

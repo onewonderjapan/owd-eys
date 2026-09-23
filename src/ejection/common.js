@@ -140,3 +140,89 @@ export function finishStage(ctx, build) {
 
  return stage;
 }
+
+// ---------------------------------------------------------------------------
+// R2 set dressing (2026-09-24). Shared, allocation-once helpers so every stage
+// can stop rendering into a flat single-colour void. Everything goes through
+// `take` so it is released with the stage; nothing here touches world content.
+
+// Deterministic PRNG: set dressing must look identical run to run (screenshots
+// and the visual gate compare frames), so no Math.random here.
+export function seededRandom(seed) {
+ let s = seed >>> 0;
+ return () => {
+  s = (s + 0x6D2B79F5) >>> 0;
+  let t = Math.imul(s ^ (s >>> 15), 1 | s);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+ };
+}
+
+// Vertical gradient sky (BackSide sphere, vertex colours, fog-free). `mid`
+// is optional and sits at the horizon; `horizon` shifts where it falls (-1..1).
+export function addSkyDome({scene, take}, {top, bottom, mid = null, radius = 38, horizon = 0}) {
+ const geo = take(new THREE.SphereGeometry(radius, 32, 16));
+ const pos = geo.attributes.position, colors = new Float32Array(pos.count * 3);
+ const cTop = new THREE.Color(top), cBottom = new THREE.Color(bottom), cMid = mid ? new THREE.Color(mid) : null, c = new THREE.Color();
+ for (let i = 0; i < pos.count; i++) {
+  const h = pos.getY(i) / radius; // -1 .. 1
+  if (cMid) {
+   if (h >= horizon) c.lerpColors(cMid, cTop, clamp01((h - horizon) / (1 - horizon)));
+   else c.lerpColors(cBottom, cMid, clamp01((h + 1) / (horizon + 1)));
+  } else c.lerpColors(cBottom, cTop, clamp01(h * 0.5 + 0.5));
+  colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+ }
+ geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+ const mat = take(new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false}));
+ const dome = new THREE.Mesh(geo, mat);
+ dome.renderOrder = -1;
+ scene.add(dome);
+ return dome;
+}
+
+// A small night town seen from above: instanced house blocks with warm lit
+// windows on their tops, laid on a dark ground disc. One draw call for the
+// blocks, one for the window glow. Used by the space stage ("the town shrinks
+// into lights below"), which previously hid its lights under its own floor.
+export function addTownBelow({scene, take}, {y = -9, span = 24, count = 150, seed = 7} = {}) {
+ const rand = seededRandom(seed);
+ const group = new THREE.Group();
+ group.position.y = y;
+ const ground = new THREE.Mesh(take(new THREE.CircleGeometry(span * 0.62, 48)),
+  take(new THREE.MeshStandardMaterial({color: '#1b2336', roughness: 1})));
+ ground.rotation.x = -Math.PI / 2;
+ group.add(ground);
+ // streets: two faint crossing bands so the lights read as a street grid
+ const streetMat = take(new THREE.MeshBasicMaterial({color: '#2f3a52', fog: false}));
+ for (const [w, d] of [[span * 1.1, 0.7], [0.7, span * 1.1]]) {
+  const street = new THREE.Mesh(take(new THREE.PlaneGeometry(w, d)), streetMat);
+  street.rotation.x = -Math.PI / 2; street.position.y = 0.01;
+  group.add(street);
+ }
+ const blockGeo = take(new THREE.BoxGeometry(1, 1, 1));
+ const blockMat = take(new THREE.MeshStandardMaterial({color: '#39405a', roughness: 0.9, emissive: '#0c0f18'}));
+ const blocks = new THREE.InstancedMesh(blockGeo, blockMat, count);
+ const glowGeo = take(new THREE.PlaneGeometry(1, 1));
+ const glowMat = take(new THREE.MeshBasicMaterial({color: '#ffcf7a', transparent: true, opacity: 0.9, fog: false, depthWrite: false}));
+ const glows = new THREE.InstancedMesh(glowGeo, glowMat, count);
+ const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
+ const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+ let placed = 0;
+ for (let i = 0; i < count * 3 && placed < count; i++) {
+  const x = (rand() - 0.5) * span, z = (rand() - 0.5) * span;
+  if (Math.hypot(x, z) > span * 0.58) continue;           // keep inside the disc
+  if (Math.abs(x) < 0.55 || Math.abs(z) < 0.55) continue;  // keep the streets clear
+  const w = 0.5 + rand() * 0.9, d = 0.5 + rand() * 0.9, h = 0.35 + rand() * 1.1;
+  q.setFromAxisAngle(UP, Math.floor(rand() * 4) * Math.PI / 2);
+  m.compose(p.set(x, h / 2, z), q, s.set(w, h, d));
+  blocks.setMatrixAt(placed, m);
+  const lit = rand() < 0.7 ? 1 : 0.0001; // most houses have a lamp on
+  m.compose(p.set(x, h + 0.02, z), flat, s.set(w * 0.55 * lit, d * 0.55 * lit, 1));
+  glows.setMatrixAt(placed, m);
+  placed++;
+ }
+ blocks.count = placed; glows.count = placed;
+ group.add(take(blocks), take(glows)); // InstancedMesh.dispose releases the instance buffers
+ scene.add(group);
+ return group;
+}
