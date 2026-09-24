@@ -55,7 +55,7 @@ export function createEjectionContext({actors, targetId, playerActorId, style, c
   return o;
  };
 
- const stage = {scene, camera, style, isSelf, lookMode: 'free', wingSplay: 0, trajectory: {body: [0, 0, 0], eye: [0, 0, 0]}};
+ const stage = {scene, camera, style, isSelf, lookMode: 'free', trajectory: {body: [0, 0, 0], eye: [0, 0, 0]}};
 
  const reduced = {value: false}; // updated each frame from update({reducedMotion})
  const lastPose = {};

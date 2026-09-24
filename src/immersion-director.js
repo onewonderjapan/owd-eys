@@ -12,7 +12,6 @@ import {createWorldBell, createMeetingStage} from './immersion-meeting.js';
 import {createEjectionStage} from './immersion-ejection.js';
 import {createHeadMount} from './immersion-headmount.js';
 
-const WING_SCALE = 0.28;
 const lerp = (a, b, t) => a + (b - a) * t;
 
 export function createImmersionDirector({props, worldScene, host, canvas, getWalker, getNavigation, getActorId, onEnd, onPropsUnavailable}) {

@@ -300,11 +300,10 @@ export function buildStage(ctx) {
 
   // Ambience follows the live curve: the splash fires when the BODY breaks the
   // surface, the underwater ambience when the EYE passes it; one splash, no second
-  // flash. Wings part and droop as the eye sinks so the chain/stone stay readable.
+  // flash.
   const bodyUnder = by < 0;
   const eyeUnder = by < -eyeOff;
   splashMat.opacity = !reduced.value && bodyUnder && by > -0.34 ? 1 - Math.min(1, -by / 0.34) : 0;
-  stage.wingSplay = clamp01((-by - eyeOff) / 0.5) * 0.55;
   for (const b of bubbles) {
    const seed = b.userData.seed;
    const local = (elapsed * 0.4 + seed * 0.13) % 1;

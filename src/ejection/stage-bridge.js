@@ -80,8 +80,6 @@ export function buildStage(ctx) {
     a.player.rotation.y = Math.atan2(target.player.position.x - spot[0], target.player.position.z - spot[1]);
    }
   }
-  // Wings part and droop after the fall so the treading bird reads as body+wings.
-  stage.wingSplay = clamp01((elapsed - crossEnd) / 0.6) * 0.5;
   // Stay just above the surface after the fall: from underwater the parted wings
   // (white-feathered, sun-broadside) read as two ownerless white slabs (V2). The
   // tail position pulls back +z so the sight line to the treading bird threads

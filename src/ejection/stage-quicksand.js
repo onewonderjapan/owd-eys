@@ -42,7 +42,6 @@ export function buildStage(ctx) {
   poseOnce(targetId, 'standing');
   target.player.position.set(bx, by, 0);
   target.player.rotation.z = reduced.value ? 0 : Math.sin(elapsed * 2.4) * 0.12 * (1 - depth * 0.6);
-  stage.wingSplay = depth; // wings spread wider as the sand takes hold
   const rimSpots = [[2.3, 1.7], [-1.9, 1.5], [0.3, -1.95]];
   let rimIdx = 0;
   for (const id of actors.ids) {

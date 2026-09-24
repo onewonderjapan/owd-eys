@@ -66,7 +66,6 @@ export function buildStage(ctx) {
     a.player.rotation.y = Math.atan2(target.player.position.x - a.player.position.x, target.player.position.z - a.player.position.z);
    }
   }
-  stage.wingSplay = ease(clamp01((elapsed - launchEnd) / 0.8));
   starMat.opacity = 0.75 + Math.sin(elapsed * 2.3) * 0.15; // gentle twinkle
   const camTrackSelf = [
    [0, [-1.1, 1.05, -0.9]], [carryEnd, [-0.2, 1.15, 0]], [launchEnd, [0, 1.05, 0]],

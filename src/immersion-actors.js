@@ -162,48 +162,6 @@ export async function loadImmersionActors(actorIds, {onProgress = () => {}, isCu
       }
       for (const pivot of entry.reachPivots) pivot.rotation.x = -amount * 1.1;
     },
-    // Clones of the wing meshes for the player's first-person view; shares read-only
-    // geometry/material with the owned actor, disposed once with the ActorSet.
-    extractWings(id) {
-      const entry = actors.get(id);
-      if (!entry) return null;
-      const group = new THREE.Group();
-      group.name = 'pov-wings';
-      entry.avatar.model.traverse(o => {
-        if (o.isMesh && isWingNode(o.name)) {
-          const clone = new THREE.Mesh(o.geometry, o.material);
-          clone.name = o.name;
-          clone.userData.povWing = true;
-          group.add(clone);
-        }
-      });
-      return group.children.length ? group : null;
-    },
-    // Wing clones in model-local coordinates for the self first-person body proxy.
-    // Each clone keeps the source mesh's exact transform relative to the model root
-    // (re-derived from matrixWorld every frame by the director, so posed pivots are
-    // honored); the caller owns and disposes any material clone it makes.
-    buildWingRig(id) {
-      const entry = actors.get(id);
-      if (!entry) return null;
-      const group = new THREE.Group();
-      group.name = 'self-wing-rig';
-      let count = 0;
-      entry.avatar.model.updateWorldMatrix(true, true);
-      entry.avatar.model.traverse(o => {
-        if (o.isMesh && isWingNode(o.name)) {
-          const clone = new THREE.Mesh(o.geometry, o.material);
-          clone.name = o.name;
-          clone.userData.povWing = true;
-          clone.userData.source = o;
-          clone.matrixAutoUpdate = false;
-          clone.frustumCulled = false;
-          group.add(clone);
-          count += 1;
-        }
-      });
-      return count ? group : null;
-    },
     dispose() {
       releaseAll();
     },

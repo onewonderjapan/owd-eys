@@ -180,10 +180,6 @@ export function buildStage(ctx) {
    poseOnce(id, 'standing');
   });
 
-  // Once the body settles in the pit the wings droop outward so the flame core,
-  // logs and pit rim stay visible between them.
-  stage.wingSplay = ease(clamp01((elapsed - (dropEnd + 0.7)) / 0.6));
-
   const flicker = reduced.value ? 0.8 : 0.72 + Math.sin(elapsed * 11) * 0.12 + Math.sin(elapsed * 23.7) * 0.08;
   const feed = elapsed > dropEnd + 0.1 ? 1.15 : 1; // fire rises a little as the body lands
   // Inside the pit the near flames stack into a whiteout and the pit light blows
