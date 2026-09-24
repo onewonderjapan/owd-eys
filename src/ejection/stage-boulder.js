@@ -97,17 +97,31 @@ export function buildStage(ctx) {
  stones.count = si;
  scene.add(take(stones));
  const torchGeo = take(new THREE.PlaneGeometry(0.16, 0.3));
- const torchMat = take(new THREE.MeshBasicMaterial({color: '#ffb35a', transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
+ // Warm-capped flame color + camera-distance fade (R1 542c3d9 recipe, adapted):
+ // additive planes clipped toward white over the bright dusk sky no matter how the
+ // color was capped, so the cap lives in the solid flame color instead — an orange
+ // flame that occludes the sky — and near-camera torches still fade with distance
+ // (reduced-motion unaffected — pure brightness scaling).
+ const torchMat = take(new THREE.MeshBasicMaterial({color: '#ff7a26', transparent: true, opacity: 0.92, blending: THREE.NormalBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
+ const torchPoints = [];
  const postGeo = take(new THREE.CylinderGeometry(0.035, 0.045, 0.5, 6));
  const postMat = take(new THREE.MeshStandardMaterial({color: '#2a1d12', roughness: 1}));
  for (const x of [-6, -2, 2, 6]) for (const zSide of [-2.2, 2.2]) {
   const post = new THREE.Mesh(postGeo, postMat); post.position.set(x, 2.1, zSide); scene.add(post);
   const flame = new THREE.Mesh(torchGeo, torchMat); flame.position.set(x, 2.45, zSide); scene.add(flame);
+  torchPoints.push(flame.position);
  }
  for (const x of [-4, 4]) {
   const glow = new THREE.PointLight('#ffb35a', 3.2, 6, 1.6);
   glow.position.set(x, 2.4, 0); scene.add(glow);
  }
+ const dressedUpdate = stage.update;
+ stage.update = args => {
+  dressedUpdate(args);
+  let nearest = Infinity;
+  for (const p of torchPoints) nearest = Math.min(nearest, camera.position.distanceTo(p));
+  torchMat.opacity = 0.92 * clamp01((nearest - 0.8) / 0.9);
+ };
  stage.diagnostics = () => ({trajectory: stage.trajectory});
 
  stage.begin = () => {
