@@ -89,7 +89,10 @@ export function buildStage(ctx) {
  }
 
  const stoneRoot = props.instantiate('prop_sink_stone');
- stoneRoot.scale.setScalar(stoneScale * 1.2);
+ // 1.3x bigger (C5 2026-09-26): on the look-down beat the stone read as a small
+ // dark disc; scale keeps it exactly on the chain line (a pull along the chain
+ // would crowd the body axis).
+ stoneRoot.scale.setScalar(stoneScale * 1.2 * 1.3);
  scene.add(stoneRoot);
  take(stoneRoot);
  const stoneBody = stoneRoot.getObjectByName('sink_stone_body');
