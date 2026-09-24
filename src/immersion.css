@@ -175,17 +175,18 @@
  display: flex;
  flex-direction: column;
  align-items: center;
- gap: 4px;
+ gap: 2px;
  flex: 0 0 auto;
  min-width: 68px;
- padding: 6px;
+ padding: 4px 6px;
  font-size: 12px;
  border-radius: 10px;
 }
 
+/* C6 2026-09-26: card 56px+ of avatar with the portrait ~70% of the card height */
 #immersion-avatars button img {
- width: 52px;
- height: 48px;
+ width: 56px;
+ height: 56px;
  object-fit: contain;
  pointer-events: none;
 }
@@ -217,8 +218,15 @@
  border: 1px solid rgba(255, 170, 120, 0.6);
  border-radius: 12px;
  padding: 12px 22px;
- font-size: clamp(16px, 2.6vw, 22px);
+ /* C6 2026-09-26: ~1.6x the old clamp(16px, 2.6vw, 22px) so the verdict reads at a glance */
+ font-size: clamp(26px, 4.2vw, 35px);
  text-align: center;
+ animation: immersion-banner-in 240ms ease-out;
+}
+
+@keyframes immersion-banner-in {
+ from { transform: translateX(-50%) scale(0.86); opacity: 0; }
+ to { transform: translateX(-50%) scale(1); opacity: 1; }
 }
 
 #immersion-fade {
@@ -237,11 +245,35 @@
  #immersion-caption { bottom: 168px; font-size: 15px; }
  #immersion-voting { width: calc(100vw - 16px); }
  #immersion-avatars button { min-width: 60px; }
- #immersion-avatars button img { width: 44px; height: 40px; }
+ #immersion-avatars button img { width: 48px; height: 48px; }
  #immersion-style-picker { top: auto; bottom: 230px; right: 8px; flex-direction: column; align-items: flex-end; }
 }
 
+/* C6 2026-09-26: phone portrait — the style picker becomes one horizontally
+   scrollable row above the voting panel instead of a vertical stack over the
+   table; the row sits low so it never covers the viewport's central 40%. */
+@media (max-width: 420px) {
+ #immersion-style-picker {
+  top: auto;
+  bottom: max(calc(190px + env(safe-area-inset-bottom)), 190px);
+  left: 8px;
+  right: 8px;
+  max-width: none;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  font-size: 12px;
+  padding: 4px 8px;
+ }
+ #immersion-style-picker button { flex: 0 0 auto; }
+ #immersion-style-picker span { white-space: nowrap; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+ #immersion-banner { animation: none; }
  #immersion-fade { transition: none; }
 }
 

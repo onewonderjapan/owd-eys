@@ -441,6 +441,37 @@ try {
   const firePressed = await page.evaluate(() => document.querySelector('#immersion-style-fire')?.getAttribute('aria-pressed'));
   check('vote: 火堆风格可选', firePressed === 'true', `pressed=${firePressed}`);
   await SHOT('voting.png');
+  // C6 2026-09-26: P3 UI — bigger avatar cards, phone picker row (measured at voting;
+  // the MOBILE run measures at the real phone viewport, then restores the prior size).
+  if (MOBILE) { await page.setViewportSize(finalViewport); await page.waitForTimeout(500); }
+  const c6ui = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('#immersion-avatars button')];
+    const card = cards[0]?.getBoundingClientRect();
+    const img = cards[0]?.querySelector('img')?.getBoundingClientRect();
+    const picker = document.querySelector('#immersion-style-picker')?.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const center = {left: vw * 0.3, right: vw * 0.7, top: vh * 0.3, bottom: vh * 0.7};
+    const pickerHitsCenter = picker && picker.width > 0
+      ? !(picker.right < center.left || picker.left > center.right || picker.bottom < center.top || picker.top > center.bottom)
+      : null;
+    return {
+      cards: cards.length,
+      cardH: card ? +card.height.toFixed(1) : 0,
+      touch: card ? +Math.min(card.width, card.height).toFixed(1) : 0,
+      imgRatio: card && img ? +(img.height / card.height).toFixed(2) : 0,
+      pickerHitsCenter,
+      pickerW: picker ? +picker.width.toFixed(0) : 0,
+      pickerH: picker ? +picker.height.toFixed(0) : 0,
+      noHOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+    };
+  });
+  const c6cardMin = MOBILE ? 48 : 56;
+  check('c6: 头像卡高度与头像占比', c6ui.cards > 0 && c6ui.cardH >= c6cardMin && c6ui.imgRatio >= 0.6 && c6ui.imgRatio <= 0.8, JSON.stringify(c6ui));
+  check('c6: 头像触区>=44且页面无横向溢出', c6ui.touch >= 44 && c6ui.noHOverflow, JSON.stringify(c6ui));
+  if (MOBILE) check('c6: 手机样式选择器一行横滚且不压画面中心40%', c6ui.pickerHitsCenter === false && c6ui.pickerW > 0, JSON.stringify(c6ui));
+  await SHOT('c6-voting.png');
+  // MOBILE stays at the phone viewport through confirm/result so the banner is
+  // measured in the same frame it is shown (a mid-phase resize used to hide it).
   await page.evaluate(() => document.querySelector('#immersion-confirm')?.click());
   await page.waitForTimeout(200);
   await page.evaluate(() => document.querySelector('#immersion-confirm')?.click());
@@ -449,6 +480,15 @@ try {
   const bannerText = await page.evaluate(() => document.querySelector('#immersion-banner')?.textContent || '');
   check('vote: 结果横幅与票数', afterConfirm?.phase === 'result' && /\d+ 票/.test(bannerText), bannerText);
   await SHOT('vote-result.png');
+  // C6: the enlarged result banner, measured at result phase (phone viewport on mobile)
+  const c6banner = await page.evaluate(() => {
+    const el = document.querySelector('#immersion-banner');
+    const r = el?.getBoundingClientRect();
+    return {px: el ? +getComputedStyle(el).fontSize.replace('px', '') : 0, w: r ? +r.width.toFixed(0) : 0, h: r ? +r.height.toFixed(0) : 0};
+  });
+  check('c6: 结果横幅字号>=26px', c6banner.px >= 26 && c6banner.w > 0, JSON.stringify(c6banner));
+  await SHOT('c6-vote-result.png');
+  if (MOBILE) { await page.setViewportSize({width: 1440, height: 960}); await page.waitForTimeout(500); }
 
   if (!await waitPhase('ejection', 8000)) check('fire: ejection', false, JSON.stringify(await imm()));
   await page.waitForTimeout(300);

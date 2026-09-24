@@ -221,8 +221,8 @@ export function ensureImmersionUi(host) {
      const image = document.createElement('img');
      image.alt = '';
      image.loading = 'lazy';
-     image.width = 52;
-     image.height = 48;
+     image.width = 56;
+     image.height = 56;
      const label = document.createElement('span');
      node.append(image, label);
      node.addEventListener('click', e => {
