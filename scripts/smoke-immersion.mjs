@@ -352,7 +352,17 @@ try {
   await page.keyboard.press('KeyE');
   if (!await waitPhase('ringing', 40000)) check('flow: ringing', false, JSON.stringify(await imm()));
   await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing' && window.eys.state().walk.immersion.elapsed > 0.4, {timeout: 20000}).catch(() => {});
+  // Ring / meeting first person on the real body (2026-09-24): lens on the eye,
+  // own body visible, head hidden, and the view centre never blocked by the own
+  // body within 30cm (the goose head and body are one mesh).
+  const bodyPovCheck = async (label) => {
+    const bp = await page.evaluate(() => window.eys.state().walk.immersion?.bodyPov);
+    const blocked = bp?.centerHit && bp.centerHit.self && bp.centerHit.distance < 0.3;
+    check(label + ': 真身体第一人称(镜头在眼位,身体可见,头隐藏,中心不被自己挡住)',
+      !!bp && bp.camToEye < 0.005 && bp.bodyVisible && bp.headHidden && !blocked, JSON.stringify(bp));
+  };
   await SHOT('ring-pov.png');
+  await bodyPovCheck('ring');
   // V5 2026-09-24: the sky dome must give a vertical gradient — measure how much
   // the row mean color varies across the 8-28% height band (clear of the mobile
   // UI): a flat 1.5.1 background measures ≈0, the dome gradient is prominent.
@@ -389,6 +399,7 @@ try {
   // never overwrites the default evidence; default runs keep the old names.
   const meetingShot = LOOK === 'court' ? 'look-court-desktop.png' : 'meeting-pov.png';
   await SHOT(meetingShot);
+  await bodyPovCheck('meeting');
   await page.setViewportSize({width: 390, height: 844});
   await page.waitForTimeout(500);
   await SHOT(LOOK === 'court' ? 'look-court-mobile.png' : 'meeting-mobile.png');

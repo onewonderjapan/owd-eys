@@ -10,6 +10,7 @@ import {ensureImmersionUi} from './immersion-ui.js';
 import {loadImmersionActors} from './immersion-actors.js';
 import {createWorldBell, createMeetingStage} from './immersion-meeting.js';
 import {createEjectionStage} from './immersion-ejection.js';
+import {createHeadMount} from './immersion-headmount.js';
 
 const WING_SCALE = 0.28;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -29,7 +30,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  let ejectionStage = null;
  let lastStageKind = null;
  let ringCamera = null;
- let ringWings = null;
+ let ringBody = null; // {avatar, mount} while the bell ring borrows the player's body
  let selfPov = null; // head-mounted self camera state (see buildSelfPov)
  let loadingProgress = null;
  let nearBell = null;
@@ -81,27 +82,50 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    worldScene.add(ringCamera);
   }
   const eye = bellEyePose();
-  ringCamera.position.set(...eye.position);
+  if (ringBody) ringCamera.position.copy(ringBody.mount.eyeWorld(ringEye));
+  else ringCamera.position.set(...eye.position);
   ringCamera.lookAt(...eye.target);
   ringCamera.aspect = host.clientWidth / Math.max(1, host.clientHeight);
   ringCamera.updateProjectionMatrix();
   return ringCamera;
  }
 
- function buildRingWings() {
-  destroyRingWings();
-  if (!actors) return;
-  ringWings = actors.extractWings(playerActorId);
-  if (!ringWings) return;
-  ringWings.scale.setScalar(WING_SCALE);
-  ringWings.position.set(0.2, -0.38, -0.5);
-  ringWings.rotation.set(0.24, -0.3, 0);
-  ensureRingCamera().add(ringWings);
+ // Bell ring on the real body (2026-09-24; two proxy wings used to hang off the
+ // ring camera). The player's own immersion avatar is borrowed from the meeting
+ // scene into the town, stood at the bell's interaction spot facing the bell, and
+ // the ring camera sits on its eye. It reuses the meeting stage's head mount --
+ // that mount already hid the head at load, and a second mount would record the
+ // hidden state as "original" and never show the head again. The avatar goes back
+ // to its chair via meetingStage.seatPlayer() when seating begins.
+ const ringEye = new THREE.Vector3();
+ const RING_STEP_BACK = 0.25;
+ function buildRingBody() {
+  destroyRingBody();
+  if (!actors || !meetingStage || !meetingStage.headMount) return;
+  const avatar = actors.get(playerActorId);
+  if (!avatar) return;
+  const mount = meetingStage.headMount;
+  actors.pose(playerActorId, 'standing'); // pose() restores load transforms, so place afterwards
+  const [ix, iz] = IMMERSION_CONFIG.bell.interaction;
+  const [bx, by, bz] = IMMERSION_CONFIG.bell.base;
+  // Stand a step back from the interaction spot (away from the bell): the eye
+  // sits ~0.3m ahead of the body, which put the lens 0.4m from the bell column.
+  const away = Math.hypot(ix - bx, iz - bz) || 1;
+  avatar.player.position.set(ix + (ix - bx) / away * RING_STEP_BACK, by, iz + (iz - bz) / away * RING_STEP_BACK);
+  avatar.player.rotation.set(0, 0, 0);
+  avatar.player.visible = true;
+  worldScene.add(avatar.player);
+  mount.faceTowards(bx, bz);
+  mount.setHeadHidden(true);
+  ringBody = {avatar, mount};
  }
 
- function destroyRingWings() {
-  if (ringWings && ringWings.parent) ringWings.parent.remove(ringWings);
-  ringWings = null;
+ function destroyRingBody() {
+  if (ringBody) {
+   actors?.reachWings(playerActorId, 0);
+   if (ringBody.avatar.player.parent === worldScene) worldScene.remove(ringBody.avatar.player);
+  }
+  ringBody = null;
  }
 
  // ---------------------------------------------------------------------------
@@ -129,49 +153,16 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  const SELF_POV_PITCH = [-0.32, 0.45]; // default head-cam pitch band (rad); user look adds on top
  const povEye = new THREE.Vector3(), povAuthored = new THREE.Vector3(), povFwd = new THREE.Vector3(), povTarget = new THREE.Vector3();
  function setHeadHidden(hidden) {
-  if (!selfPov || selfPov.headHidden === hidden) return;
-  selfPov.headHidden = hidden;
-  for (const h of selfPov.hidden) h.o.visible = hidden ? false : h.visible;
+  if (selfPov) selfPov.mount.setHeadHidden(hidden);
  }
  function buildSelfPov() {
   destroySelfPov();
   if (!actors || !ejectionStage || !ejectionStage.isSelf) return;
   const avatar = actors.get(playerActorId);
   if (!avatar) return;
-  const model = avatar.model;
-  model.updateWorldMatrix(true, true);
-  const toModel = new THREE.Matrix4().copy(model.matrixWorld).invert();
-  const eyeBox = new THREE.Box3(), part = new THREE.Box3();
-  const hidden = [];
-  let bodyMesh = null;
-  model.traverse(o => {
-   const slot = o.userData && o.userData.slot;
-   if (slot === 'headwear' || slot === 'facewear') { hidden.push({o, visible: o.visible}); return; }
-   if (!o.isMesh) return;
-   const name = o.name || '';
-   // GLTFLoader sanitizes node names (spaces -> '_'), so match either separator.
-   if (/seamless[\s_]rounded[\s_]body/i.test(name)) bodyMesh = o;
-   if (/eye[\s_](white[\s_]sclera|ink[\s_]rim)/i.test(name)) { part.setFromObject(o); part.applyMatrix4(toModel); eyeBox.union(part); }
-   if (/(^|[\s_|])eye([\s_]|$)|beak|nostril|crown|mouth[\s_]crease/i.test(name)) hidden.push({o, visible: o.visible});
-  });
-  if (eyeBox.isEmpty()) return;
-  const eyeCenter = eyeBox.getCenter(new THREE.Vector3());
-  // Head surface in front of the eyes on the midline, so the camera never sits inside the head.
-  let front = eyeBox.max.z;
-  if (bodyMesh && bodyMesh.geometry && bodyMesh.geometry.attributes.position) {
-   const pos = bodyMesh.geometry.attributes.position, v = new THREE.Vector3();
-   const meshToModel = new THREE.Matrix4().multiplyMatrices(toModel, bodyMesh.matrixWorld);
-   for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i).applyMatrix4(meshToModel);
-    if (Math.abs(v.x) < 0.3 && Math.abs(v.y - eyeCenter.y) < 0.2 && v.z > front) front = v.z;
-   }
-  }
-  selfPov = {
-   avatar, hidden, headHidden: false, blend: 1, roll: 0, mode: 'head', camToEye: 0,
-   // 0.2 model units (~5.6cm at the 0.28 avatar scale) ahead of the face, so a
-   // raised gaze does not catch the top of the head in the upper edge of the frame.
-   eyeLocal: new THREE.Vector3(0, eyeCenter.y, front + 0.2),
-  };
+  const mount = createHeadMount(avatar);
+  if (!mount) return;
+  selfPov = {avatar, mount, eyeLocal: mount.eyeLocal, blend: 1, roll: 0, mode: 'head', camToEye: 0};
   setHeadHidden(true);
  }
  const shortAngle = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
@@ -288,10 +279,31 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   }
   return {owner, self: owner === playerActorId, name: String(hit.object.name || '').slice(0, 40), distance: +hit.distance.toFixed(3)};
  }
+ // Ring / meeting first person: lens-to-eye gap, own body visible, head hidden,
+ // and what the centre of the view hits (must never be the own body up close).
+ function bodyPovState(phase) {
+  let cam = null, scene = null, mount = null;
+  if (phase === 'ringing' && ringBody) { cam = ringCamera; scene = worldScene; mount = ringBody.mount; }
+  else if (['seating', 'discussion', 'voting', 'result'].includes(phase) && meetingStage && meetingStage.headMount) {
+   cam = meetingStage.camera; scene = meetingStage.scene; mount = meetingStage.headMount;
+  }
+  if (!cam || !mount) return null;
+  // meeting: the lens is the lifted eye (see meeting povSync), not the raw eye
+  const eye = phase === 'ringing' ? mount.eyeWorld(new THREE.Vector3()) : meetingStage.lens.clone();
+  cam.updateMatrixWorld();
+  povRay.setFromCamera(povNdc, cam);
+  povRay.near = 0.01; povRay.far = 30;
+  const visibleChain = o => { for (let n = o; n; n = n.parent) if (n.visible === false) return false; return true; };
+  const hit = povRay.intersectObject(scene, true).find(h => h.object.isMesh && visibleChain(h.object));
+  let self = false;
+  if (hit) for (let n = hit.object; n; n = n.parent) if (n === mount.avatar.player) { self = true; break; }
+  return {phase, camToEye: +cam.position.distanceTo(eye).toFixed(4), bodyVisible: Boolean(mount.avatar.player.visible && mount.avatar.player.parent),
+   headHidden: mount.headHidden, centerHit: hit ? {self, distance: +hit.distance.toFixed(3), name: String(hit.object.name || '').slice(0, 40)} : null};
+ }
  function selfPovState() {
   if (!selfPov) return null;
   return {mode: selfPov.mode, blend: +selfPov.blend.toFixed(3), camToEye: selfPov.camToEye,
-   bodyVisible: Boolean(selfPov.avatar.player.visible), headHidden: selfPov.headHidden, roll: +selfPov.roll.toFixed(3), culled: selfPov.culled || 0,
+   bodyVisible: Boolean(selfPov.avatar.player.visible), headHidden: selfPov.mount.headHidden, roll: +selfPov.roll.toFixed(3), culled: selfPov.culled || 0,
    centerHit: selfPovCenterHit(),
    eye: ejectionStage ? ejectionStage.camera.position.toArray().map(v => +v.toFixed(2)) : null,
    authored: povAuthored.toArray().map(v => +v.toFixed(2)),
@@ -326,12 +338,14 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   switch (phase) {
    case 'ringing':
     ensureRingCamera();
-    buildRingWings();
+    buildRingBody();
     if (worldBell) worldBell.update(0);
     break;
    case 'seating':
     if (worldBell) worldBell.update(0);
+    destroyRingBody();
     if (meetingStage) {
+     meetingStage.seatPlayer();
      meetingStage.reset();
      meetingStage.projection(host.clientWidth, Math.max(1, host.clientHeight));
     }
@@ -393,13 +407,12 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   if (phase === 'ringing') {
    if (worldBell) worldBell.update(dt);
    const t = snapshot.elapsed;
-   if (ringWings) {
-    // 0-0.3s reach toward the bell, 0.3-0.9s withdraw, then rest.
+   if (ringBody) {
+    // 0-0.3s reach toward the bell, 0.3-0.9s withdraw, then rest (real wings now).
     let reach = 0;
     if (t < 0.3) reach = t / 0.3;
     else if (t < 0.9) reach = 1 - (t - 0.3) / 0.6;
-    ringWings.position.z = -0.55 - reach * 0.28;
-    ringWings.rotation.x = 0.2 - reach * 0.35;
+    actors.reachWings(playerActorId, snapshot.reducedMotion ? 0 : reach);
    }
    if (t >= 0.3) {
     if (worldBell && !worldBell.isRinging()) worldBell.ring();
@@ -410,6 +423,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   if (meetingStage && ['seating', 'discussion', 'voting', 'result'].includes(phase)) {
    meetingStage.update({elapsed: snapshot.elapsed, speakerIndex: snapshot.speakerIndex, reducedMotion: snapshot.reducedMotion, actorIds: snapshot.actorIds});
    if (look.state().enabled) look.apply(meetingStage.camera, 0, -0.123);
+   meetingStage.povSync(); // real seated body: turn it with the gaze, lens on the eye
    return;
   }
   if (ejectionStage && ['ejection', 'finished'].includes(phase)) {
@@ -449,7 +463,8 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  }
 
  function cleanupSession() {
-  destroyRingWings();
+  enteredPhase = 'roam'; // the next session must re-run every phase entry, even the same ones
+  destroyRingBody();
   destroySelfPov();
   if (ringCamera) {
    // drop the hidden bell camera so the roam scene graph is back to its
@@ -598,7 +613,18 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   finalize(endReason);
  }
 
- let prevPhase = 'roam';
+ // The last phase whose one-shot entry ran. Entry is keyed on this instead of a
+ // before/after pair inside one call: READY (and LOAD_FAILED) are dispatched from
+ // the async actor load between frames, so update() never saw preparing->ringing
+ // happen and enterPhase('ringing') never ran -- the ring's own setup (camera,
+ // POV body, bell reset) was silently skipped since it shipped (found 2026-09-24).
+ let enteredPhase = 'roam';
+ function syncPhaseEntry() {
+  const phase = machine.snapshot().phase;
+  if (phase === enteredPhase) return;
+  enteredPhase = phase;
+  if (phase !== 'roam') enterPhase(phase);
+ }
 
  // Single phase-entry authority: every machine transition (UI events, tick, replay)
  // funnels through here so one-shot side effects and look resets always run.
@@ -609,7 +635,8 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   // REPLAY rewinds finished->ejection: the repeated performance must get its
   // one-shot audio cues again, so drop this session's cue memory
   if (event.type === 'REPLAY' && after !== before) cues.clear();
-  if (after !== 'roam' && before !== after) enterPhase(after);
+  if (event.type === 'REPLAY' && after !== before) enteredPhase = before; // re-enter ejection even if it was the last entry
+  syncPhaseEntry();
  }
 
  function update(dt) {
@@ -622,7 +649,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    // RETURN's timed exit lands here; CANCEL handles its own finalize.
    finalize('return');
   }
-  if (phase !== 'roam' && before !== phase) enterPhase(phase);
+  syncPhaseEntry();
   if (phase !== 'roam') {
    applyCamera(phase, snapshot, dt);
    if (++uiTick % 3 === 0) renderUi(snapshot);
@@ -691,6 +718,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
     positionDrift,
     ringBell: snapshot.phase === 'ringing' ? ringBellProjection() : null,
     selfPov: ['ejection', 'finished'].includes(snapshot.phase) ? selfPovState() : null,
+    bodyPov: bodyPovState(snapshot.phase),
    };
   },
   dispose() {

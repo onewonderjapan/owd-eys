@@ -2,7 +2,11 @@
 // share library resources (removed, never disposed here); actors are reparented in and
 // out by the director. Dynamic water/fire/live lighting live in other modules.
 import * as THREE from 'three';
+import {createHeadMount} from './immersion-headmount.js';
 import {seatTransform} from './immersion-config.js';
+
+// Seated first-person lens height above the table top (see povSync).
+const MEETING_EYE_LIFT = 0.30;
 
 export function createWorldBell({config, props}) {
  const group = props.instantiate('prop_bell');
@@ -141,27 +145,23 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
   const baseYaw = angle + Math.PI;
   avatar.player.position.set(position[0], 0, position[2]);
   avatar.player.rotation.y = baseYaw;
-  avatar.player.visible = actorId !== playerActorId;
+  avatar.player.visible = true; // own seat too: the head mount hides only the head
   scene.add(avatar.player);
-  seated.push({actorId, avatar, baseYaw, angle});
+  seated.push({actorId, avatar, baseYaw, angle, position});
  }
 
- // First-person wings hang off the camera so the bottom edge reads as "you".
- const wings = actors.extractWings(playerActorId);
- let wingsRig = null;
- if (wings) {
-  wingsRig = new THREE.Group();
-  wingsRig.name = 'pov-wings-rig';
-  wings.position.set(0, -0.185, -0.42);
-  wings.rotation.set(0.15, 0, 0);
-  wingsRig.add(wings);
- }
+ // First person sits on the player's real seated body (2026-09-24; the camera
+ // used to carry two proxy wings). The head mount hides only the head; every
+ // frame povSync() turns the body with the gaze and seats the lens on the eye.
+ const ownSeat = seated.find(s => s.actorId === playerActorId) || null;
+ const head = ownSeat ? createHeadMount(ownSeat.avatar) : null;
+ if (head) head.setHeadHidden(true);
 
  const camera = new THREE.PerspectiveCamera(meeting.camera.fov, 1, 0.035, 60);
  camera.position.set(...meeting.camera.position);
  camera.lookAt(0, meeting.camera.lookY, 0);
  scene.add(camera);
- if (wingsRig) camera.add(wingsRig);
+ const povEye = new THREE.Vector3();
 
  let lastSpeakerIndex = -1;
 
@@ -199,21 +199,50 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
     s.avatar.model.rotation.y = 0;
     s.avatar.visual.rotation.z = 0;
     s.avatar.player.rotation.y = s.baseYaw;
-    s.avatar.player.visible = s.actorId !== playerActorId;
+    s.avatar.player.visible = true;
    }
+   if (head) head.setHeadHidden(true);
   },
+  // Put the player back in the chair (the bell ring borrows the avatar into the
+  // town scene) and re-pose it seated.
+  seatPlayer() {
+   if (!ownSeat) return;
+   actors.pose(playerActorId, 'seated');
+   ownSeat.avatar.player.position.set(ownSeat.position[0], 0, ownSeat.position[2]);
+   ownSeat.avatar.player.rotation.set(0, ownSeat.baseYaw, 0);
+   ownSeat.avatar.player.visible = true;
+   if (ownSeat.avatar.player.parent !== scene) scene.add(ownSeat.avatar.player);
+   if (head) head.setHeadHidden(true);
+  },
+  // After the look controller set the camera rotation: turn the seated body
+  // with the gaze, then seat the lens on the eye. Returns the lens-to-eye gap.
+  povSync() {
+   if (!head || !ownSeat || ownSeat.avatar.player.parent !== scene) return null;
+   head.alignBodyToCamera(camera);
+   head.eyeWorld(povEye);
+   // A seated goose's real eye is level with the table top and ~8cm from its edge,
+   // so the table rim filled the frame and the others showed half a head. The lens
+   // keeps the real eye's x/z (in front of the face, so never inside the head) and
+   // sits up to MEETING_EYE_LIFT above the table top -- "sitting up straight".
+   povEye.y = Math.max(povEye.y, meeting.tableTopY + MEETING_EYE_LIFT);
+   camera.position.copy(povEye);
+   return 0;
+  },
+  // Where the lens should be right now (the lifted eye); used by diagnostics.
+  get lens() { return povEye; },
+  get headMount() { return head; },
   detachActors() {
    for (const s of seated) {
     s.avatar.model.rotation.y = 0;
     s.avatar.visual.rotation.z = 0;
     if (s.avatar.player.parent === scene) scene.remove(s.avatar.player);
    }
-   if (wingsRig && wingsRig.parent === camera) camera.remove(wingsRig);
+   if (head) head.setHeadHidden(false);
+   if (ownSeat) ownSeat.avatar.player.rotation.set(0, ownSeat.baseYaw, 0);
   },
   dispose() {
    this.detachActors();
    for (const object of owned) if (object.parent === scene) scene.remove(object);
-   if (wingsRig) wingsRig.clear();
    for (const part of backdropParts) if (part.dispose) part.dispose();
    scene.clear();
   },

@@ -125,6 +125,7 @@ export async function loadImmersionActors(actorIds, {onProgress = () => {}, isCu
         }
       }
       pivots.length = 0;
+      entry.reachPivots = null;
       if (mode === 'standing') return;
       const legAngle = mode === 'carried' ? CARRY_LEG_ANGLE : SEAT_LEG_ANGLE;
       for (const node of poseNodes.legs) {
@@ -145,6 +146,21 @@ export async function loadImmersionActors(actorIds, {onProgress = () => {}, isCu
     },
     reset() {
       for (const id of actors.keys()) this.pose(id, 'standing');
+    },
+    // Lift both wings forward (0 = at rest, 1 = reaching out), e.g. toward the bell
+    // in the ring beat now that the player sees its own real body. Uses the same
+    // pivot mechanism as the poses; the next pose() call unwraps it.
+    reachWings(id, amount) {
+      const entry = actors.get(id);
+      if (!entry) return;
+      if (!entry.reachPivots) {
+        entry.reachPivots = entry.poseNodes.wings.map(node => {
+          const pivot = wrapInPivot(node);
+          if (!entry.pivots.includes(pivot)) entry.pivots.push(pivot);
+          return pivot;
+        });
+      }
+      for (const pivot of entry.reachPivots) pivot.rotation.x = -amount * 1.1;
     },
     // Clones of the wing meshes for the player's first-person view; shares read-only
     // geometry/material with the owned actor, disposed once with the ActorSet.
