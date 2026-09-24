@@ -675,6 +675,43 @@ try {
         check('style-bridge: 第4拍画面门可测', false, String(e && e.message || e).slice(0, 160));
       }
     }
+    // C2 2026-09-26: the pre-R2 chandelier parts (ring/candles/flames/chains) used
+    // to escape take() and leak on every stage dispose. Three replays (reset-reuse)
+    // must hold GPU memory at the first performance's end values, and a full second
+    // session (dispose + rebuild) must not grow geometries/textures either.
+    if (EXTRA_STYLE === 'chandelier') {
+      const chMem = () => page.evaluate(() => {
+        const m = window.eys.state().walk.memory || {};
+        return {g: m.geometries ?? null, t: m.textures ?? null};
+      });
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'finished', null, {timeout: 30000}).catch(() => {});
+      await page.waitForTimeout(1500); // let the final frames register before freezing the reference
+      const chMem1 = await chMem();
+      for (let i = 0; i < 3; i++) {
+        await page.evaluate(() => document.querySelector('#immersion-replay')?.click());
+        await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'finished', null, {timeout: 30000}).catch(() => {});
+      }
+      const chMem2 = await chMem();
+      check('style-chandelier: 连续3次重播后几何/贴图与首演结束时相等',
+        chMem1.g != null && chMem2.g === chMem1.g && chMem2.t === chMem1.t, JSON.stringify({first: chMem1, afterReplays: chMem2}));
+      await page.evaluate(() => document.querySelector('#immersion-return')?.click());
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', null, {timeout: 10000}).catch(() => {});
+      const chMemR1 = await chMem();
+      await page.keyboard.press('KeyE');
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'voting', null, {timeout: 40000}).catch(() => {});
+      await page.evaluate(() => document.querySelector('#immersion-style-chandelier')?.click());
+      await page.evaluate(() => document.querySelector('#immersion-self-demo')?.click());
+      await page.waitForFunction(() => { const b = document.querySelector('#immersion-confirm'); return b && !b.disabled; }, null, {timeout: 5000}).catch(() => {});
+      await page.evaluate(() => document.querySelector('#immersion-confirm')?.click());
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ejection' && window.eys?.state?.().walk?.immersion?.style === 'chandelier', null, {timeout: 30000}).catch(() => {});
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'finished', null, {timeout: 30000}).catch(() => {});
+      await page.waitForTimeout(1500);
+      await page.evaluate(() => document.querySelector('#immersion-return')?.click());
+      await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', null, {timeout: 10000}).catch(() => {});
+      const chMem3 = await chMem();
+      check('style-chandelier: 二次完整会话后几何/贴图不增长',
+        chMemR1.g != null && chMem3.g <= chMemR1.g + 2 && chMem3.t <= chMemR1.t + 2, JSON.stringify({afterSession1: chMemR1, afterSession2: chMem3}));
+    }
     await page.evaluate(() => document.querySelector('#immersion-skip')?.click());
     await page.waitForFunction(() => ['finished', 'returning', 'roam'].includes(window.eys?.state?.().walk?.immersion?.phase), null, {timeout: 20000}).catch(() => {});
     await page.evaluate(() => document.querySelector('#immersion-return')?.click());

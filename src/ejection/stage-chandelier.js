@@ -17,25 +17,28 @@ export function buildStage(ctx) {
  warm.position.set(0, 2.6, 1.2); scene.add(warm);
 
  const chandelier = new THREE.Group();
- const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.07, 10, 24),
-  new THREE.MeshStandardMaterial({color: '#c9a24a', metalness: 0.7, roughness: 0.35}));
+ const ring = new THREE.Mesh(take(new THREE.TorusGeometry(0.55, 0.07, 10, 24)),
+  take(new THREE.MeshStandardMaterial({color: '#c9a24a', metalness: 0.7, roughness: 0.35})));
  ring.rotation.x = Math.PI / 2; chandelier.add(ring);
+ const candleGeo = take(new THREE.CylinderGeometry(0.035, 0.045, 0.22, 8));
+ const candleMat = take(new THREE.MeshStandardMaterial({color: '#e8dcc2', roughness: 0.8}));
+ const flameGeo = take(new THREE.PlaneGeometry(0.1, 0.2));
+ const flameMat = take(new THREE.MeshBasicMaterial({color: '#ffca7a', transparent: true, opacity: 0.9,
+  blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
  for (let i = 0; i < 6; i++) {
-  const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.22, 8),
-   new THREE.MeshStandardMaterial({color: '#e8dcc2', roughness: 0.8}));
+  const candle = new THREE.Mesh(candleGeo, candleMat);
   const ca = i * Math.PI / 3;
   candle.position.set(Math.cos(ca) * 0.55, 0.14, Math.sin(ca) * 0.55);
   chandelier.add(candle);
-  const flame = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.2),
-   new THREE.MeshBasicMaterial({color: '#ffca7a', transparent: true, opacity: 0.9,
-    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false}));
+  const flame = new THREE.Mesh(flameGeo, flameMat);
   flame.position.set(candle.position.x, 0.32, candle.position.z);
   flame.userData.flame = true;
   chandelier.add(flame);
  }
+ const chainGeo = take(new THREE.CylinderGeometry(0.012, 0.012, 2.4, 6));
+ const chainMat = take(new THREE.MeshStandardMaterial({color: '#55432a', roughness: 0.8}));
  for (let i = 0; i < 3; i++) {
-  const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 2.4, 6),
-   new THREE.MeshStandardMaterial({color: '#55432a', roughness: 0.8}));
+  const chain = new THREE.Mesh(chainGeo, chainMat);
   const cha = i * Math.PI * 2 / 3 + 0.5;
   chain.position.set(Math.cos(cha) * 0.3, 1.25, Math.sin(cha) * 0.3);
   chandelier.add(chain);
