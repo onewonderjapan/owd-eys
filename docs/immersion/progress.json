@@ -22,7 +22,7 @@
   "plan": "implementation-plan.md",
   "preview_url": "http://127.0.0.1:8870/",
   "candidate_version": "1.2.0",
-  "actual_version": "1.5.4",
+  "actual_version": "1.5.5",
   "build_sha256": null,
   "publishing_authorized": true,
   "stages": [
