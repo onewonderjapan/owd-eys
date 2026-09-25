@@ -4,10 +4,11 @@
  <div id="walk-photo-bar" hidden><span>拍照模式 · 拖动取景</span><button id="walk-photo-save">导出图片 <kbd>Enter</kbd></button><button id="walk-photo-exit">退出 <kbd>Esc</kbd></button></div>
  <span id="walk-reticle" aria-hidden="true" hidden></span>
  <div id="walk-paused" role="status" hidden>已暂停 · 回到窗口继续</div>
- <div class="walk-bottom"><span class="walk-key-hint">WASD / 方向键移动 · E 查看 · Esc 换角色</span><button id="walk-inspect" disabled>查看位置 <kbd>E</kbd></button></div>
+ <div class="walk-bottom"><span class="walk-key-hint">WASD / 方向键移动 · E 查看 · Esc 换角色</span><span><button id="walk-report" hidden>报警 <kbd>R</kbd></button><button id="walk-inspect" disabled>查看位置 <kbd>E</kbd></button></span></div>
+ <div id="walk-round-toast" role="status" hidden></div>
  <div id="walk-prompt" hidden></div>
  <p class="walk-fan-notice" id="walk-fan-notice">《鹅鸭杀》非官方二创 · 技术验证与娱乐 · 不作商业用途</p>
  <div class="walk-pad" aria-label="触屏移动"><button data-move="KeyW" aria-label="向北走">↑</button><button data-move="KeyA" aria-label="向西走">←</button><button data-move="KeyS" aria-label="向南走">↓</button><button data-move="KeyD" aria-label="向东走">→</button></div>
- <div id="walk-help" hidden><strong>逛一圈鹅教堂</strong><p>方向键或 WASD 移动。点「视角」或按 V 切换俯视／第一人称。沿门口走进房间，按 E 查看位置。广场的红色按钮桌也能开会；8 种出局演出可在会议右上选择。</p><p>第一人称：按住画面拖动环顾；电脑也可点击画面锁定鼠标，Esc 释放。W／S 前后走，A／D 左右平移。</p><p>手机用左下方向键移动，拖动画面转头。离开窗口会自动暂停。</p><button id="walk-home">回到港口入口</button><p class="fan-notice-full" id="walk-fan-notice-full">本项目为《鹅鸭杀》（Goose Goose Duck）的非官方二次创作，仅用于技术验证与娱乐，不用于商业用途。与原作官方无关联，原作相关权利归其权利人所有。</p></div>
+ <div id="walk-help" hidden><strong>逛一圈鹅教堂</strong><p>方向键或 WASD 移动。点「视角」或按 V 切换俯视／第一人称。沿门口走进房间，按 E 查看位置。广场的红色按钮桌也能开会；8 种出局演出可在会议右上选择。</p><p>镇民中藏着一只鸭子——发现谁倒在地上变成两条腿，走近按 E 或 R 报警，全体直接进会议投票。</p><p>第一人称：按住画面拖动环顾；电脑也可点击画面锁定鼠标，Esc 释放。W／S 前后走，A／D 左右平移。</p><p>手机用左下方向键移动，拖动画面转头。离开窗口会自动暂停。</p><button id="walk-home">回到港口入口</button><p class="fan-notice-full" id="walk-fan-notice-full">本项目为《鹅鸭杀》（Goose Goose Duck）的非官方二次创作，仅用于技术验证与娱乐，不用于商业用途。与原作官方无关联，原作相关权利归其权利人所有。</p></div>
  <section id="walk-info" aria-labelledby="walk-info-title" hidden><button id="walk-info-close" aria-label="关闭位置说明">×</button><span class="eyebrow">GOOSECHAPEL</span><h2 id="walk-info-title"></h2><p id="walk-info-text"></p><small>关闭说明后继续行走</small></section>
 </div>

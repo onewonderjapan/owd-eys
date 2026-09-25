@@ -284,3 +284,66 @@
  opacity: 0.3;
 }
 #immersion-avatars button.dropped { transition: transform 0.7s ease-in, opacity 0.7s ease-in; }
+
+/* 1.7.0: dead seats carry a red cross and cannot be voted; ejected ones grey out. */
+#immersion-avatars button[data-dead],
+#immersion-avatars button[data-eliminated] {
+ cursor: not-allowed;
+}
+#immersion-avatars button[data-dead] {
+ border-color: rgba(255, 96, 64, 0.75);
+ background: rgba(84, 20, 12, 0.72);
+}
+#immersion-avatars button[data-eliminated] {
+ opacity: 0.45;
+ filter: grayscale(0.9);
+}
+#immersion-avatars button[data-dead]::after {
+ content: '✕';
+ position: absolute;
+ left: 50%;
+ top: 34px;
+ transform: translateX(-50%);
+ font-size: 40px;
+ line-height: 1;
+ font-weight: 700;
+ color: #ff5a3c;
+ text-shadow: 0 1px 4px #000a;
+ pointer-events: none;
+}
+#immersion-avatars button { position: relative; } /* anchor the ::after cross */
+
+/* 1.7.0 topbar line naming the found dead */
+#immersion-found-tag {
+ font-size: 13px;
+ color: #ffb9a3;
+ background: rgba(84, 26, 18, 0.7);
+ border: 1px solid rgba(255, 130, 96, 0.45);
+ border-radius: 8px;
+ padding: 2px 8px;
+}
+
+/* 1.7.0 discovery performance: one soft red vignette at the screen edges.
+   Plays once over the reporting phase; reduced motion holds a static pale edge. */
+#immersion-vignette {
+ position: absolute;
+ inset: 0;
+ pointer-events: none;
+ box-shadow: inset 0 0 120px 40px rgba(180, 30, 16, 0.85);
+ opacity: 0;
+}
+#immersion-vignette.play {
+ animation: immersion-vignette-pulse 1s ease-in-out 1 both;
+}
+#immersion-vignette.hold {
+ opacity: 0.25;
+ animation: none;
+}
+@keyframes immersion-vignette-pulse {
+ 0% { opacity: 0; }
+ 50% { opacity: 0.6; }
+ 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+ #immersion-vignette.play { animation: none; opacity: 0.25; }
+}

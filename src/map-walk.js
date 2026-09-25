@@ -15,7 +15,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  const enter=$('#walk-enter'),exit=$('#walk-exit'),hud=$('#walk-hud'),info=$('#walk-info'),prompt=$('#walk-prompt');
  let nav,walker,avatar,loading=false,active=false,paused=false,failure=null,saved=null,raf=0,last=0,frame=0;
  let director=null,propsStarted=false,immersionSnapshot=null,npcs=null,round=null;
- let photoMode=false,dusk=false,duskSaved=null;
+ let photoMode=false,dusk=false,duskSaved=null,hudTick=0;
  const propsLibrary=createPropLibrary();
  const walkAudio=createWalkAudio();
  const target=new THREE.Vector3(),offset=new THREE.Vector3(0,13,9),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -182,26 +182,87 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  function nearBellPoint(){
   return meetingTrigger()!==null;
  }
- function updateHud(){
-  const s=walker.state;$('#walk-area').textContent=s.area.label;$('#walk-visited').textContent=`已到访 ${s.visited.size} / 11`;
-  const near=s.near;prompt.hidden=!near;prompt.textContent=near?'入口 · '+near.label:'';
-  $('#walk-inspect').disabled=s.area.kind!=='room'&&!near;
-  const trigger=meetingTrigger();
-  director?.setNearBell(trigger?trigger.label:null);
-  director?.refresh();
+ // 1.7.0 report trigger: a discovered leg within reportDistance. Same guard set
+ // as the meeting triggers (busy/paused/info/help), plus photo mode.
+ function reportTrigger(){
+  if(!director||director.busy||!nav||!walker||paused||photoMode||!round)return null;
+  if(!info.hidden||!$('#walk-help').hidden)return null;
+  return round.reportable(walker.state.position); // {actor, position} or null
  }
- function inspect(){
-  if(!active||!walker)return;if(director&&director.busy)return;const s=walker.state,id=s.area.kind==='room'?s.area.id:s.near?.room;if(!id)return;
-  clearInput();view.unlock();$('#walk-info-title').textContent=nav.rooms.find(r=>r.id===id).label;$('#walk-info-text').textContent=note[id];info.hidden=false;
+ let roundToastTimer=0;
+ function showRoundToast(text){
+  const el=$('#walk-round-toast');
+  if(!el)return; // old cached HTML: the summary card degrades silently
+  el.textContent=text;el.hidden=false;
+  clearTimeout(roundToastTimer);
+  roundToastTimer=setTimeout(()=>{el.hidden=true;},TOWN_ROUND_CONFIG.summary*1000);
  }
- function restoreImmersion(){
+ // 1.7.0 meeting aftermath (director RETURN, not CANCEL): resolve the round,
+ // dispose the ejected townsperson and the legs, repopulate on a new round.
+ function settleRound(end){
+  if(!round||!npcs)return;
+  const r=round.resolveMeeting({ejectedId:end.ejectedId||null});
+  npcs.applyRound(r);
+  if(r.outcome==='duck-out')showRoundToast('鸭子出局，小镇安全');
+  else if(r.outcome==='goose-out'){
+   const label=describeActor(r.ejectedId)?.label||r.ejectedId;
+   showRoundToast(`「${label}」是无辜的鹅`);
+  }
+  // ?round=force-kill stays armed for the whole session: re-zero the duck's
+  // cooldown after every meeting so debug rounds don't wait out the first-kill gate.
+  if(new URLSearchParams(location.search).get('round')==='force-kill')round.forceKill();
+  if(round.checkSilence()&&!r.newRound){ // a meeting can leave the town silent
+   round.nextRound();
+   npcs.applyRound({newRound:true});
+   showRoundToast('小镇陷入寂静');
+  }
+ }
+ function checkRoundSilence(){ // roam-only, ~1s cadence
+  if(!round||!npcs||paused||!round.checkSilence())return;
+  round.nextRound();
+  npcs.applyRound({newRound:true});
+  showRoundToast('小镇陷入寂静');
+ }
+ function restoreImmersion(end){
   const snap=immersionSnapshot;
   immersionSnapshot=null;clearInput();
   if(!snap||!active)return;
+  if(end&&end.reason!=='cancel')settleRound(end); // CANCEL keeps the legs and ejects nobody
   view.restore(snap);
   if(walker&&nav)view.update(walker.state.position,nav.heightAt(walker.state.position));
   info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=!paused;
   host.tabIndex=0;host.focus({preventScroll:true});render();
+ }
+ function beginReport(){
+  if(!director||director.busy||!walker||!round)return;
+  const corpse=round.reportable(walker.state.position);
+  if(!corpse)return;
+  exitPhoto(); // a session must never start inside photo mode
+  clearInput();view.unlock();
+  npcs?.setHidden(true); // townsfolk and legs step out while the meeting plays
+  const snap=view.snapshot();
+  director.begin({entry:'report',corpse:{actorId:corpse.actor,position:[...corpse.position]}}).then(accepted=>{
+   if(accepted)immersionSnapshot=snap;
+  });
+ }
+ function updateHud(){
+  const s=walker.state;$('#walk-area').textContent=s.area.label;$('#walk-visited').textContent=`已到访 ${s.visited.size} / 11`;
+  const near=s.near;prompt.hidden=!near;prompt.textContent=near?'入口 · '+near.label:'';
+  $('#walk-inspect').disabled=s.area.kind!=='room'&&!near;
+  const report=reportTrigger();
+  // 1.7.0 prompt priority: report > meeting trigger > inspect (the inspect
+  // button stays available either way; the E-key handler picks report first).
+  const reportBtn=$('#walk-report');
+  if(reportBtn)reportBtn.hidden=!report;
+  const trigger=meetingTrigger();
+  director?.setNearBell(trigger?trigger.label:null);
+  director?.setReportNear(report?{actor:report.actor,position:[...report.position]}:null);
+  director?.refresh();
+  if(++hudTick%20===0)checkRoundSilence(); // updateHud runs every 3rd frame -> ~1s cadence
+ }
+ function inspect(){
+  if(!active||!walker)return;if(director&&director.busy)return;const s=walker.state,id=s.area.kind==='room'?s.area.id:s.near?.room;if(!id)return;
+  clearInput();view.unlock();$('#walk-info-title').textContent=nav.rooms.find(r=>r.id===id).label;$('#walk-info-text').textContent=note[id];info.hidden=false;
  }
  function beginImmersion(){
   if(!director||director.busy||!walker)return;
@@ -268,6 +329,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   director=createImmersionDirector({
    props:propsLibrary,worldScene:scene,host,canvas:renderer.domElement,
    getWalker:()=>walker,getNavigation:()=>nav,getActorId:()=>avatar?.actorId,
+   getRound:()=>round, // 1.7.0: the town-round ledger feeds absent seats and the aftermath
    describeActor,
    onEnd:restoreImmersion,
    onPropsUnavailable:()=>{propsLibrary.ensure().then(()=>director?.refreshProps()).catch(()=>{});},
@@ -304,10 +366,10 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    };
    const forceKillRequested=()=>new URLSearchParams(location.search).get('round')==='force-kill';
    npcs=createWalkNpcs({scene,nav,config:WALK_NPC_CONFIG,getPlayerPosition:()=>walker?[...walker.state.position]:null,getPlayerActor:()=>avatar?.actorId,isMobile:()=>matchMedia('(pointer: coarse)').matches||(host.clientWidth||innerWidth)<700,reducedMotion:reduced,camera,host,round,getPlayerView,
-    onRoundStarted:()=>{if(forceKillRequested()&&npcs&&npcs.state().loaded>=2)round.forceKill();}}); // ?round=force-kill debug hook: cooldown 0 + one witness bypass, seed untouched
+    onRoundStarted:()=>{if(forceKillRequested()&&npcs&&npcs.state().loaded>=2)round.forceKill();}, // ?round=force-kill debug hook: cooldown 0 + one witness bypass, seed untouched
+    onCorpse:()=>{director?.cue('kill:thud');}}); // the kill lands: one very soft thump
   }
-  npcs.start();
-   document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
+  npcs.start();   document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
    view.sync();view.update(walker.state.position,nav.heightAt(walker.state.position));
    // Roam renders the full town (205k triangles, no LOD); 1x keeps the frame budget
    // sane on integrated GPUs. Slightly softer on scaled displays, much smoother motion.
@@ -351,7 +413,8 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   }
   if(movement.has(e.code)){e.preventDefault();if(!paused&&info.hidden&&!e.target.closest('button'))keys.add(e.code);}
   else if(e.code==='Escape'){e.preventDefault();if(view.escape())return;if(!info.hidden)info.hidden=true;else if(!$('#walk-help').hidden)$('#walk-help').hidden=true;else stop();}
-  else if(e.code==='KeyE'&&!e.repeat){e.preventDefault();if(nearBellPoint())beginImmersion();else inspect();}
+  else if(e.code==='KeyE'&&!e.repeat){e.preventDefault();if(reportTrigger())beginReport();else if(nearBellPoint())beginImmersion();else inspect();}
+  else if(e.code==='KeyR'&&!e.repeat){e.preventDefault();if(reportTrigger())beginReport();}
   else if(e.code==='KeyV'&&!e.repeat){e.preventDefault();view.change();}
   else if(e.code==='KeyP'&&!e.repeat){e.preventDefault();enterPhoto();}
   else if(e.code==='KeyF'&&!e.repeat){e.preventDefault();setDusk(!dusk);syncDuskButton();}
@@ -373,11 +436,13 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  if(duskButton)duskButton.onclick=()=>{setDusk(!dusk);syncDuskButton();host.focus({preventScroll:true});};
  syncDuskButton();
  $('#walk-info-close').onclick=()=>{info.hidden=true;host.focus({preventScroll:true});};
+ const reportButton=$('#walk-report');
+ if(reportButton)reportButton.onclick=()=>{beginReport();host.focus({preventScroll:true});}; // 1.7.0 touch report; silent no-op on old HTML
  $('#walk-help-toggle').onclick=()=>{if(director&&director.busy)return;clearInput();view.unlock();$('#walk-help').hidden=!$('#walk-help').hidden;host.focus({preventScroll:true});};
  $('#walk-home').onclick=()=>{if(director&&director.busy)return;clearInput();walker.reset();target.set(walker.state.position[0],.2,walker.state.position[1]);info.hidden=true;host.focus({preventScroll:true});};
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,reportable:null,photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,duskGlow:duskGlow.length?{count:duskGlow.length,intensity:+duskGlow[0].emissiveIntensity.toFixed(3)}:null,glowPools:duskPools?duskPools.filter(d=>d.visible).length:0,fogColor:scene.fog?scene.fog.color.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,reportable:reportTrigger(),photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,duskGlow:duskGlow.length?{count:duskGlow.length,intensity:+duskGlow[0].emissiveIntensity.toFixed(3)}:null,glowPools:duskPools?duskPools.filter(d=>d.visible).length:0,fogColor:scene.fog?scene.fog.color.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }

@@ -85,6 +85,14 @@ export function createImmersionAudio() {
     case 'whoosh':
      track(noise(t0, 0.55, 0.3, 'bandpass', 500, 1600));
      break;
+    case 'report': // 1.7.0 discovery alarm: two short square-wave blips, ≤0.4s
+     track(tone('square', 660, t0, 0.12, 0.008, 0.09));
+     track(tone('square', 880, t0 + 0.16, 0.12, 0.008, 0.12));
+     break;
+    case 'kill:thud': // 1.7.0 kill landing: one very soft low thump, ≤0.15s
+     track(tone('sine', 120, t0, 0.06, 0.005, 0.11));
+     track(noise(t0, 0.06, 0.03, 'lowpass', 300));
+     break;
     case 'fire':
      for (let i = 0; i < 7; i++)
       track(noise(t0 + i * 0.16 + Math.random() * 0.05, 0.09, 0.14, 'bandpass', 1400 + Math.random() * 900));

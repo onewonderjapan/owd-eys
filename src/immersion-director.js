@@ -2,7 +2,7 @@
 // temporary scenes/cameras handed to the walking render loop, actor/stage lifecycles,
 // one-shot audio cues and the DOM UI. Never writes walker.position directly.
 import * as THREE from 'three';
-import {IMMERSION_CONFIG, selectRoster, pickSessionSpeeches} from './immersion-config.js';
+import {IMMERSION_CONFIG, TOWN_ROUND_CONFIG, selectRoster, pickSessionSpeeches} from './immersion-config.js';
 import {createImmersionState} from './immersion-state.js';
 import {createImmersionAudio} from './immersion-audio.js';
 import {createImmersionLook} from './immersion-look.js';
@@ -14,7 +14,7 @@ import {createHeadMount} from './immersion-headmount.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
-export function createImmersionDirector({props, worldScene, host, canvas, getWalker, getNavigation, getActorId, onEnd, onPropsUnavailable}) {
+export function createImmersionDirector({props, worldScene, host, canvas, getWalker, getNavigation, getActorId, getRound, onEnd, onPropsUnavailable}) {
  const machine = createImmersionState();
  const audio = createImmersionAudio();
  const look = createImmersionLook({canvas, host});
@@ -22,6 +22,10 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
 
  let session = 0; // increments on start/retry/cancel; late async results check against it
  let sessionSpeeches = [];
+ let sessionEntry = 'ring'; // 'ring' (bell/button) or 'report' (1.7.0 corpse discovery)
+ let sessionCorpse = null; // {actorId, position:[x,z]} for the report entry
+ let sessionAbsent = {dead: [], eliminated: []};
+ let lastTargetId = null; // survives the session reset so finalize can report the eject
  let actors = null;
  let playerActorId = null;
  let worldBell = null;
@@ -33,6 +37,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  let selfPov = null; // head-mounted self camera state (see buildSelfPov)
  let loadingProgress = null;
  let nearBell = null;
+ let reportNear = null;
  let endReason = null;
  let endNotified = false;
  let cues = new Set();
@@ -50,6 +55,16 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  }
 
  function bellEyePose() {
+  // 1.7.0 report entry: the camera rides the player's frozen spot, looking down
+  // (~0.35 rad at the usual 1.2m gap) at the discovered leg.
+  if (sessionEntry === 'report' && sessionCorpse && walkFrozenAt) {
+   const nav = getNavigation && getNavigation();
+   const [px, pz] = walkFrozenAt;
+   const [cx, cz] = sessionCorpse.position;
+   const ground = nav ? nav.heightAt([px, pz]) : 0;
+   const corpseGround = nav ? nav.heightAt([cx, cz]) : 0;
+   return {position: [px, ground + 0.755, pz], target: [cx, corpseGround + 0.30, cz]};
+  }
   // interaction is [x, z] — the old [x, , z] destructure left z undefined and
   // parked the ring camera at world z=0, ~7m from the bell (V4 2026-09-24).
   const [x, z] = IMMERSION_CONFIG.bell.interaction;
@@ -105,6 +120,19 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   if (!avatar) return;
   const mount = meetingStage.headMount;
   actors.pose(playerActorId, 'standing'); // pose() restores load transforms, so place afterwards
+  if (sessionEntry === 'report' && sessionCorpse && walkFrozenAt) {
+   // Report entry: stand the borrowed body where the discovery happened, facing the leg.
+   const nav = getNavigation && getNavigation();
+   const [px, pz] = walkFrozenAt;
+   avatar.player.position.set(px, nav ? nav.heightAt([px, pz]) : 0, pz);
+   avatar.player.rotation.set(0, 0, 0);
+   avatar.player.visible = true;
+   worldScene.add(avatar.player);
+   mount.faceTowards(sessionCorpse.position[0], sessionCorpse.position[1]);
+   mount.setHeadHidden(true);
+   ringBody = {avatar, mount};
+   return;
+  }
   const [ix, iz] = IMMERSION_CONFIG.bell.interaction;
   const [bx, by, bz] = IMMERSION_CONFIG.bell.base;
   // Stand a step back from the interaction spot (away from the bell): the eye
@@ -283,12 +311,13 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  function bodyPovState(phase) {
   let cam = null, scene = null, mount = null;
   if (phase === 'ringing' && ringBody) { cam = ringCamera; scene = worldScene; mount = ringBody.mount; }
+  else if (phase === 'reporting' && ringBody) { cam = ringCamera; scene = worldScene; mount = ringBody.mount; }
   else if (['seating', 'discussion', 'voting', 'result'].includes(phase) && meetingStage && meetingStage.headMount) {
    cam = meetingStage.camera; scene = meetingStage.scene; mount = meetingStage.headMount;
   }
   if (!cam || !mount) return null;
   // meeting: the lens is the lifted eye (see meeting povSync), not the raw eye
-  const eye = phase === 'ringing' ? mount.eyeWorld(new THREE.Vector3()) : meetingStage.lens.clone();
+  const eye = (phase === 'ringing' || phase === 'reporting') ? mount.eyeWorld(new THREE.Vector3()) : meetingStage.lens.clone();
   cam.updateMatrixWorld();
   povRay.setFromCamera(povNdc, cam);
   povRay.near = 0.01; povRay.far = 30;
@@ -340,9 +369,18 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
     buildRingBody();
     if (worldBell) worldBell.update(0);
     break;
+   case 'reporting':
+    // 1.7.0 discovery performance: the borrowed body stands at the discovery
+    // spot facing the leg; one red vignette pulse + alarm cue. No bell.
+    ensureRingCamera();
+    buildRingBody();
+    ui.vignette('play');
+    fireCue('reporting:alarm', 'report');
+    break;
    case 'seating':
     if (worldBell) worldBell.update(0);
     destroyRingBody();
+    ui.vignette(null);
     if (meetingStage) {
      meetingStage.seatPlayer();
      meetingStage.reset();
@@ -352,7 +390,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
     fireCue('seating:enter', 'chair');
     break;
    case 'voting':
-    ui.setAvatars(snapshot.actorIds.slice(1), snapshot.selectedId, extras.describeActor, false);
+    ui.setAvatars(snapshot.actorIds.slice(1), snapshot.selectedId, extras.describeActor, false, snapshot.absent);
     break;
    case 'ejection': {
     if (meetingStage) meetingStage.detachActors();
@@ -390,7 +428,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  }
 
  function renderTargetFor(phase) {
-  if (phase === 'ringing') return {scene: worldScene, camera: ensureRingCamera()};
+  if (phase === 'ringing' || phase === 'reporting') return {scene: worldScene, camera: ensureRingCamera()};
   if (['seating', 'discussion', 'voting', 'result'].includes(phase) && meetingStage)
    return {scene: meetingStage.scene, camera: meetingStage.camera};
   if (['ejection', 'finished'].includes(phase) && ejectionStage)
@@ -403,6 +441,11 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  }
 
  function applyCamera(phase, snapshot, dt) {
+  if (phase === 'reporting') {
+   // Steady borrowed-body shot: the ring camera sits on the eye (refreshed for
+   // aspect), the vignette runs on CSS and the banner on the UI clock.
+   return;
+  }
   if (phase === 'ringing') {
    if (worldBell) worldBell.update(dt);
    const t = snapshot.elapsed;
@@ -420,7 +463,8 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    return;
   }
   if (meetingStage && ['seating', 'discussion', 'voting', 'result'].includes(phase)) {
-   meetingStage.update({elapsed: snapshot.elapsed, speakerIndex: snapshot.speakerIndex, reducedMotion: snapshot.reducedMotion, actorIds: snapshot.actorIds});
+   // 1.7.0: discussion speakers come from the present members (dead seats don't talk).
+   meetingStage.update({elapsed: snapshot.elapsed, speakerIndex: snapshot.speakerIndex, reducedMotion: snapshot.reducedMotion, actorIds: snapshot.present?.length ? snapshot.present : snapshot.actorIds});
    if (look.state().enabled) look.apply(meetingStage.camera, 0, -0.123);
    meetingStage.povSync(); // real seated body: turn it with the gaze, lens on the eye
    return;
@@ -465,6 +509,11 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   enteredPhase = 'roam'; // the next session must re-run every phase entry, even the same ones
   destroyRingBody();
   destroySelfPov();
+  ui.vignette(null);
+  sessionEntry = 'ring';
+  sessionCorpse = null;
+  sessionAbsent = {dead: [], eliminated: []};
+  lastTargetId = null;
   if (ringCamera) {
    // drop the hidden bell camera so the roam scene graph is back to its
    // pre-session state (it is re-created on demand by ensureRingCamera).
@@ -496,20 +545,28 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  function finalize(reason) {
   if (endNotified) return;
   endNotified = true;
+  // 1.7.0 meeting aftermath: the RETURN path ejects the voted target; CANCEL
+  // ejects nobody (the legs stay). wasDuck is judged BEFORE resolveMeeting
+  // gets a chance to start the next round.
+  const ejectedId = reason === 'cancel' ? null : lastTargetId;
+  const round = getRound ? getRound() : null;
+  const wasDuck = Boolean(ejectedId && round && round.duckId && round.duckId() === ejectedId);
   cleanupSession();
   if (walkFrozenAt && getWalker) {
    const now = getWalker().state.position;
    positionDrift = Math.hypot(now[0] - walkFrozenAt[0], now[1] - walkFrozenAt[1]);
    walkFrozenAt = null;
   }
-  if (onEnd) onEnd({reason: reason || endReason || 'return', positionDrift});
+  if (onEnd) onEnd({reason: reason || endReason || 'return', positionDrift, ejectedId, wasDuck});
  }
 
  async function loadSession(gen) {
-  loadingProgress = {done: 0, total: 8};
+  // 1.7.0: only present members load; dead/eliminated seats stay empty chairs.
+  const roster = selectRoster(playerActorId);
+  const presentRoster = roster.filter(id => !sessionAbsent.dead.includes(id) && !sessionAbsent.eliminated.includes(id));
+  loadingProgress = {done: 0, total: presentRoster.length};
   try {
-   const roster = selectRoster(playerActorId);
-   const set = await loadImmersionActors(roster, {
+   const set = await loadImmersionActors(presentRoster, {
     onProgress: (done, total) => {
      loadingProgress = {done, total};
     },
@@ -536,6 +593,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  const extras = {
   describeActor: null, // injected by map-walk via setDescribeActor
   get nearBell() { return nearBell; },
+  get reportNear() { return reportNear; },
   get progress() { return loadingProgress; },
   get muted() { return audio.isMuted(); },
   get fade() { return machine.snapshot().phase === 'returning'; },
@@ -558,7 +616,9 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  ui.on.replay = () => dispatchEvent({type: 'REPLAY'});
  ui.on.return = () => dispatchEvent({type: 'RETURN'});
 
- async function begin() {
+ async function begin(opts = {}) {
+  const entry = opts && opts.entry === 'report' ? 'report' : 'ring';
+  const corpse = entry === 'report' ? opts.corpse : null;
   if (machine.snapshot().phase !== 'roam') return false;
   if (!props.state().ready) {
    if (!props.state().loading && onPropsUnavailable) onPropsUnavailable();
@@ -568,20 +628,27 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   const nav = getNavigation && getNavigation();
   if (!walker || !nav) return false;
   const [x, z] = walker.state.position;
-  // Accept ANY configured meeting trigger (courthouse bell or plaza fountain
-  // button); room-gated triggers only fire inside their room.
-  let atTrigger = false;
-  for (const t of [IMMERSION_CONFIG.bell, IMMERSION_CONFIG.button]) {
-   const [ix, iz] = t.interaction;
-   if (Math.hypot(x - ix, z - iz) > t.triggerDistance) continue;
-   if (t.room) {
-    const room = nav.roomAt([x, z]);
-    if (!room || room.id !== t.room) continue;
+  if (entry === 'report') {
+   // 1.7.0: the report entry only needs the player within reportDistance of the
+   // discovered leg — no bell/button room gate applies.
+   if (!corpse || !Array.isArray(corpse.position)) return false;
+   if (Math.hypot(x - corpse.position[0], z - corpse.position[1]) > TOWN_ROUND_CONFIG.reportDistance) return false;
+  } else {
+   // Accept ANY configured meeting trigger (courthouse bell or plaza fountain
+   // button); room-gated triggers only fire inside their room.
+   let atTrigger = false;
+   for (const t of [IMMERSION_CONFIG.bell, IMMERSION_CONFIG.button]) {
+    const [ix, iz] = t.interaction;
+    if (Math.hypot(x - ix, z - iz) > t.triggerDistance) continue;
+    if (t.room) {
+     const room = nav.roomAt([x, z]);
+     if (!room || room.id !== t.room) continue;
+    }
+    atTrigger = true;
+    break;
    }
-   atTrigger = true;
-   break;
+   if (!atTrigger) return false;
   }
-  if (!atTrigger) return false;
   audio.unlock();
   playerActorId = (getActorId && getActorId()) || playerActorId;
   if (!playerActorId) return false;
@@ -590,8 +657,11 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   endReason = null;
   session += 1;
   sessionSpeeches = pickSessionSpeeches(session);
+  sessionEntry = entry;
+  sessionCorpse = corpse;
+  sessionAbsent = getRound ? getRound().meetingStart(selectRoster).absent : {dead: [], eliminated: []};
   const prefersReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  machine.dispatch({type: 'START', actorIds: selectRoster(playerActorId), playerActorId, style: IMMERSION_CONFIG.defaultStyle, reducedMotion: prefersReduced});
+  machine.dispatch({type: 'START', actorIds: selectRoster(playerActorId), playerActorId, style: IMMERSION_CONFIG.defaultStyle, reducedMotion: prefersReduced, entry, absent: sessionAbsent});
   loadSession(session);
   return true;
  }
@@ -631,6 +701,9 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   const before = machine.snapshot().phase;
   machine.dispatch(event);
   const after = machine.snapshot().phase;
+  // 1.7.0: remember the confirmed eject across the session reset so finalize
+  // can hand it to the town-round bookkeeping.
+  if (event.type === 'CONFIRM' && after === 'result') lastTargetId = machine.snapshot().targetId;
   // REPLAY rewinds finished->ejection: the repeated performance must get its
   // one-shot audio cues again, so drop this session's cue memory
   if (event.type === 'REPLAY' && after !== before) cues.clear();
@@ -660,7 +733,7 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
  function renderUi(snapshot) {
   ui.render(snapshot, extras);
   if (snapshot.phase === 'voting')
-   ui.setAvatars(snapshot.actorIds.slice(1), snapshot.selectedId, extras.describeActor, false);
+   ui.setAvatars(snapshot.actorIds.slice(1), snapshot.selectedId, extras.describeActor, false, snapshot.absent);
  }
 
  return {
@@ -685,9 +758,15 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
    if (meetingStage) meetingStage.projection(width, height);
    if (ejectionStage) ejectionStage.projection(width, height);
   },
-  setNearBell(value) {
-   nearBell = value || null; // trigger label ('按铃'/'按下按钮') or null
-  },
+ setNearBell(value) {
+  nearBell = value || null; // trigger label ('按铃'/'按下按钮') or null
+ },
+ setReportNear(value) {
+  reportNear = value || null; // 1.7.0: nearby corpse {actor, position} or null
+ },
+ cue(name) {
+  audio.play(name); // 1.7.0: one-shot world cues (kill:thud) from outside the session
+ },
   refresh() {
    renderUi(machine.snapshot());
   },

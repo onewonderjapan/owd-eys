@@ -56,6 +56,11 @@ export function ensureImmersionUi(host) {
  modeTag.id = 'immersion-mode-tag';
  modeTag.textContent = '体验模式 · NPC 演出';
  topbar.appendChild(modeTag);
+ // 1.7.0: one line naming who was found dead this round (hidden when nobody died).
+ const foundTag = document.createElement('span');
+ foundTag.id = 'immersion-found-tag';
+ topbar.appendChild(foundTag);
+ made['found-tag'] = foundTag;
  buttonOf(topbar, 'mute', '静音');
  buttonOf(topbar, 'skip', '跳过');
  buttonOf(topbar, 'leave', '退出会议');
@@ -124,6 +129,9 @@ export function ensureImmersionUi(host) {
  buttonOf(finishedRow, 'return', '返回小镇');
 
  div('fade');
+ // 1.7.0 discovery vignette: a fullscreen inset-shadow overlay above everything.
+ const vignette = div('vignette');
+ vignette.setAttribute('aria-hidden', 'true');
 
  host.appendChild(root);
 
@@ -142,20 +150,31 @@ export function ensureImmersionUi(host) {
    for (const id of ['prompt', 'topbar', 'style-picker', 'caption', 'voting', 'banner', 'preparing', 'error-panel', 'finished'])
     made[id].hidden = true;
    made['fade'].classList.remove('on');
+   made['vignette'].classList.remove('play', 'hold');
+  },
+  // 1.7.0 discovery vignette: 'play' runs the one-shot pulse, 'hold' pins the
+  // reduced-motion pale edge, null clears both.
+  vignette(mode) {
+   const v = made['vignette'];
+   v.classList.remove('play', 'hold');
+   if (mode === 'play') { void v.offsetWidth; v.classList.add('play'); }
+   else if (mode === 'hold') v.classList.add('hold');
   },
   render(state, extras = {}) {
    const {phase} = state;
    const show = (id, visible) => { made[id].hidden = !visible; };
    const propsError = Boolean(extras.propsError);
    const triggerLabel = extras.nearBell || null; // '按铃' | '按下按钮' | null
-   const promptVisible = phase === 'roam' && (Boolean(triggerLabel) || propsError) && extras.propsReady !== false;
+   // 1.7.0: the report prompt outranks the meeting triggers (design: 报警 > 开会).
+   const reportNear = Boolean(extras.reportNear);
+   const promptVisible = phase === 'roam' && (reportNear || Boolean(triggerLabel) || propsError) && extras.propsReady !== false;
    show('prompt', promptVisible);
    if (promptVisible) {
-    const actionText = propsError ? '会议道具加载失败' : (triggerLabel === '按下按钮' ? ' 按下按钮开会' : ' 按铃开会');
+    const actionText = propsError ? '会议道具加载失败' : (reportNear ? ' 报警' : (triggerLabel === '按下按钮' ? ' 按下按钮开会' : ' 按铃开会'));
     made['prompt-label'].childNodes.forEach(node => { if (node.nodeType === 3 && node.textContent !== actionText) node.textContent = actionText; });
     const kbd = made['prompt-label'].querySelector('kbd');
-    if (kbd) kbd.hidden = propsError;
-    setText(made['prompt-bell'], propsError ? '重试' : (triggerLabel || '按铃'));
+    if (kbd) { kbd.hidden = propsError; kbd.textContent = 'E'; }
+    setText(made['prompt-bell'], propsError ? '重试' : (reportNear ? '报警' : (triggerLabel || '按铃')));
    }
    show('preparing', phase === 'preparing');
    if (phase === 'preparing')
@@ -167,8 +186,16 @@ export function ensureImmersionUi(host) {
    const showChrome = state.busy && phase !== 'preparing' && phase !== 'error';
    show('topbar', showChrome);
    if (showChrome) {
-    show('skip', ['ringing', 'seating', 'discussion', 'result', 'ejection'].includes(phase));
+    show('skip', ['ringing', 'reporting', 'seating', 'discussion', 'result', 'ejection'].includes(phase));
     setText(made['mute'], extras.muted ? '取消静音' : '静音');
+    // 1.7.0: name the found dead once the meeting knows them (roam hides it).
+    const deadId = state.absent?.dead?.[0];
+    const foundVisible = Boolean(deadId) && phase !== 'roam';
+    made['found-tag'].hidden = !foundVisible;
+    if (foundVisible) {
+     const dead = (extras.describeActor(deadId) || {}).label || deadId;
+     setText(made['found-tag'], `本轮发现：${dead}`);
+    }
    }
    const styleVisible = phase === 'discussion' || phase === 'voting';
    show('style-picker', styleVisible);
@@ -188,7 +215,14 @@ export function ensureImmersionUi(host) {
     made['confirm'].disabled = !state.selectedId;
    }
    const show_text = (id, text) => setText(made[id], text);
-   show('banner', phase === 'result');
+   // 1.7.0: the discovery banner reuses the result banner slot.
+   const deadLabel = id => (extras.describeActor(id) || {}).label || id;
+   if (phase === 'reporting') {
+    show('banner', true);
+    show_text('banner', '发现尸体！');
+   } else {
+    show('banner', phase === 'result');
+   }
    if (phase === 'result') {
     if (state.targetId && !made['avatars'].querySelector(`[data-actor="${CSS.escape(state.targetId)}"]`)?.classList.contains('dropped')) {
      const card = made['avatars'].querySelector(`[data-actor="${CSS.escape(state.targetId)}"]`);
@@ -202,15 +236,18 @@ export function ensureImmersionUi(host) {
    }
    show('caption', phase === 'discussion');
    if (phase === 'discussion') {
-    const speaker = extras.describeActor(state.actorIds[state.speakerIndex]) || {};
+    // 1.7.0: speakers are the present members — dead seats stay silent.
+    const speakers = state.present?.length ? state.present : state.actorIds;
+    const speaker = extras.describeActor(speakers[state.speakerIndex]) || {};
     setText(made['caption'], `${speaker.label || '有人'}：${extras.speeches?.[state.speakerIndex] || ''}`);
    }
    show('finished', phase === 'finished');
    made['fade'].classList.toggle('on', Boolean(extras.fade));
   },
-  setAvatars(actorIds, selectedId, describeActor, disabled) {
+  setAvatars(actorIds, selectedId, describeActor, disabled, absent = {dead: [], eliminated: []}) {
    const box = made['avatars'];
    const wanted = new Set(actorIds);
+   const deadSet = new Set(absent.dead || []), elimSet = new Set(absent.eliminated || []);
    for (const child of [...box.children]) if (!wanted.has(child.dataset.actor)) child.remove();
    for (const id of actorIds) {
     let node = box.querySelector(`[data-actor="${CSS.escape(id)}"]`);
@@ -235,7 +272,15 @@ export function ensureImmersionUi(host) {
     node.querySelector('img').src = described.thumbnail || '';
     node.querySelector('span').textContent = described.label || id;
     node.setAttribute('aria-pressed', String(selectedId === id));
-    node.disabled = Boolean(disabled);
+    // 1.7.0: dead seats show a red cross and cannot be voted; ejected ones grey out.
+    const isDead = deadSet.has(id), isEliminated = !isDead && elimSet.has(id);
+    if (isDead) node.setAttribute('data-dead', '');
+    else node.removeAttribute('data-dead');
+    if (isEliminated) node.setAttribute('data-eliminated', '');
+    else node.removeAttribute('data-eliminated');
+    node.disabled = Boolean(disabled) || isDead || isEliminated;
+    const base = described.label || id;
+    node.setAttribute('aria-label', isDead ? `${base}（已死亡，不可选）` : isEliminated ? `${base}（已出局，不可选）` : base);
    }
   },
  };

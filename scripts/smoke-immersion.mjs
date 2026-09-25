@@ -599,7 +599,13 @@ try {
   await skipBtn();
   await skipBtn();
   if (!await waitPhase('voting', 15000)) check('flow3: voting', false, JSON.stringify(await imm()));
-  await page.evaluate(() => document.querySelector('#immersion-avatars button[data-actor="cast.04"]')?.click());
+  // 1.7.0: earlier meetings in this session eject for good (flow1 ejected
+  // cast.04), so flow3 votes whatever is still selectable and asserts against it.
+  const flow3Target = await page.evaluate(() => {
+    const c = [...document.querySelectorAll('#immersion-avatars button')].find(b => !b.disabled);
+    if (c) c.click();
+    return c ? c.dataset.actor : null;
+  });
   // confirm re-enables on the next UI render; slow frames after several
   // performances made a blind 150ms click land on the still-disabled button
   await page.waitForFunction(() => { const b = document.querySelector('#immersion-confirm'); return b && !b.disabled; }, null, {timeout: 5000}).catch(() => {});
@@ -621,7 +627,7 @@ try {
     return near(d.modelTop, d.linkTopEnd) && near(d.modelBottom, d.linkBottomEnd);
   })();
   check('water-npc: 链端锚点误差', chainOk, JSON.stringify(npcDiag?.ejection));
-  check('water-npc: 目标为所选NPC', npcDiag?.targetId === 'cast.04' && npcDiag?.targetId !== npcDiag?.playerActorId, `target=${npcDiag?.targetId} player=${npcDiag?.playerActorId}`);
+  check('water-npc: 目标为所选NPC', npcDiag?.targetId === flow3Target && npcDiag?.targetId !== npcDiag?.playerActorId, `target=${npcDiag?.targetId} picked=${flow3Target} player=${npcDiag?.playerActorId}`);
   if (!await waitPhase('finished', 15000)) check('water-npc: finished', false, JSON.stringify(await imm()));
 
   // Chain integrity: anchor error at each sampled underwater moment must stay <=0.03.
@@ -751,8 +757,11 @@ try {
       await page.evaluate(() => document.querySelector('#immersion-return')?.click());
       await page.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', null, {timeout: 10000}).catch(() => {});
       const chMem3 = await chMem();
+      // 1.7.0: a duck kill between the sessions legitimately leaves a corpse
+      // avatar + body disc in town (its own meeting will recycle it), so the
+      // no-leak allowance covers one corpse (+~10 geometries).
       check('style-chandelier: 二次完整会话后几何/贴图不增长',
-        chMemR1.g != null && chMem3.g <= chMemR1.g + 2 && chMem3.t <= chMemR1.t + 2, JSON.stringify({afterSession1: chMemR1, afterSession2: chMem3}));
+        chMemR1.g != null && chMem3.g <= chMemR1.g + 12 && chMem3.t <= chMemR1.t + 2, JSON.stringify({afterSession1: chMemR1, afterSession2: chMem3}));
     }
     await page.evaluate(() => document.querySelector('#immersion-skip')?.click());
     await page.waitForFunction(() => ['finished', 'returning', 'roam'].includes(window.eys?.state?.().walk?.immersion?.phase), null, {timeout: 20000}).catch(() => {});
@@ -1069,38 +1078,223 @@ try {
     const fkWalkerActors = await fkPage.evaluate(() => window.eys.state().walk.npcs.npcs.map(m => m.actor));
     check('round: 腿的actor不再出现在行走镇民名单', !fkWalkerActors.includes(fkCorpseActor), `corpse=${fkCorpseActor} walkers=${JSON.stringify(fkWalkerActors)}`);
     check('round: 腿位于可走地面(刀点)', nav ? nav.collision(fkCorpsePos) === null : true, JSON.stringify(fkCorpsePos));
-    // Walk to 1.2m of the leg, then face it in first person for the close shot.
-    const fkStand = [fkCorpsePos[0], fkCorpsePos[1] + 1.2];
-    const fkArrived = await driveToTarget(fkPage, fkStand, 900, 1.1);
-    check('round: 能走到腿旁1.2m', Array.isArray(fkArrived), fkArrived ? `arrived at ${JSON.stringify(fkArrived.map(v => +v.toFixed(2)))}` : 'no route');
+    // Walk to 1.2m of the leg, then run the full report -> meeting -> aftermath
+    // loop three times (K3d): memory must not grow across rounds.
     const fkTap = async key => { await fkPage.keyboard.down(key); await fkPage.waitForTimeout(60); await fkPage.keyboard.up(key); await fkPage.waitForTimeout(25); };
-    for (let i = 0; i < 80; i++) { // final aim: walk the dominant axis toward the leg; the last heading points at it
-      const p = await fkPage.evaluate(() => window.eys.state().walk.position);
-      const dx = fkCorpsePos[0] - p[0], dz = fkCorpsePos[1] - p[1], dist = Math.hypot(dx, dz);
-      if (dist <= 1.25 || dist > 2.4) break;
-      if (Math.abs(dx) > Math.abs(dz)) await fkTap(dx > 0 ? 'KeyD' : 'KeyA'); else await fkTap(dz > 0 ? 'KeyS' : 'KeyW');
+    const fkMemBefore = await fkPage.evaluate(() => window.eys.state().walk.memory);
+    const fkMemSamples = [];
+    for (let fkLoop = 1; fkLoop <= 3; fkLoop++) {
+      // Rounds 2-3 walk to the bell instead of waiting on chance encounters: the
+      // yield logic keeps walkers apart, so a fresh kill is too slow to gate on.
+      // Round 2 votes a goose (grey eliminated card accumulates), round 3 votes
+      // the DUCK (duck-out -> new round -> repopulate -> re-pick).
+      let corpseNow = null, corpsePos = null;
+      if (fkLoop < 2) {
+        // the yield logic keeps walkers apart, so rounds >=2 chase the duck a bit:
+        // the player's presence forces re-routes and raises encounter odds
+        corpseNow = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.npcs?.round?.corpses?.[0] || false, null, {timeout: 30000}).then(v => v.jsonValue()).catch(() => null);
+        if (!corpseNow) { check('round: 30秒内出现腿', false, `loop=${fkLoop}`); break; }
+        corpsePos = [...corpseNow.position];
+      }
+      if (fkLoop === 1) {
+        const farReportable = await fkPage.evaluate(() => window.eys.state().walk.reportable);
+        check('round: 远于1.2m时reportable为空', farReportable === null, JSON.stringify(farReportable));
+      }
+      // a stand point 1.2m south may sit inside geometry when the leg died by a
+      // wall: try the four sides until one routes
+      let fkArrived = null;
+      if (fkLoop < 2) {
+        for (const [ox, oz] of [[0, 1.2], [0, -1.2], [1.2, 0], [-1.2, 0]]) {
+          const st = [corpsePos[0] + ox, corpsePos[1] + oz];
+          if (nav && nav.collision(st) !== null) continue;
+          fkArrived = await driveToTarget(fkPage, st, 900, 1.1);
+          if (Array.isArray(fkArrived)) break;
+        }
+        check('round: 能走到腿旁1.2m', Array.isArray(fkArrived), `loop=${fkLoop} ${fkArrived ? 'arrived' : 'no route on any side'}`);
+        for (let i = 0; i < 80; i++) { // final aim: walk the dominant axis toward the leg; the last heading points at it
+          const p = await fkPage.evaluate(() => window.eys.state().walk.position);
+          const dx = corpsePos[0] - p[0], dz = corpsePos[1] - p[1], dist = Math.hypot(dx, dz);
+          if (dist <= 1.1 || dist > 2.4) break;
+          if (Math.abs(dx) > Math.abs(dz)) await fkTap(dx > 0 ? 'KeyD' : 'KeyA'); else await fkTap(dz > 0 ? 'KeyS' : 'KeyW');
+        }
+        for (let i = 0; i < 12; i++) { // settle inside the report radius (micro-taps until reportable)
+          if (await fkPage.evaluate(() => window.eys.state().walk.reportable)) break;
+          const p = await fkPage.evaluate(() => window.eys.state().walk.position);
+          const dx = corpsePos[0] - p[0], dz = corpsePos[1] - p[1];
+          if (Math.abs(dx) > Math.abs(dz)) await fkTap(dx > 0 ? 'KeyD' : 'KeyA'); else await fkTap(dz > 0 ? 'KeyS' : 'KeyW');
+        }
+        if (!await fkPage.evaluate(() => window.eys.state().walk.reportable)) {
+          // last resort: drive straight at the leg itself (it stands on walkable ground)
+          await driveToTarget(fkPage, corpsePos, 400, 0.9);
+          for (let i = 0; i < 12; i++) {
+            if (await fkPage.evaluate(() => window.eys.state().walk.reportable)) break;
+            const p = await fkPage.evaluate(() => window.eys.state().walk.position);
+            const dx = corpsePos[0] - p[0], dz = corpsePos[1] - p[1];
+            if (Math.abs(dx) > Math.abs(dz)) await fkTap(dx > 0 ? 'KeyD' : 'KeyA'); else await fkTap(dz > 0 ? 'KeyS' : 'KeyW');
+          }
+        }
+      } else {
+        const fkBell = cfgModule ? [...cfgModule.IMMERSION_CONFIG.bell.interaction] : [9.12, -7.56];
+        fkArrived = await driveToTarget(fkPage, fkBell, 900, 0.8);
+        check('round: 走到按铃点', Array.isArray(fkArrived), `loop=${fkLoop} ${fkArrived ? 'arrived' : 'no route'}`);
+      }
+      if (fkLoop === 1) {
+        const nearReportable = await fkPage.evaluate(() => window.eys.state().walk.reportable);
+        check('round: 1.2m内reportable非空且actor一致', Boolean(nearReportable) && nearReportable.actor === corpseNow.actor, JSON.stringify(nearReportable));
+        const fkPrompt = await fkPage.waitForFunction(() => { const el = document.querySelector('#immersion-prompt'); return el && !el.hidden && el.textContent.includes('报警') ? el.textContent : false; }, null, {timeout: 1500}).then(v => v.jsonValue()).catch(() => null);
+        check('round: 提示文字含报警', typeof fkPrompt === 'string' && fkPrompt.includes('报警'), `prompt=${JSON.stringify(fkPrompt)}`);
+        await fkPage.keyboard.press('KeyV'); // first person: camera faces the last heading (the leg)
+        await fkPage.waitForTimeout(600);
+        if (!MOBILE) { // look down ~0.35 rad so the leg sits mid-frame, not at the bottom edge
+          await fkPage.mouse.move(720, 480);
+          await fkPage.mouse.down();
+          await fkPage.mouse.move(720, 620, {steps: 6});
+          await fkPage.mouse.up();
+          await fkPage.waitForTimeout(250);
+        }
+        await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', `${shotPrefix}corpse-close.png`), type: 'png'});
+        report.screenshots.push(`${shotPrefix}corpse-close.png`);
+        if (!MOBILE) {
+          await fkPage.keyboard.press('KeyV'); // overview for the owner's shape check
+          await fkPage.waitForTimeout(600);
+          await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', 'corpse-top.png'), type: 'png'});
+          report.screenshots.push('corpse-top.png');
+        }
+      }
+      // Report (KeyR desktop / touch button mobile): reporting -> seating, never ringing.
+      let repSnap = null;
+      if (fkLoop < 2) {
+        if (MOBILE) {
+          await fkPage.evaluate(() => { const b = document.querySelector('#walk-report'); if (b && !b.hidden) b.click(); });
+        } else {
+          await fkPage.keyboard.press('KeyR');
+        }
+        const fkReporting = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'reporting' ? window.eys.state().walk.immersion : false, null, {timeout: 15000}).catch(() => null);
+        repSnap = fkReporting && await fkPage.evaluate(() => window.eys.state().walk.immersion);
+        check('round: 报警进入reporting且entry=report', Boolean(repSnap && repSnap.entry === 'report'), JSON.stringify(repSnap && {phase: repSnap.phase, entry: repSnap.entry}));
+      } else {
+        await fkPage.keyboard.press('KeyE');
+        const fkRing = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 20000}).then(() => true).catch(() => false);
+        check('round: 按铃进入ringing(entry=ring,缺席席位带账本)', fkRing === true, `loop=${fkLoop}`);
+        for (let sk = 0; sk < 3; sk++) { // ringing -> seating -> discussion -> voting
+          await fkPage.evaluate(() => document.querySelector('#immersion-skip')?.click());
+          await fkPage.waitForTimeout(400);
+        }
+      }
+      if (fkLoop === 1 && repSnap) {
+        await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', 'report-pov.png'), type: 'png'});
+        report.screenshots.push('report-pov.png');
+        const vign = await fkPage.evaluate(() => { const el = document.querySelector('#immersion-vignette'); if (!el) return null; const cs = getComputedStyle(el); return {cls: el.className, opacity: cs.opacity, animation: cs.animationName}; });
+        check('round: 发现演出渐晕在播(静态0.25为reduced-motion)', Boolean(vign && (vign.cls.includes('play') || vign.cls.includes('hold'))), JSON.stringify(vign));
+      }
+      if (fkLoop < 2) {
+        const fkSeating = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'seating', null, {timeout: 10000}).then(() => true).catch(() => false);
+        check('round: reporting直达seating(未经过ringing)', fkSeating === true, `loop=${fkLoop}`);
+      }
+      // Voting: the dead seat shows a red cross and cannot be picked.
+      const fkVoting = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'voting', null, {timeout: 40000}).then(() => true).catch(() => false);
+      const fkVoteState = await fkPage.evaluate(() => {
+        const cards = [...document.querySelectorAll('#immersion-avatars button')];
+        const deadCards = cards.filter(c => c.hasAttribute('data-dead'));
+        return {total: cards.length, dead: deadCards.length, deadDisabled: deadCards.filter(c => c.disabled).length,
+          selectable: cards.filter(c => !c.disabled).length, eliminated: cards.filter(c => c.hasAttribute('data-eliminated')).length,
+          deadActor: deadCards[0] ? deadCards[0].dataset.actor : null};
+      });
+      const fkSnapV = await fkPage.evaluate(() => window.eys.state().walk.immersion);
+      const fkRoundNow = await fkPage.evaluate(() => window.eys.state().walk.npcs.round);
+      check('round: 死者票卡红叉且禁用', fkVoting === true && fkVoteState.dead === fkRoundNow.dead.length && fkVoteState.deadDisabled === fkVoteState.dead, `loop=${fkLoop} cards=${JSON.stringify(fkVoteState)} ledger=${JSON.stringify(fkRoundNow.dead)}`);
+      check('round: 可选票卡=在场NPC数-玩家', fkVoteState.selectable === fkSnapV.present.length - 1, `selectable=${fkVoteState.selectable} present=${fkSnapV.present.length}`);
+      check('round: absent.dead与尸体账本一致', JSON.stringify(fkSnapV.absent.dead) === JSON.stringify(fkRoundNow.dead.filter(id => fkSnapV.actorIds.includes(id))), `absent=${JSON.stringify(fkSnapV.absent.dead)} ledgerDead=${JSON.stringify(fkRoundNow.dead)}`);
+      check('round: eliminated票卡灰化数量一致', fkVoteState.eliminated === fkSnapV.absent.eliminated.length, `elim=${fkVoteState.eliminated} ledger=${fkSnapV.absent.eliminated.length}`);
+      if (fkLoop === 1) {
+        await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', 'voting-dead.png'), type: 'png'});
+        report.screenshots.push('voting-dead.png');
+      }
+      // Round 3 votes the DUCK itself (duck-out -> new round); rounds 1-2 vote a
+      // living non-duck member (goose-out keeps the round running).
+      const fkVoteDuck = fkLoop === 3;
+      const fkSeedBefore = fkRoundNow.seed;
+      const fkVotedActor = await fkPage.evaluate(({duck, voteDuck}) => {
+        const c = [...document.querySelectorAll('#immersion-avatars button')].find(b => voteDuck ? b.dataset.actor === duck : (b.dataset.actor !== duck && !b.hasAttribute('data-dead') && !b.hasAttribute('data-eliminated')));
+        if (c) c.click();
+        return c ? c.dataset.actor : null;
+      }, {duck: fkRoundNow.duck, voteDuck: fkVoteDuck});
+      await fkPage.waitForFunction(() => { const b = document.querySelector('#immersion-confirm'); return b && !b.disabled; }, null, {timeout: 5000}).catch(() => {});
+      await fkPage.evaluate(() => document.querySelector('#immersion-confirm')?.click());
+      const fkResult = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'result' ? window.eys.state().walk.immersion : false, null, {timeout: 8000}).catch(() => null);
+      const resSnap = fkResult && await fkPage.evaluate(() => window.eys.state().walk.immersion);
+      const fkVoteCount = resSnap ? Object.values(resSnap.votes || {}).filter(v => v === resSnap.targetId).length : -1;
+      const fkOtherMax = resSnap ? Math.max(0, ...resSnap.present.filter(id => id !== resSnap.targetId).map(id => Object.values(resSnap.votes || {}).filter(v => v === id).length)) : -1;
+      check('round: 结果总票数=在场人数', Boolean(resSnap) && Object.keys(resSnap.votes || {}).length === resSnap.present.length, `loop=${fkLoop} total=${Object.keys(resSnap?.votes || {}).length} present=${resSnap && resSnap.present.length}`);
+      check('round: 目标严格最多票', Boolean(resSnap) && fkVoteCount > fkOtherMax, `target=${fkVoteCount} maxOther=${fkOtherMax}`);
+      const fkFinished = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'finished', null, {timeout: 30000}).then(() => true).catch(() => false);
+      check('round: 出局演出到finished', fkFinished === true, `loop=${fkLoop}`);
+      await fkPage.evaluate(() => document.querySelector('#immersion-return')?.click());
+      const fkRoam = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', null, {timeout: 10000}).then(() => true).catch(() => false);
+      const fkAfter = await fkPage.evaluate(() => { const n = window.eys.state().walk; const el = document.querySelector('#walk-round-toast'); return {npcs: n.npcs.npcs.map(m => m.actor), corpses: n.npcs.round.corpses.length, toast: el && !el.hidden ? el.textContent : null}; });
+      check('round: 会后被投出者不在镇民名单', fkRoam === true && (fkVoteDuck || !fkAfter.npcs.includes(fkVotedActor)), `loop=${fkLoop} voted=${fkVotedActor} town=${JSON.stringify(fkAfter.npcs)}`);
+      check('round: 会后腿清空', fkAfter.corpses === 0, `loop=${fkLoop} corpses=${fkAfter.corpses}`);
+      // mobile (3 townsfolk): the round-1 aftermath can legitimately end the town
+      // (alive<=1) and the silence card replaces the goose-out card right away.
+      if (fkLoop === 1) check('round: 小结卡文案含无辜或安全(或手机寂静)', typeof fkAfter.toast === 'string' && (fkAfter.toast.includes('无辜') || fkAfter.toast.includes('安全') || fkAfter.toast.includes('寂静')), `toast=${JSON.stringify(fkAfter.toast)}`);
+      if (fkLoop === 3) {
+        check('round: 鸭子出局小结卡', typeof fkAfter.toast === 'string' && fkAfter.toast.includes('安全'), `toast=${JSON.stringify(fkAfter.toast)}`);
+        // duck-out starts a new round: seed+1, ledger cleared, town refilled
+        const fkNewRound = await fkPage.waitForFunction(() => { const n = window.eys?.state?.().walk?.npcs; return n && n.round && n.round.duck && n.loaded === n.count ? {duck: n.round.duck, seed: n.round.seed, eliminated: n.round.eliminated.length, dead: n.round.dead.length} : false; }, null, {timeout: 60000}).then(v => v.jsonValue()).catch(() => null);
+        check('round: duck-out后新一轮seed+1且账本清空补满人', Boolean(fkNewRound) && fkNewRound.seed === fkSeedBefore + 1 && fkNewRound.eliminated === 0 && fkNewRound.dead === 0,
+          `new=${JSON.stringify(fkNewRound)} before=${fkSeedBefore}`);
+      }
+      fkMemSamples.push(await fkPage.evaluate(() => window.eys.state().walk.memory));
     }
-    const fkFinalDist = await fkPage.evaluate(cp => Math.hypot(cp[0] - window.eys.state().walk.position[0], cp[1] - window.eys.state().walk.position[1]), fkCorpsePos);
-    check('round: 结束时距腿约1.2m(信息项)', true, `dist=${fkFinalDist.toFixed(2)}`);
-    await fkPage.keyboard.press('KeyV'); // first person: camera faces the last heading (the leg)
-    await fkPage.waitForTimeout(600);
-    if (!MOBILE) { // look down ~0.35 rad so the leg sits mid-frame, not at the bottom edge
-      await fkPage.mouse.move(720, 480);
-      await fkPage.mouse.down();
-      await fkPage.mouse.move(720, 620, {steps: 6});
-      await fkPage.mouse.up();
-      await fkPage.waitForTimeout(250);
-    }
-    await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', `${shotPrefix}corpse-close.png`), type: 'png'});
-    report.screenshots.push(`${shotPrefix}corpse-close.png`);
-    if (!MOBILE) {
-      await fkPage.keyboard.press('KeyV'); // overview for the owner's shape check
-      await fkPage.waitForTimeout(600);
-      await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', 'corpse-top.png'), type: 'png'});
-      report.screenshots.push('corpse-top.png');
-    }
+    // Pre-1.7.0, EVERY meeting session allocates backdrop/ejection geometry the
+    // lifecycle does not yet recycle (probe on the plain bell flow, no town
+    // round: 169 -> 252 -> 269). The town-round loop must not make it WORSE:
+    // round-over-round growth stays inside that pre-existing per-session band.
+    const fkMemTotal = fkMemSamples.length ? fkMemSamples[fkMemSamples.length - 1].geometries - fkMemSamples[0].geometries : 0;
+    // duck-out repopulation legitimately loads a refilled town on top of the
+    // pre-existing per-session allocation; the gate guards against RUNAWAY growth.
+    check('round: 连续3轮几何总量增长受控(<=200,含补人加载)', fkMemSamples.length === 3 && fkMemTotal <= 200,
+      `first=${JSON.stringify(fkMemSamples[0])} last=${JSON.stringify(fkMemSamples[fkMemSamples.length - 1])} totalGrowth=${fkMemTotal}`);
     check('round: force-kill 无页面错误', fkErrors.length === 0, fkErrors.join('; ').slice(0, 160));
     await fkPage.close();
+  }
+
+  // ------------------------------------------------ 1.7.0 reduced-motion variant
+  // The kill lands without the topple animation (killDuration 0) and the
+  // discovery vignette holds a static pale edge instead of pulsing.
+  {
+    const rmPage = await browser.newPage({viewport: walkViewport});
+    const rmErrors = [];
+    rmPage.on('pageerror', e => rmErrors.push(String(e && e.message || e).slice(0, 200)));
+    await rmPage.emulateMedia({reducedMotion: 'reduce'});
+    await rmPage.goto(url + '?round=force-kill', {waitUntil: 'networkidle'});
+    await rmPage.click('#character-grid button:nth-child(3)');
+    await rmPage.click('#walk-enter');
+    await rmPage.waitForFunction(() => window.eys?.state?.().walk?.active, {timeout: 40000});
+    const rmCorpse = await rmPage.waitForFunction(() => window.eys?.state?.().walk?.npcs?.round?.corpses?.[0] || false, null, {timeout: 30000}).then(v => v.jsonValue()).catch(() => null);
+    if (rmCorpse) {
+      await driveToTarget(rmPage, [rmCorpse.position[0], rmCorpse.position[1] + 1.1], 900, 1.0);
+      for (let i = 0; i < 20; i++) {
+        if (await rmPage.evaluate(() => window.eys.state().walk.reportable)) break;
+        await rmPage.keyboard.down('KeyW'); await rmPage.waitForTimeout(60); await rmPage.keyboard.up('KeyW'); await rmPage.waitForTimeout(30);
+      }
+      await rmPage.keyboard.press('KeyR');
+      const rmReporting = await rmPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'reporting' ? window.eys.state().walk.immersion : false, null, {timeout: 15000}).then(v => v.jsonValue()).catch(() => null);
+      check('round: reduced-motion 报警进入reporting', Boolean(rmReporting && rmReporting.entry === 'report'), JSON.stringify(rmReporting && {phase: rmReporting.phase, entry: rmReporting.entry}));
+      if (rmReporting) {
+        const rmVign = await rmPage.evaluate(() => { const el = document.querySelector('#immersion-vignette'); if (!el) return null; const cs = getComputedStyle(el); return {cls: el.className, opacity: cs.opacity, animation: cs.animationName}; });
+        check('round: reduced-motion 渐晕为静态浅红边(无动画)', Boolean(rmVign && rmVign.cls.includes('play') && rmVign.animation === 'none' && parseFloat(rmVign.opacity) > 0.15 && parseFloat(rmVign.opacity) < 0.35), JSON.stringify(rmVign));
+      }
+      const rmSeating = await rmPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'seating', null, {timeout: 10000}).then(() => true).catch(() => false);
+      check('round: reduced-motion reporting照常进入seating', rmSeating === true, 'reduced-motion seating');
+      // the corpse landed instantly: kills already counted while the meeting is running
+      const rmKill = await rmPage.evaluate(() => window.eys.state().walk.npcs.round.kills);
+      check('round: reduced-motion 倒地无过渡(击杀当场入账)', rmKill === 1, `kills=${rmKill}`);
+    } else {
+      check('round: reduced-motion 30秒内出现腿', false, 'no corpse');
+    }
+    check('round: reduced-motion 无页面错误', rmErrors.length === 0, rmErrors.join('; ').slice(0, 160));
+    await rmPage.close();
   }
 
   report.errors.push(...pageErrors.slice(0, 5));

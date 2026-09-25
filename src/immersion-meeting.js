@@ -240,11 +240,18 @@ export function createMeetingStage({actors, playerActorId, config, props}) {
    if (head) head.setHeadHidden(false);
    if (ownSeat) ownSeat.avatar.player.rotation.set(0, ownSeat.baseYaw, 0);
   },
-  dispose() {
-   this.detachActors();
-   for (const object of owned) if (object.parent === scene) scene.remove(object);
-   for (const part of backdropParts) if (part.dispose) part.dispose();
-   scene.clear();
-  },
+ dispose() {
+  this.detachActors();
+  for (const object of owned) if (object.parent === scene) scene.remove(object);
+  // Backdrop meshes carry no dispose(); free their GPU-side geometry/materials
+  // explicitly or every meeting session leaks the courtroom (~15 geometries).
+  for (const part of backdropParts) {
+   part.traverse?.(o => {
+    if (o.geometry) o.geometry.dispose();
+    for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) m.dispose();
+   });
+  }
+  scene.clear();
+ },
  };
 }

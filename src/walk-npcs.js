@@ -19,7 +19,7 @@ const span=(rng,range)=>range[0]+rng()*(range[1]-range[0]);
 // tied to any export suffix (no `.080`-style tail in the pattern).
 const FOOT_NAME=/foot|shin|webbed[\s_]paddle|toe[\s_]seam/i;
 
-export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActor,isMobile=()=>false,reducedMotion=false,camera,host,round=null,getPlayerView=null,onRoundStarted=null}){
+export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActor,isMobile=()=>false,reducedMotion=false,camera,host,round=null,getPlayerView=null,onRoundStarted=null,onCorpse=null}){
  const list=[];let corpses=[];let started=false,hidden=false,bubblesSuppressed=false,bubbleLayer=null,loadToken=0,activeLoads=0,queue=[],activeCount=0,rng=makeRng(20260920),graph=null;
  let roundLive=false,kill=null,corpsePlaceholder=false,corpseMeshNames=null;
  // Stroll targets come from the walk-start wander graph (see createWanderGraph):
@@ -187,6 +187,7 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
    list.splice(list.indexOf(victim),1);
    duck.killing=false;
    kill=null;
+   if(onCorpse)try{onCorpse();}catch{} // one-shot thump; hooks must not break the kill flow
    chooseTarget(duck,getPlayerPosition?.(),TOWN_ROUND_CONFIG.fleeDistance); // walk away, ≥ fleeDistance
   }
  }

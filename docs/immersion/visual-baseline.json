@@ -90,5 +90,13 @@
   "corpse-close": {
     "variance": 1889.2,
     "maxBlock": 0.3226
+  },
+  "report-pov": {
+    "variance": 2432.7,
+    "maxBlock": 0.194
+  },
+  "voting-dead": {
+    "variance": 3928.3,
+    "maxBlock": 0.1796
   }
 }
