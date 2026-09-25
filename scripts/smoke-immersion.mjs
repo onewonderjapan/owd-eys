@@ -600,7 +600,9 @@ try {
   await skipBtn();
   if (!await waitPhase('voting', 15000)) check('flow3: voting', false, JSON.stringify(await imm()));
   await page.evaluate(() => document.querySelector('#immersion-avatars button[data-actor="cast.04"]')?.click());
-  await page.waitForTimeout(150);
+  // confirm re-enables on the next UI render; slow frames after several
+  // performances made a blind 150ms click land on the still-disabled button
+  await page.waitForFunction(() => { const b = document.querySelector('#immersion-confirm'); return b && !b.disabled; }, null, {timeout: 5000}).catch(() => {});
   await page.evaluate(() => document.querySelector('#immersion-confirm')?.click());
   if (!await waitPhase('ejection', 10000)) check('water-npc: ejection', false, JSON.stringify(await imm()));
   const integrity = [];
@@ -906,6 +908,10 @@ try {
     const npcLoadedOk = await npcPage.waitForFunction(exp => window.eys?.state?.().walk?.npcs?.loaded === exp, NPC_EXPECT, {timeout: 60000}).then(() => true).catch(() => false);
     const npcStateNow = await npcPage.evaluate(() => window.eys.state().walk.npcs);
     check('npc: 常驻镇民按平台配置加载数量', npcLoadedOk === true, `expect=${NPC_EXPECT} got=${JSON.stringify(npcStateNow)}`);
+    // 1.7.0 default-path regression: without ?round=force-kill the round ledger
+    // exists with a duck, but no leg may exist at load or through the first
+    // sampling window (the earliest possible kill is firstKillCooldown[0]=25s).
+    check('round: 默认路径加载完成即有round账本且零腿', Boolean(npcStateNow?.round?.duck) && npcStateNow.round.corpses.length === 0, JSON.stringify(npcStateNow?.round));
     // 3s sampling: every townsperson stays collision-free, at least one moves.
     const npcSamples = [];
     let npcBubbleSeen = null;
@@ -1034,6 +1040,67 @@ try {
       check('npc: reduced-motion 无页面错误', npcRErrors.length === 0, npcRErrors.join('; ').slice(0, 160));
       await npcRPage.close();
     }
+  }
+
+  // ---------------------------------------------------- 1.7.0 town round: force-kill corpse
+  // ?round=force-kill zeroes the duck's cooldown and opens the witness gate ONCE
+  // once the townsfolk are loaded; the seed is never touched. A fresh page so the
+  // round timeline starts clean; every variable here is fk-prefixed.
+  {
+    const fkPage = await browser.newPage({viewport: finalViewport});
+    const fkErrors = [];
+    fkPage.on('pageerror', e => fkErrors.push(String(e && e.message || e).slice(0, 200)));
+    await fkPage.goto(url + '?round=force-kill', {waitUntil: 'networkidle'});
+    await fkPage.click('#character-grid button:nth-child(3)');
+    await fkPage.click('#walk-enter');
+    await fkPage.waitForFunction(() => window.eys?.state?.().walk?.active, {timeout: 40000});
+    const fkRoundReady = await fkPage.waitForFunction(() => {
+      const n = window.eys?.state?.().walk?.npcs;
+      return Boolean(n && n.loaded > 0 && n.round && n.round.duck);
+    }, null, {timeout: 60000}).then(() => true).catch(() => false);
+    const fkRoundNow = await fkPage.evaluate(() => window.eys.state().walk.npcs.round);
+    check('round: force-kill 镇民加载后round就绪且鸭子已选(仅测试可读)', fkRoundReady === true && Boolean(fkRoundNow?.duck), JSON.stringify(fkRoundNow));
+    const fkCorpseSeen = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.npcs?.round?.corpses?.length >= 1, null, {timeout: 30000}).then(() => true).catch(() => false);
+    const fkRound = await fkPage.evaluate(() => window.eys.state().walk.npcs.round);
+    check('round: force-kill 后10秒内出现腿', fkCorpseSeen === true && fkRound.corpses.length >= 1, JSON.stringify(fkRound && fkRound.corpses));
+    check('round: 首刀后冷却重置回killCooldown区间', fkRound && fkRound.cooldown !== null && fkRound.cooldown >= 20 && fkRound.cooldown <= 35, `cooldown=${fkRound && fkRound.cooldown}`);
+    const fkCorpseActor = fkRound.corpses[0].actor;
+    const fkCorpsePos = [...fkRound.corpses[0].position];
+    const fkWalkerActors = await fkPage.evaluate(() => window.eys.state().walk.npcs.npcs.map(m => m.actor));
+    check('round: 腿的actor不再出现在行走镇民名单', !fkWalkerActors.includes(fkCorpseActor), `corpse=${fkCorpseActor} walkers=${JSON.stringify(fkWalkerActors)}`);
+    check('round: 腿位于可走地面(刀点)', nav ? nav.collision(fkCorpsePos) === null : true, JSON.stringify(fkCorpsePos));
+    // Walk to 1.2m of the leg, then face it in first person for the close shot.
+    const fkStand = [fkCorpsePos[0], fkCorpsePos[1] + 1.2];
+    const fkArrived = await driveToTarget(fkPage, fkStand, 900, 1.1);
+    check('round: 能走到腿旁1.2m', Array.isArray(fkArrived), fkArrived ? `arrived at ${JSON.stringify(fkArrived.map(v => +v.toFixed(2)))}` : 'no route');
+    const fkTap = async key => { await fkPage.keyboard.down(key); await fkPage.waitForTimeout(60); await fkPage.keyboard.up(key); await fkPage.waitForTimeout(25); };
+    for (let i = 0; i < 80; i++) { // final aim: walk the dominant axis toward the leg; the last heading points at it
+      const p = await fkPage.evaluate(() => window.eys.state().walk.position);
+      const dx = fkCorpsePos[0] - p[0], dz = fkCorpsePos[1] - p[1], dist = Math.hypot(dx, dz);
+      if (dist <= 1.25 || dist > 2.4) break;
+      if (Math.abs(dx) > Math.abs(dz)) await fkTap(dx > 0 ? 'KeyD' : 'KeyA'); else await fkTap(dz > 0 ? 'KeyS' : 'KeyW');
+    }
+    const fkFinalDist = await fkPage.evaluate(cp => Math.hypot(cp[0] - window.eys.state().walk.position[0], cp[1] - window.eys.state().walk.position[1]), fkCorpsePos);
+    check('round: 结束时距腿约1.2m(信息项)', true, `dist=${fkFinalDist.toFixed(2)}`);
+    await fkPage.keyboard.press('KeyV'); // first person: camera faces the last heading (the leg)
+    await fkPage.waitForTimeout(600);
+    if (!MOBILE) { // look down ~0.35 rad so the leg sits mid-frame, not at the bottom edge
+      await fkPage.mouse.move(720, 480);
+      await fkPage.mouse.down();
+      await fkPage.mouse.move(720, 620, {steps: 6});
+      await fkPage.mouse.up();
+      await fkPage.waitForTimeout(250);
+    }
+    await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', `${shotPrefix}corpse-close.png`), type: 'png'});
+    report.screenshots.push(`${shotPrefix}corpse-close.png`);
+    if (!MOBILE) {
+      await fkPage.keyboard.press('KeyV'); // overview for the owner's shape check
+      await fkPage.waitForTimeout(600);
+      await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', 'corpse-top.png'), type: 'png'});
+      report.screenshots.push('corpse-top.png');
+    }
+    check('round: force-kill 无页面错误', fkErrors.length === 0, fkErrors.join('; ').slice(0, 160));
+    await fkPage.close();
   }
 
   report.errors.push(...pageErrors.slice(0, 5));

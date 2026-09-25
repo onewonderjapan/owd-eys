@@ -26,7 +26,7 @@ const baselines = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePat
 
 const STYLES = ['water', 'fire', 'bridge', 'flush', 'quicksand', 'space', 'chandelier', 'boulder'];
 const views = []; // {view, image: relative path under reports/, b64}
-for (const f of ['meeting-pov', 'voting', 'vote-result', 'water-self', 'water-self-look-down', 'water-npc', 'fire-self', 'fire-self-lit', 'fire-npc', 'ring-pov'])
+for (const f of ['meeting-pov', 'voting', 'vote-result', 'water-self', 'water-self-look-down', 'water-npc', 'fire-self', 'fire-self-lit', 'fire-npc', 'ring-pov', 'corpse-close'])
   views.push({view: f, image: `immersion/${f}.png`});
 for (const s of STYLES) views.push({view: `style-${s}-3`, image: `immersion/style-${s}-3.png`});
 

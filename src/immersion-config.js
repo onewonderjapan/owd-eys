@@ -120,6 +120,7 @@ export const TOWN_ROUND_CONFIG = Object.freeze({
  witnessDistance: 5.0,          // 玩家离刀点 < 此值视为可能目击（俯视下直接禁止）
  witnessForwardDot: 0.35,       // 第一人称：刀点方向与视线点积 > 此值才算看见；否则允许
  killDuration: 0.6,             // 刀人动作时长（reduced-motion 为 0）
+ killLunge: 0.15,               // 动作内鸭子小步前冲总距离（设计 §2「刀人动作」0.15 m，入 config 以免模块硬编码）
  fleeDistance: 4.0,             // 刀后鸭子选路的最小距离
  reportDistance: 1.2,           // 出「报警」提示的距离
  maxCorpses: 4,

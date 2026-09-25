@@ -3,8 +3,9 @@ import {createNavigation,createWalker} from './map-walk-simulation.js';
 import {loadWalkingAvatar,disposeWalkingAvatar} from './map-walk-avatar.js';
 import {createWalkView} from './map-walk-view.js';
 import {createPropLibrary} from './immersion-props.js';
-import {IMMERSION_CONFIG,WALK_NPC_CONFIG} from './immersion-config.js';
+import {IMMERSION_CONFIG,WALK_NPC_CONFIG,TOWN_ROUND_CONFIG} from './immersion-config.js';
 import {createWalkNpcs} from './walk-npcs.js';
+import {createTownRound} from './walk-round.js';
 import {createImmersionDirector} from './immersion-director.js';
 import {createWalkAudio} from './walk-audio.js';
 
@@ -13,7 +14,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  const $=s=>document.querySelector(s),keys=new Set(),touches=new Map();
  const enter=$('#walk-enter'),exit=$('#walk-exit'),hud=$('#walk-hud'),info=$('#walk-info'),prompt=$('#walk-prompt');
  let nav,walker,avatar,loading=false,active=false,paused=false,failure=null,saved=null,raf=0,last=0,frame=0;
- let director=null,propsStarted=false,immersionSnapshot=null,npcs=null;
+ let director=null,propsStarted=false,immersionSnapshot=null,npcs=null,round=null;
  let photoMode=false,dusk=false,duskSaved=null;
  const propsLibrary=createPropLibrary();
  const walkAudio=createWalkAudio();
@@ -293,7 +294,18 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
    walkAudio.start();syncMuteButton();
   // B4 townsfolk: loading starts once the player avatar is ready; the module owns
   // its own avatars exclusively and releases them all in stop().
-  if(!npcs)npcs=createWalkNpcs({scene,nav,config:WALK_NPC_CONFIG,getPlayerPosition:()=>walker?[...walker.state.position]:null,getPlayerActor:()=>avatar?.actorId,isMobile:()=>matchMedia('(pointer: coarse)').matches||(host.clientWidth||innerWidth)<700,reducedMotion:reduced,camera,host});
+  if(!npcs){
+   // 1.7.0 town round: one seeded duck among the townsfolk. The round owns the
+   // bookkeeping, npcs owns the avatars; both die together in stop().
+   round=createTownRound({config:TOWN_ROUND_CONFIG,playerActorId:actorId});
+   const getPlayerView=()=>{ // forward = the first-person camera's horizontal heading
+    const s=view.state();
+    return {firstPerson:s.mode==='first-person',forward:[-Math.sin(s.yaw),-Math.cos(s.yaw)]};
+   };
+   const forceKillRequested=()=>new URLSearchParams(location.search).get('round')==='force-kill';
+   npcs=createWalkNpcs({scene,nav,config:WALK_NPC_CONFIG,getPlayerPosition:()=>walker?[...walker.state.position]:null,getPlayerActor:()=>avatar?.actorId,isMobile:()=>matchMedia('(pointer: coarse)').matches||(host.clientWidth||innerWidth)<700,reducedMotion:reduced,camera,host,round,getPlayerView,
+    onRoundStarted:()=>{if(forceKillRequested()&&npcs&&npcs.state().loaded>=2)round.forceKill();}}); // ?round=force-kill debug hook: cooldown 0 + one witness bypass, seed untouched
+  }
   npcs.start();
    document.body.classList.add('walking');hud.hidden=false;info.hidden=true;$('#walk-help').hidden=true;$('#walk-paused').hidden=true;
    view.sync();view.update(walker.state.position,nav.heightAt(walker.state.position));
@@ -312,7 +324,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   walkAudio.stop();exitPhoto();setDusk(false);syncDuskButton();stopFlicker();
   fpFogOn=false;scene.fog=null; // first-person haze must not leak into the main page
   if(skyDome&&skyDome.parent)scene.remove(skyDome); // same for the sky dome
-  npcs?.stop();npcs=null; // exit walk: townsfolk and their bubble layer go with it
+  npcs?.stop();npcs=null;round=null; // exit walk: townsfolk, the round ledger and the bubble layer go with it
   immersionSnapshot=null;updateBusyHud(false);
   clearInput();view.unlock();view.sync();cancelAnimationFrame(raf);avatar.player.visible=false;document.body.classList.remove('walking');hud.hidden=true;info.hidden=true;
   for(const [o,visible] of saved.visible)o.visible=visible;highlight.visible=saved.highlight;
@@ -366,6 +378,6 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  renderer.domElement.addEventListener('webglcontextlost',()=>{pause();$('#walk-paused').textContent='画面暂时中断，正在恢复…';});
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
- const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,duskGlow:duskGlow.length?{count:duskGlow.length,intensity:+duskGlow[0].emissiveIntensity.toFixed(3)}:null,glowPools:duskPools?duskPools.filter(d=>d.visible).length:0,fogColor:scene.fog?scene.fog.color.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
+ const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,reportable:null,photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,duskGlow:duskGlow.length?{count:duskGlow.length,intensity:+duskGlow[0].emissiveIntensity.toFixed(3)}:null,glowPools:duskPools?duskPools.filter(d=>d.visible).length:0,fogColor:scene.fog?scene.fog.color.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
  return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }
