@@ -2,7 +2,7 @@
   "schema_version": 1,
   "feature_id": "eys-pov-immersion",
   "prepared_on": "2026-09-13",
-  "updated_at": "2026-09-27",
+  "updated_at": "2026-09-26",
   "status": "released",
   "execution_started": true,
   "executor": "ZCode",
@@ -22,7 +22,7 @@
   "plan": "implementation-plan.md",
   "preview_url": "http://127.0.0.1:8870/",
   "candidate_version": "1.2.0",
-  "actual_version": "1.6.0",
+  "actual_version": "1.7.0",
   "build_sha256": null,
   "publishing_authorized": true,
   "stages": [
@@ -329,7 +329,7 @@
     "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
     "本文件记录本地候选完成，不代表已发布或已部署。"
   ],
-  "next_action": "1.7.0 三夜施工完成于 feature/kill-report-1.7.0(commit 44b4565,报告 C:/3d/eys/REPORT_FLASH_20260927.md):镇民刀人/腿/拉腿开会全链路,全门绿(桌面142/手机131/STYLE×8/visual 25帧/P0 63);待机主拍板腿造型对照官方截图、合并 main 并 Release 1.7.0(版本号未动);1.7.x 候选:玩家被刀灵体视角、S1 专用腿 GLB、会议桌收缩、会话几何分配审计",
+  "next_action": "Released 1.7.0 on 2026-09-26 (Claude): townsfolk kill / corpse / body report per design-kill-report.md, ZCode three nights (REPORT_FLASH_20260927.md) + Claude review c8a85e2 (legs visible in the report beat, smaller body disc). Gates on the 1.7.0 build (182 files): P0 63/63, desktop 143/143, mobile 132/132, STYLE x8 147-154, first-person, entry-recovery, smoke, perf, visual 25 frames, undeclared 29 files; the force-kill bell loop (loop 2) is flaky (natural kill makes E report instead of ring), mobile and water passed on retry. Corpse is a placeholder (red disc + legs); the owner supplied the official shot (upper body with hat half-sunk in a red pool). Next: 1.7.1 per C:/3d/eys/PLAN_FLASH_20260927_v171.md (smoke stabilization with fix/smoke-kill-hold 00c4aba + official-style corpse), ZCode GLM-5.3-Flash, branch feature/corpse-1.7.1.",
   "blockers": [],
   "deviations": [
     {
