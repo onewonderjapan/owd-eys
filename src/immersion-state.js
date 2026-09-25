@@ -1,30 +1,37 @@
 // Pure event state machine for the immersion session. No Three.js, DOM or network imports.
 // The only clock is tick(dt) driven by the walking RAF; wall-clock time never advances phases.
-import {IMMERSION_CONFIG} from './immersion-config.js';
+import {IMMERSION_CONFIG, TOWN_ROUND_CONFIG} from './immersion-config.js';
 
-export const IMMERSION_PHASES = Object.freeze(['roam', 'preparing', 'error', 'ringing', 'seating', 'discussion', 'voting', 'result', 'ejection', 'finished', 'returning']);
+export const IMMERSION_PHASES = Object.freeze(['roam', 'preparing', 'error', 'ringing', 'reporting', 'seating', 'discussion', 'voting', 'result', 'ejection', 'finished', 'returning']);
 
-const TIMED_NEXT = {ringing: 'seating', seating: 'discussion', discussion: 'voting', result: 'ejection', ejection: 'finished', returning: 'roam'};
+const TIMED_NEXT = {ringing: 'seating', reporting: 'seating', seating: 'discussion', discussion: 'voting', result: 'ejection', ejection: 'finished', returning: 'roam'};
 
 function durationOf(phase, style, timings) {
  if (phase === 'discussion') return timings.discussionSegments * timings.discussionSegment;
  if (phase === 'ejection') return timings[style] ?? timings.water;
+ // 1.7.0: the discovery performance. The single source is IMMERSION_CONFIG.timings
+ // (see the comment there); TOWN_ROUND_CONFIG.reporting is a fallback only.
+ if (phase === 'reporting') return timings.reporting ?? TOWN_ROUND_CONFIG.reporting;
  return {ringing: timings.ringing ?? 1.2, seating: timings.seating, result: timings.result, returning: timings.returning}[phase] ?? 0;
 }
 
-// Deterministic scripted ballot. selfDemo: every NPC votes the player, player abstains.
-// Normal: player+NPC1-3 vote the target, NPC4-6 vote the next different NPC, NPC7 abstains.
-function computeVotes(actorIds, playerActorId, targetId, selfDemo) {
+// Deterministic scripted ballot (1.7.0 rewrite, design-kill-report.md §2 会议名单).
+// `present` is the ordered roster minus dead/eliminated, player first.
+// selfDemo: every present NPC votes the player, player abstains.
+// Normal: the first ceil(n/2) present members vote the target, the last present
+// member abstains, and everyone between votes "the next different present NPC"
+// (cycling NPCs only, never the player) so the target is always strictly ahead.
+// With the full 8 present this is byte-identical to the pre-1.7.0 script.
+function computeVotes(present, playerActorId, targetId, selfDemo) {
  const votes = {};
- for (const id of actorIds) {
+ for (const id of present) {
   if (selfDemo) { votes[id] = id === playerActorId ? null : playerActorId; continue; }
-  const index = actorIds.indexOf(id);
-  if (index === 0) { votes[id] = targetId; continue; }
-  if (index <= 3) { votes[id] = targetId; continue; }
-  if (index === 7) { votes[id] = null; continue; }
+  const index = present.indexOf(id);
+  if (index < Math.ceil(present.length / 2)) { votes[id] = targetId; continue; }
+  if (index === present.length - 1) { votes[id] = null; continue; }
   let choice = null;
-  for (let k = 1; k <= 7 && !choice; k++) {
-   const candidate = actorIds[1 + ((index - 1 + k) % 7)];
+  for (let k = 1; k < present.length && !choice; k++) {
+   const candidate = present[1 + ((index - 1 + k) % (present.length - 1))];
    if (candidate !== targetId) choice = candidate;
   }
   votes[id] = choice;
@@ -39,6 +46,7 @@ export function countVotesFor(votes, targetId) {
 export function createImmersionState(config = IMMERSION_CONFIG) {
  let phase = 'roam', elapsed = 0, paused = false;
  let actorIds = [], playerActorId = null;
+ let entry = 'ring', absent = {dead: [], eliminated: []}, present = [];
  let selectedId = null, targetId = null, style = config.defaultStyle;
  let selfDemo = false, votes = null, speakerIndex = 0, error = null;
  let reducedMotion = false;
@@ -46,6 +54,7 @@ export function createImmersionState(config = IMMERSION_CONFIG) {
  const duration = () => durationOf(phase, style, config.timings);
  const resetSession = () => {
   actorIds = []; playerActorId = null; selectedId = null; targetId = null;
+  entry = 'ring'; absent = {dead: [], eliminated: []}; present = [];
   selfDemo = false; votes = null; speakerIndex = 0; error = null; elapsed = 0; paused = false;
  };
  const enter = next => { phase = next; elapsed = 0; speakerIndex = 0; };
@@ -61,8 +70,24 @@ export function createImmersionState(config = IMMERSION_CONFIG) {
      error = '演员名单无效：需要8位不重复角色且玩家首席';
      phase = 'error'; elapsed = 0; return;
     }
+    // 1.7.0: entry 'ring' (bell/button) or 'report' (corpse discovery); absent
+    // lists seat holders that must not take part. Every absent id must sit on
+    // the roster and never be the player.
+    const wantedEntry = event.entry === 'report' ? 'report' : 'ring';
+    const dead = Array.isArray(event.absent?.dead) ? event.absent.dead : [];
+    const eliminated = Array.isArray(event.absent?.eliminated) ? event.absent.eliminated : [];
+    const absentInvalid = [...dead, ...eliminated].some(id => !ids.includes(id) || id === player)
+     || new Set(dead).size !== dead.length || new Set(eliminated).size !== eliminated.length
+     || dead.some(id => eliminated.includes(id));
+    if (absentInvalid) {
+     error = '缺席名单无效：缺席者必须在名单内且不是玩家';
+     phase = 'error'; elapsed = 0; return;
+    }
     resetSession();
     actorIds = [...ids]; playerActorId = player;
+    entry = wantedEntry;
+    absent = {dead: [...dead], eliminated: [...eliminated]};
+    present = ids.filter(id => !dead.includes(id) && !eliminated.includes(id));
     style = config.styles.includes(event.style) ? event.style : config.defaultStyle;
     reducedMotion = Boolean(event.reducedMotion);
     enter('preparing');
@@ -70,7 +95,7 @@ export function createImmersionState(config = IMMERSION_CONFIG) {
    }
    case 'READY':
     if (phase !== 'preparing') return;
-    enter('ringing');
+    enter(entry === 'report' ? 'reporting' : 'ringing');
     return;
    case 'LOAD_FAILED':
     if (phase !== 'preparing') return;
@@ -89,7 +114,8 @@ export function createImmersionState(config = IMMERSION_CONFIG) {
    case 'SELECT': {
     if (phase !== 'voting') return;
     const id = event.actorId;
-    if (!actorIds.includes(id) || id === playerActorId) return;
+    // 1.7.0: dead/eliminated seats stay empty — only present members can be picked.
+    if (!present.includes(id) || id === playerActorId) return;
     selectedId = id; selfDemo = false;
     return;
    }
@@ -105,11 +131,11 @@ export function createImmersionState(config = IMMERSION_CONFIG) {
    case 'CONFIRM':
     if (phase !== 'voting' || !selectedId) return;
     targetId = selectedId;
-    votes = computeVotes(actorIds, playerActorId, targetId, selfDemo);
+    votes = computeVotes(present, playerActorId, targetId, selfDemo);
     enter('result');
     return;
    case 'SKIP': {
-    const skippable = ['ringing', 'seating', 'discussion', 'result', 'ejection'];
+    const skippable = ['ringing', 'reporting', 'seating', 'discussion', 'result', 'ejection'];
     if (!skippable.includes(phase)) return;
     enter(TIMED_NEXT[phase]);
     return;
@@ -151,6 +177,7 @@ export function createImmersionState(config = IMMERSION_CONFIG) {
  const snapshot = () => ({
   phase, elapsed, paused,
   actorIds: [...actorIds], playerActorId,
+  entry, absent: {dead: [...absent.dead], eliminated: [...absent.eliminated]}, present: [...present],
   selectedId, targetId, style, selfDemo,
   votes: votes ? {...votes} : null,
   speakerIndex, error,

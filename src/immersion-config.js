@@ -43,6 +43,10 @@ export const IMMERSION_CONFIG = Object.freeze({
  }),
  timings: Object.freeze({
   seating: 0.8,
+  // 1.7.0 discovery performance (corpse report -> seating). Single source of
+  // truth lives here; TOWN_ROUND_CONFIG.reporting is only a fallback for the
+  // state machine if this key is ever removed.
+  reporting: 1.0,
   returning: 0.25,
   discussionSegment: 2.6,
   discussionSegments: 3,
@@ -82,8 +86,8 @@ export const IMMERSION_CONFIG = Object.freeze({
 // B4 walk-NPC townsfolk: roaming extras for free roam. Speech lines are local
 // ambient chatter and must never overlap the meeting speechPool above.
 export const WALK_NPC_CONFIG = Object.freeze({
- count: 4,            // desktop townsfolk
- mobileCount: 2,      // phone townsfolk
+ count: 5,            // desktop townsfolk (1.7.0: 4 -> 5 so the duck has prey)
+ mobileCount: 3,      // phone townsfolk (1.7.0: 2 -> 3; perf gate may roll back to 4/2)
  speed: 1.4,          // stroll speed, units/second (slower than the player's 2.35)
  pauseRange: Object.freeze([1.5, 4.0]),
  avoidPlayerRadius: 0.9,  // inside this the townsperson gives way (never waits here indefinitely)
@@ -103,6 +107,25 @@ export const WALK_NPC_CONFIG = Object.freeze({
    '理发店的椅子总是空的。', '仓库的木桶又滚到路中间了。',
   ]),
  }),
+});
+
+// 1.7.0 town-round (design-kill-report.md §2): the duck among the townsfolk,
+// kills, corpse legs and the report->meeting loop. walk-round.js reads every
+// number from here; the module itself hard-codes none of them.
+export const TOWN_ROUND_CONFIG = Object.freeze({
+ seed: 20260927,
+ firstKillCooldown: [25, 40],   // s，进入漫游、镇民加载完成后计
+ killCooldown: [20, 35],        // s，其后每刀
+ killRange: 0.7,                // 鸭子与靶子水平距离
+ witnessDistance: 5.0,          // 玩家离刀点 < 此值视为可能目击（俯视下直接禁止）
+ witnessForwardDot: 0.35,       // 第一人称：刀点方向与视线点积 > 此值才算看见；否则允许
+ killDuration: 0.6,             // 刀人动作时长（reduced-motion 为 0）
+ fleeDistance: 4.0,             // 刀后鸭子选路的最小距离
+ reportDistance: 1.2,           // 出「报警」提示的距离
+ maxCorpses: 4,
+ corpse: Object.freeze({footRise: 0.18, discRadius: 0.25, discThickness: 0.04, sink: 0.02}),
+ reporting: 1.0,                // 发现演出时长（正本在 IMMERSION_CONFIG.timings，此处兜底）
+ summary: 3.0,                  // 会后小结卡停留
 });
 
 // Player always sits at seat 0; the seven NPCs come from the fixed candidate order.

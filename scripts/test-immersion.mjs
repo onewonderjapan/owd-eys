@@ -137,6 +137,126 @@ check('state: SELECT只接受本轮NPC', () => {
  assert.equal(m.snapshot().selfDemo, false);
 });
 
+// --- 1.7.0 entry/absent/present (K1a) ----------------------------------------
+const startWith = (m, {entry, dead = [], eliminated = [], actorIds: ids = roster, playerActorId: player = 'cast.14'} = {}) => {
+ m.dispatch({type: 'START', actorIds: ids, playerActorId: player, style: 'water', reducedMotion: false, entry, absent: {dead, eliminated}});
+ return m;
+};
+const toVotingWith = opts => {
+ const m = createImmersionState();
+ startWith(m, opts);
+ m.dispatch({type: 'READY'});
+ m.dispatch({type: 'SKIP'});
+ m.dispatch({type: 'SKIP'});
+ advance(m, 7.9); // discussion 7.8s -> voting
+ assert.equal(m.snapshot().phase, 'voting');
+ return m;
+};
+
+check('entry: READY 按 entry 进 reporting,ringing 为默认', () => {
+ const m = createImmersionState();
+ startWith(m, {entry: 'report'});
+ m.dispatch({type: 'READY'});
+ assert.equal(m.snapshot().phase, 'reporting');
+ assert.equal(m.snapshot().entry, 'report');
+ const m2 = createImmersionState();
+ startWith(m2, {});
+ m2.dispatch({type: 'READY'});
+ assert.equal(m2.snapshot().phase, 'ringing');
+ assert.equal(m2.snapshot().entry, 'ring');
+});
+check('timing: reporting 时长按config推进且SKIP可跳', () => {
+ const m = createImmersionState();
+ startWith(m, {entry: 'report'});
+ m.dispatch({type: 'READY'});
+ advance(m, 0.9);
+ assert.equal(m.snapshot().phase, 'reporting');
+ advance(m, 0.2);
+ assert.equal(m.snapshot().phase, 'seating'); // 1.0s发现演出
+ const m2 = createImmersionState();
+ startWith(m2, {entry: 'report'});
+ m2.dispatch({type: 'READY'});
+ m2.dispatch({type: 'SKIP'});
+ assert.equal(m2.snapshot().phase, 'seating');
+});
+check('absent: 缺席id不在名单或含玩家 -> error', () => {
+ for (const bad of [
+  {dead: ['cast.99']},                          // 不在名单
+  {eliminated: ['cast.14']},                    // 是玩家
+  {dead: ['cast.03'], eliminated: ['cast.03']}, // 重复登记
+  {eliminated: ['cast.02', 'cast.02']},         // 重复id
+ ]) {
+  const m = createImmersionState();
+  startWith(m, bad);
+  assert.equal(m.snapshot().phase, 'error', JSON.stringify(bad));
+ }
+ const ok = createImmersionState();
+ startWith(ok, {dead: ['cast.03'], eliminated: ['cast.04']});
+ assert.equal(ok.snapshot().phase, 'preparing');
+ assert.deepEqual(ok.snapshot().absent, {dead: ['cast.03'], eliminated: ['cast.04']});
+});
+check('present: 名单- dead - eliminated,player 在场则首席在列', () => {
+ const m = createImmersionState();
+ startWith(m, {dead: [roster[1], roster[2]], eliminated: [roster[4]]});
+ m.dispatch({type: 'READY'});
+ const s = m.snapshot();
+ assert.deepEqual(s.present, roster.filter(id => ![roster[1], roster[2], roster[4]].includes(id)));
+ assert.equal(s.present.length, 5);
+ assert.ok(s.present.includes('cast.14'));
+});
+check('voting: SELECT拒绝死者与出局者、接受在场者', () => {
+ const m = toVotingWith({dead: [roster[1]], eliminated: [roster[2]]});
+ m.dispatch({type: 'SELECT', actorId: roster[1]});
+ assert.equal(m.snapshot().selectedId, null);
+ m.dispatch({type: 'SELECT', actorId: roster[2]});
+ assert.equal(m.snapshot().selectedId, null);
+ m.dispatch({type: 'SELECT', actorId: 'cast.14'});
+ assert.equal(m.snapshot().selectedId, null);
+ m.dispatch({type: 'SELECT', actorId: roster[3]});
+ assert.equal(m.snapshot().selectedId, roster[3]);
+});
+check('votes: absent 0/1/2/3/4人时目标严格最多票、总票数=在场数、不在场者无票', () => {
+ for (const absentCount of [0, 1, 2, 3, 4]) {
+  const dead = roster.slice(1, 1 + Math.ceil(absentCount / 2));
+  const eliminated = roster.slice(1 + Math.ceil(absentCount / 2), 1 + absentCount);
+  const m = toVotingWith({dead, eliminated});
+  const target = roster[1 + absentCount + 1]; // 一定在场的目标
+  m.dispatch({type: 'SELECT', actorId: target});
+  m.dispatch({type: 'CONFIRM'});
+  const s = m.snapshot();
+  const present = s.present;
+  assert.equal(Object.keys(s.votes).length, present.length, `absent=${absentCount}`);
+  for (const id of [...dead, ...eliminated]) assert.ok(!(id in s.votes), `absent=${absentCount} ${id} 不应有票`);
+  const maxOther = Math.max(...present.filter(id => id !== target).map(id => countVotesFor(s.votes, id)), 0);
+  assert.ok(countVotesFor(s.votes, target) > maxOther, `absent=${absentCount} 目标必须严格最多`);
+  assert.ok(countVotesFor(s.votes, target) >= Math.ceil(present.length / 2), `absent=${absentCount} 目标至少一半`);
+ }
+});
+check('votes: selfDemo 在有缺席时仍全投玩家且不在场者无票', () => {
+ const m = toVotingWith({dead: [roster[1], roster[2]]});
+ m.dispatch({type: 'SELECT', actorId: roster[3]});
+ m.dispatch({type: 'SELF_DEMO'});
+ m.dispatch({type: 'CONFIRM'});
+ const s = m.snapshot();
+ assert.equal(s.targetId, 'cast.14');
+ assert.equal(countVotesFor(s.votes, 'cast.14'), s.present.length - 1);
+ assert.equal(Object.keys(s.votes).length, s.present.length);
+ assert.ok(!('cast.14' in {}) || s.votes['cast.14'] === null);
+ assert.ok(!(roster[1] in s.votes) && !(roster[2] in s.votes));
+});
+check('votes: 回归——8人无absent票数与改前脚本一致', () => {
+ const m = toVotingWith({});
+ m.dispatch({type: 'SELECT', actorId: roster[3]});
+ m.dispatch({type: 'CONFIRM'});
+ const s = m.snapshot();
+ assert.equal(Object.keys(s.votes).length, 8);
+ assert.equal(countVotesFor(s.votes, roster[3]), 4);
+ assert.equal(s.votes['cast.14'], roster[3]);
+ assert.equal(s.votes[roster[7]], null);
+ for (const i of [4, 5, 6]) assert.ok(s.votes[roster[i]] !== roster[3] && s.votes[roster[i]] !== 'cast.14');
+ for (const id of roster) if (id !== roster[3]) assert.ok(countVotesFor(s.votes, id) < 4);
+});
+
 // --- scripted votes ---------------------------------------------------------
 const runToVoting = () => {
  const m = fresh();
