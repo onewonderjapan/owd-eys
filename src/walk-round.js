@@ -29,6 +29,7 @@ export function createTownRound({config = TOWN_ROUND_CONFIG, playerActorId = nul
  let cooldown = Infinity;   // seconds until the duck may kill again
  let kills = 0;
  let witnessBypass = false; // one-shot: the next canKill ignores witness checks (?round=force-kill)
+ let killsHeld = false;     // debug-only hold (?round=force-kill smoke): cooldown frozen, no kills
 
  const aliveIds = () => townsfolk.filter(id => !dead.includes(id) && !eliminated.includes(id));
 
@@ -55,6 +56,7 @@ export function createTownRound({config = TOWN_ROUND_CONFIG, playerActorId = nul
 
  function tick(dt) {
   if (typeof dt !== 'number' || !Number.isFinite(dt) || dt <= 0) return;
+  if (killsHeld) return;
   if (cooldown > 0) cooldown = Math.max(0, cooldown - dt);
  }
 
@@ -65,10 +67,20 @@ export function createTownRound({config = TOWN_ROUND_CONFIG, playerActorId = nul
   witnessBypass = true;
  }
 
+ // ?round=force-kill debug hook: while held the cooldown does not advance and
+ // canKill always says no, so a smoke can walk to the bell without a fresh leg
+ // turning E into a report. Touches nothing else (seed, duck, ledger, cooldown
+ // value, witness bypass); the hold survives nextRound/start until released.
+ function holdKills(on) {
+  killsHeld = Boolean(on);
+  return killsHeld;
+ }
+
  // Kill eligibility, design §2 刀人资格, every call. Returns the victim id or null.
  // duck: {id, position, paused}; victims: [{id, position}] (no duck, no legs);
  // player: {position, firstPerson, forward:[x,z]}.
  function canKill({duck, victims, player}) {
+  if (killsHeld) return null;
   if (!duck || duck.id !== duckId || duck.paused) return null;
   if (cooldown > 0) return null;
   if (!Array.isArray(victims) || !victims.length) return null;
@@ -168,7 +180,7 @@ export function createTownRound({config = TOWN_ROUND_CONFIG, playerActorId = nul
   maxCorpses: config.maxCorpses,
  });
 
- return {start, nextRound, tick, canKill, forceKill, recordKill, reportable, meetingStart, resolveMeeting, checkSilence,
+ return {start, nextRound, tick, canKill, forceKill, holdKills, killsHeld: () => killsHeld, recordKill, reportable, meetingStart, resolveMeeting, checkSilence,
   duckId: () => duckId, alive: aliveIds, corpses: () => corpses.map(c => ({actor: c.actor, position: [...c.position]})),
   eliminated: () => [...eliminated], state};
 }

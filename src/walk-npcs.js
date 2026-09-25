@@ -372,7 +372,7 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   count:activeCount,loaded:list.length,hidden,
   corpsesVisible:corpses.filter(c=>c.avatar&&c.avatar.player.visible).length,
   npcs:list.map(n=>({actor:n.actorId,position:[n.position[0],n.position[1]],moving:n.moving,bubble:n.bubbleText})),
-  round:round?round.state():null,
+  round:round?round.state():null,killing:Boolean(kill),
   corpsePlaceholder,corpseMeshNames:corpseMeshNames?[...corpseMeshNames]:null,
  });
  return {start,update,setHidden,setBubblesHidden,stop,applyRound,state};

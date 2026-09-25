@@ -747,6 +747,36 @@ check('round: forceKill置零冷却+一次性目击放行,不改鸭子', () => {
  const v2 = r2.alive().find(id => id !== r2.duckId());
  assert.equal(r2.canKill({duck: {id: r2.duckId(), position: [0, 0], paused: false}, victims: [{id: v2, position: [0.3, 0]}], player: near}), null);
 });
+check('round: holdKills冻结冷却且禁刀,不改state/seed,释放后恢复', () => {
+ const r = newRound();
+ r.start(TOWN_IDS);
+ r.tick(3);
+ const before = r.state();
+ assert.equal(r.holdKills(true), true);
+ assert.equal(r.killsHeld(), true);
+ r.tick(5); r.tick(1e6); // 持有期间冷却不前进
+ assert.deepEqual(r.state(), before); // seed/鸭子/冷却/账本全不变
+ const {duck, victims, player} = victimSetup(r);
+ r.forceKill(); // 冷却0+目击放行也不能刀
+ assert.equal(r.canKill({duck, victims, player}), null);
+ assert.equal(r.state().seed, before.seed);
+ assert.equal(r.duckId(), before.duck);
+ r.nextRound(); r.start(TOWN_IDS); // 持有跨轮保留,直到显式释放
+ assert.equal(r.killsHeld(), true);
+ const cdHeld = r.state().cooldown;
+ r.tick(10);
+ assert.equal(r.state().cooldown, cdHeld);
+ assert.equal(r.holdKills(false), false);
+ r.tick(2); // 释放后冷却照常前进
+ assert.ok(Math.abs(r.state().cooldown - Math.max(0, cdHeld - 2)) < 1e-3, `cooldown=${r.state().cooldown} held=${cdHeld}`);
+ tickToZero(r);
+ const s2 = victimSetup(r);
+ assert.equal(r.canKill({duck: s2.duck, victims: s2.victims, player: s2.player}), s2.victims[0].id); // 恢复可刀
+ // 默认(从未持有)与持有后释放的冷却序列一致:hold不消耗rng
+ const plain = newRound(); plain.start(TOWN_IDS); plain.nextRound(); plain.start(TOWN_IDS);
+ const held = newRound(); held.start(TOWN_IDS); held.holdKills(true); held.nextRound(); held.start(TOWN_IDS); held.holdKills(false);
+ assert.deepEqual(held.state(), plain.state());
+});
 check('round: reportable——1.2m内报最近腿,之外为null', () => {
  const r = armedRound();
  r.recordKill('tA', [0, 0]); // 不在townsfolk的不登记,先用真实id

@@ -38,6 +38,7 @@ async function enter(){
  finally{preparing=false;$('#walk-enter').disabled=false;$('#walk-enter').removeAttribute('aria-busy');$('#walk-enter').textContent='带 TA 进入小镇 ↗';}
 }
 window.eys={state:()=>({ready,error,selected,preparing,actorCount:manifest?Object.keys(manifest.presets).length:0,walk:walking?.state()||null})};
+if(new URLSearchParams(location.search).get('round')==='force-kill')window.eys.holdKills=on=>walking?.debugHoldKills(on)??null; // debug-only, smoke bell loops
 try{
  const response=await fetch(new URL('assets/manifest.json',import.meta.url));if(!response.ok)throw Error('角色册未能打开，请刷新页面');manifest=await response.json();
  let cardIndex=0;

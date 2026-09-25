@@ -921,6 +921,8 @@ try {
     // exists with a duck, but no leg may exist at load or through the first
     // sampling window (the earliest possible kill is firstKillCooldown[0]=25s).
     check('round: 默认路径加载完成即有round账本且零腿', Boolean(npcStateNow?.round?.duck) && npcStateNow.round.corpses.length === 0, JSON.stringify(npcStateNow?.round));
+    const npcHoldHook = await npcPage.evaluate(() => typeof window.eys.holdKills);
+    check('round: 默认路径无holdKills调试钩子', npcHoldHook === 'undefined', `typeof=${npcHoldHook}`);
     // 3s sampling: every townsperson stays collision-free, at least one moves.
     const npcSamples = [];
     let npcBubbleSeen = null;
@@ -1134,9 +1136,17 @@ try {
           }
         }
       } else {
+        // Bell loops: the meeting that just ended re-armed force-kill (cooldown 0 +
+        // witness bypass), so a fresh leg by the bell would turn E into a report.
+        // Hold the duck (debug-only window.eys.holdKills) and let an in-flight
+        // kill finish before walking; released after this loop's meeting.
+        const fkHeld = await fkPage.evaluate(() => window.eys.holdKills ? window.eys.holdKills(true) : null);
+        await fkPage.waitForFunction(() => !window.eys?.state?.().walk?.npcs?.killing, null, {timeout: 5000}).catch(() => {});
         const fkBell = cfgModule ? [...cfgModule.IMMERSION_CONFIG.bell.interaction] : [9.12, -7.56];
         fkArrived = await driveToTarget(fkPage, fkBell, 900, 0.8);
         check('round: 走到按铃点', Array.isArray(fkArrived), `loop=${fkLoop} ${fkArrived ? 'arrived' : 'no route'}`);
+        const fkBellState = await fkPage.evaluate(() => { const w = window.eys.state().walk; return {reportable: w.reportable, killing: w.npcs && w.npcs.killing, cooldown: w.npcs && w.npcs.round && w.npcs.round.cooldown}; });
+        check('round: 按铃轮刀人暂停(hold)且铃旁无可报腿', fkHeld === true && !fkBellState.reportable && !fkBellState.killing, `loop=${fkLoop} held=${fkHeld} ${JSON.stringify(fkBellState)}`);
       }
       if (fkLoop === 1) {
         const nearReportable = await fkPage.evaluate(() => window.eys.state().walk.reportable);
@@ -1234,6 +1244,10 @@ try {
       await fkPage.evaluate(() => document.querySelector('#immersion-return')?.click());
       const fkRoam = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'roam', null, {timeout: 10000}).then(() => true).catch(() => false);
       const fkAfter = await fkPage.evaluate(() => { const n = window.eys.state().walk; const el = document.querySelector('#walk-round-toast'); return {npcs: n.npcs.npcs.map(m => m.actor), corpses: n.npcs.round.corpses.length, toast: el && !el.hidden ? el.textContent : null}; });
+      if (fkLoop >= 2) { // meeting over: hand the duck back to its normal cooldown
+        const fkReleased = await fkPage.evaluate(() => window.eys.holdKills ? window.eys.holdKills(false) : null);
+        check('round: 会后解除hold', fkReleased === false, `loop=${fkLoop} released=${fkReleased}`);
+      }
       check('round: 会后被投出者不在镇民名单', fkRoam === true && (fkVoteDuck || !fkAfter.npcs.includes(fkVotedActor)), `loop=${fkLoop} voted=${fkVotedActor} town=${JSON.stringify(fkAfter.npcs)}`);
       check('round: 会后腿清空', fkAfter.corpses === 0, `loop=${fkLoop} corpses=${fkAfter.corpses}`);
       // mobile (3 townsfolk): the round-1 aftermath can legitimately end the town

@@ -447,5 +447,11 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
  renderer.domElement.addEventListener('webglcontextrestored',()=>{resume();$('#walk-paused').textContent='已暂停 · 回到窗口继续';render();});
  enter.disabled=false;
  const state=()=>({active,loading,error:failure,paused,version:'map_walk_v3',actor:avatar?.actorId,wardrobeVersion:avatar?.version,modules:avatar?.modules,position:walker?[...walker.state.position]:null,area:walker?.state.area,visited:walker?[...walker.state.visited]:[],moving:walker?.state.moving,blocked:walker?.state.blocked,distance:walker?.state.distance,keys:[...keys],touches:touches.size,near:walker?.state.near?.room,cameraTarget:target.toArray(),view:view.state(),avatarVisible:avatar?.player.visible,drawCalls:renderer.info.render.calls,memory:{geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},immersion:director?director.state():null,nearBell:nearBellPoint(),props:propsLibrary.state(),audio:walkAudio.state(),npcs:npcs?npcs.state():null,reportable:reportTrigger(),photo:photoMode,dusk,duskBg:scene.background&&scene.background.isColor?scene.background.getHexString():null,duskGlow:duskGlow.length?{count:duskGlow.length,intensity:+duskGlow[0].emissiveIntensity.toFixed(3)}:null,glowPools:duskPools?duskPools.filter(d=>d.visible).length:0,fogColor:scene.fog?scene.fog.color.getHexString():null,flicker:flickerState(),lights:flickerLights().map(o=>+o.intensity.toFixed(4))});
- return {start,stop,projection,state,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
+ // ?round=force-kill smoke hook only (window.eys.holdKills): freeze the duck so the
+ // bell loops are not turned into reports by a fresh leg. No-op without the query.
+ function debugHoldKills(on){
+  if(!round||new URLSearchParams(location.search).get('round')!=='force-kill')return null;
+  return round.holdKills(on);
+ }
+ return {start,stop,projection,state,debugHoldKills,get camera(){return view.camera;},get renderTarget(){return director&&director.busy?director.renderTarget:null;}};
 }
