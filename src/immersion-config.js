@@ -124,7 +124,9 @@ export const TOWN_ROUND_CONFIG = Object.freeze({
  fleeDistance: 4.0,             // 刀后鸭子选路的最小距离
  reportDistance: 1.2,           // 出「报警」提示的距离
  maxCorpses: 4,
- corpse: Object.freeze({footRise: 0.18, discRadius: 0.25, discThickness: 0.04, sink: 0.02}),
+ // Review 2026-09-27: a 0.25 disc dwarfed the 21cm legs (read as a red plate);
+ // smaller body disc + legs scaled up so the upturned legs carry the silhouette.
+ corpse: Object.freeze({footRise: 0.18, discRadius: 0.14, discThickness: 0.04, sink: 0.02, legScale: 1.6}),
  reporting: 1.0,                // 发现演出时长（正本在 IMMERSION_CONFIG.timings，此处兜底）
  summary: 3.0,                  // 会后小结卡停留
 });

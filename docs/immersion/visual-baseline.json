@@ -87,16 +87,16 @@
     "variance": 2469.4,
     "maxBlock": 0.6385
   },
-  "corpse-close": {
-    "variance": 1889.2,
-    "maxBlock": 0.3226
-  },
-  "report-pov": {
-    "variance": 2432.7,
-    "maxBlock": 0.194
-  },
   "voting-dead": {
     "variance": 3928.3,
     "maxBlock": 0.1796
+  },
+  "corpse-close": {
+    "variance": 1763.3,
+    "maxBlock": 0.3286
+  },
+  "report-pov": {
+    "variance": 2374.7,
+    "maxBlock": 0.1932
   }
 }

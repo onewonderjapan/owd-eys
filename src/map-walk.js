@@ -239,7 +239,7 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(!corpse)return;
   exitPhoto(); // a session must never start inside photo mode
   clearInput();view.unlock();
-  npcs?.setHidden(true); // townsfolk and legs step out while the meeting plays
+  npcs?.setHidden(true,{keepCorpses:true}); // townsfolk step out; the legs stay for the report beat
   const snap=view.snapshot();
   director.begin({entry:'report',corpse:{actorId:corpse.actor,position:[...corpse.position]}}).then(accepted=>{
    if(accepted)immersionSnapshot=snap;
@@ -286,7 +286,10 @@ export function installMapWalk({data,root,scene,camera,controls,renderer,render,
   if(director&&director.busy){
    updateBusyHud(true);
    stopFlicker();flickerArmed=false; // performances own the lights; disarm until the player leaves
-   npcs?.setHidden(true); // the cast owns the stage; townsfolk step out until roam returns
+   // the cast owns the stage; townsfolk step out until roam returns. The legs stay
+   // while the session loads and during the report beat (it looks at them).
+   const busyPhase=director.phase;
+   npcs?.setHidden(true,{keepCorpses:busyPhase==='preparing'||busyPhase==='reporting'||busyPhase==='error'});
    if(avatar)avatar.player.visible=false;
    // The ejection stage draws the full cast plus effects; render at 1x during the
    // performance and restore the walk ratio on the roam path below.

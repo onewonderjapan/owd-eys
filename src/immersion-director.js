@@ -781,6 +781,9 @@ export function createImmersionDirector({props, worldScene, host, canvas, getWal
   get busy() {
    return machine.snapshot().busy;
   },
+  get phase() {
+   return machine.snapshot().phase;
+  },
   get renderTarget() {
    return renderTargetFor(machine.snapshot().phase);
   },

@@ -1184,6 +1184,8 @@ try {
       if (fkLoop === 1 && repSnap) {
         await fkPage.screenshot({path: path.join(root, 'reports', 'immersion', 'report-pov.png'), type: 'png'});
         report.screenshots.push('report-pov.png');
+        const repVis = await fkPage.evaluate(() => { const s = window.eys.state().walk; return {phase: s.immersion && s.immersion.phase, visible: s.npcs && s.npcs.corpsesVisible, corpses: s.npcs && s.npcs.round && s.npcs.round.corpses.length}; });
+        check('round: 发现演出期间腿留在画面里(镇民隐藏、腿可见)', Boolean(repVis && repVis.phase === 'reporting' && repVis.visible >= 1 && repVis.visible === repVis.corpses), JSON.stringify(repVis));
         const vign = await fkPage.evaluate(() => { const el = document.querySelector('#immersion-vignette'); if (!el) return null; const cs = getComputedStyle(el); return {cls: el.className, opacity: cs.opacity, animation: cs.animationName}; });
         check('round: 发现演出渐晕在播(静态0.25为reduced-motion)', Boolean(vign && (vign.cls.includes('play') || vign.cls.includes('hold'))), JSON.stringify(vign));
       }

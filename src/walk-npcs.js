@@ -20,7 +20,7 @@ const span=(rng,range)=>range[0]+rng()*(range[1]-range[0]);
 const FOOT_NAME=/foot|shin|webbed[\s_]paddle|toe[\s_]seam/i;
 
 export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActor,isMobile=()=>false,reducedMotion=false,camera,host,round=null,getPlayerView=null,onRoundStarted=null,onCorpse=null}){
- const list=[];let corpses=[];let started=false,hidden=false,bubblesSuppressed=false,bubbleLayer=null,loadToken=0,activeLoads=0,queue=[],activeCount=0,rng=makeRng(20260920),graph=null;
+ const list=[];let corpses=[];let started=false,hidden=false,corpsesHidden=false,bubblesSuppressed=false,bubbleLayer=null,loadToken=0,activeLoads=0,queue=[],activeCount=0,rng=makeRng(20260920),graph=null;
  let roundLive=false,kill=null,corpsePlaceholder=false,corpseMeshNames=null;
  // Stroll targets come from the walk-start wander graph (see createWanderGraph):
  // routing over its precomputed cells costs ~2ms instead of the ~73ms median a
@@ -218,6 +218,7 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   // the disc (tried first, unreadable). The owner re-judges from
   // corpse-close.png against the official shot.
   a.model.rotation.x=Math.PI;
+  a.model.scale.multiplyScalar(TOWN_ROUND_CONFIG.corpse.legScale||1); // before anchoring: the box below sees the scaled legs
   a.player.updateWorldMatrix(true,true);
   if(footMeshes.length){
    const inv=new THREE.Matrix4().copy(a.player.matrixWorld).invert();
@@ -346,10 +347,15 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   updateKill(dt);
   updateBubbles();
  }
- function setHidden(next){
-  if(hidden===next)return;hidden=next;
+ // keepCorpses: the legs stay in the world while the townsfolk step out -- the
+ // report beat (and the load before it) must show the body it is about
+ // (review 2026-09-27: report-pov.png had no legs in frame at all).
+ function setHidden(next,{keepCorpses=false}={}){
+  const corpseHide=next&&!keepCorpses;
+  if(hidden===next&&corpsesHidden===corpseHide)return;
+  hidden=next;corpsesHidden=corpseHide;
   for(const npc of list)if(npc.avatar)npc.avatar.player.visible=!hidden;
-  for(const c of corpses)if(c.avatar)c.avatar.player.visible=!hidden;
+  for(const c of corpses)if(c.avatar)c.avatar.player.visible=!corpsesHidden;
   syncLayerHidden();
  }
  function setBubblesHidden(next){if(bubblesSuppressed===next)return;bubblesSuppressed=next;syncLayerHidden();}
@@ -360,10 +366,11 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   for(const c of corpses){if(c.avatar){scene.remove(c.avatar.player);disposeWalkingAvatar(c.avatar);}}
   corpses=[];
   if(bubbleLayer){bubbleLayer.remove();bubbleLayer=null;}
-  graph=null;hidden=false;bubblesSuppressed=false;rng=makeRng(20260920);corpsePlaceholder=false;corpseMeshNames=null;
+  graph=null;hidden=false;corpsesHidden=false;bubblesSuppressed=false;rng=makeRng(20260920);corpsePlaceholder=false;corpseMeshNames=null;
  }
  const state=()=>({
   count:activeCount,loaded:list.length,hidden,
+  corpsesVisible:corpses.filter(c=>c.avatar&&c.avatar.player.visible).length,
   npcs:list.map(n=>({actor:n.actorId,position:[n.position[0],n.position[1]],moving:n.moving,bubble:n.bubbleText})),
   round:round?round.state():null,
   corpsePlaceholder,corpseMeshNames:corpseMeshNames?[...corpseMeshNames]:null,
