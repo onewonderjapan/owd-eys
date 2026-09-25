@@ -22,7 +22,7 @@
   "plan": "implementation-plan.md",
   "preview_url": "http://127.0.0.1:8870/",
   "candidate_version": "1.2.0",
-  "actual_version": "1.5.5",
+  "actual_version": "1.6.0",
   "build_sha256": null,
   "publishing_authorized": true,
   "stages": [
@@ -329,7 +329,7 @@
     "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
     "本文件记录本地候选完成，不代表已发布或已部署。"
   ],
-  "next_action": "feature/polish-1.6.0 pushed (not merged; from main v1.5.5 739f2fa): 1.6.0 polish round per PLAN_FLASH_20260926.md / REPORT_FLASH_20260926.md. C1 dead code (extractWings/buildWingRig/WING_SCALE/unread wingSplay, ed7b2a9); C2 chandelier pre-R2 parts through take() with replay+session memory smoke gates (+8 geoms/session before -> 0 after, bdeca0c); C3 bridge white fragment judged non-repro on this branch (multi-beat material scan + zoomed crops, no code change); C4 boulder torches solid orange + distance fade, visual stats within gate, no rebaseline (51a205b); C5 water sink stone 1.3x, steel-blue gate 0.81% (0e248fe); C6 P3 UI: 56/48px avatar cards, 1.6x banner with reduced-motion-safe entrance, phone style picker one scrollable row, 4 new smoke checks (f15a378); C8 help copy + README test list (687209b). Final battery: P0 38/38, desktop 88/88, mobile 77/77, style x8 92-94, first-person/entry-recovery/perf/visual(22f)/undeclared(28 files) all green. publish dry run: every gate assertion green, blocked only by owner AWS SSO login. Next: owner merges branch -> Release 1.6.0 -> publish; then C7 MEETING_EYE_LIFT, C9 three 0.186, 1.7.0 plan.",
+  "next_action": "Released 1.6.0 on 2026-09-26 (Claude): main fast-forwarded to feature/polish-1.6.0 (C1-C6, C8 per REPORT_FLASH_20260926.md); gates re-run on the 1.6.0 build (180 files): P0 38/38, desktop 88/88, mobile 77/77, STYLE x8 92-94, first-person, entry-recovery, smoke, perf, visual 22 frames, undeclared 28 files; published via publish.py --apply. Next: 1.7.0 townsfolk kill / corpse legs / body report per docs/immersion/design-kill-report.md and C:/3d/eys/PLAN_FLASH_20260927.md (ZCode, branch feature/kill-report-1.7.0).",
   "blockers": [],
   "deviations": [
     {
