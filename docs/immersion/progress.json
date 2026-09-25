@@ -2,7 +2,7 @@
   "schema_version": 1,
   "feature_id": "eys-pov-immersion",
   "prepared_on": "2026-09-13",
-  "updated_at": "2026-09-26",
+  "updated_at": "2026-09-27",
   "status": "released",
   "execution_started": true,
   "executor": "ZCode",
@@ -329,7 +329,7 @@
     "glTF Transform优化未运行；WebGL loss恢复未自动化模拟；reduced-motion与音频听感未人工验证。",
     "本文件记录本地候选完成，不代表已发布或已部署。"
   ],
-  "next_action": "Released 1.6.0 on 2026-09-26 (Claude): main fast-forwarded to feature/polish-1.6.0 (C1-C6, C8 per REPORT_FLASH_20260926.md); gates re-run on the 1.6.0 build (180 files): P0 38/38, desktop 88/88, mobile 77/77, STYLE x8 92-94, first-person, entry-recovery, smoke, perf, visual 22 frames, undeclared 28 files; published via publish.py --apply. Next: 1.7.0 townsfolk kill / corpse legs / body report per docs/immersion/design-kill-report.md and C:/3d/eys/PLAN_FLASH_20260927.md (ZCode, branch feature/kill-report-1.7.0).",
+  "next_action": "1.7.0 三夜施工完成于 feature/kill-report-1.7.0(commit 44b4565,报告 C:/3d/eys/REPORT_FLASH_20260927.md):镇民刀人/腿/拉腿开会全链路,全门绿(桌面142/手机131/STYLE×8/visual 25帧/P0 63);待机主拍板腿造型对照官方截图、合并 main 并 Release 1.7.0(版本号未动);1.7.x 候选:玩家被刀灵体视角、S1 专用腿 GLB、会议桌收缩、会话几何分配审计",
   "blockers": [],
   "deviations": [
     {
