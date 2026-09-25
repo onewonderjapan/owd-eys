@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {IMMERSION_CONFIG, selectRoster, createBellProxy, pickSessionSpeeches} from '../src/immersion-config.js';
+import {IMMERSION_CONFIG, TOWN_ROUND_CONFIG, selectRoster, createBellProxy, pickSessionSpeeches} from '../src/immersion-config.js';
 import {createImmersionState, countVotesFor} from '../src/immersion-state.js';
 import {createNavigation, findPath, pickWanderTarget, createWanderGraph} from '../src/map-walk-simulation.js';
 
@@ -595,6 +595,265 @@ check('wander: 不同种子给出不同目标(采样确实在工作)', () => {
   if (p) picks.add(p.map(v => v.toFixed(2)).join(','));
  }
  assert.ok(picks.size >= 4, `8个种子只得到${picks.size}个不同点`);
+});
+
+// --- 1.7.0 walk-round pure logic (K1b) ----------------------------------------
+import {createTownRound} from '../src/walk-round.js';
+
+const TOWN_IDS = ['t1', 't2', 't3', 't4', 't5'];
+const newRound = (overrides = {}) => createTownRound({config: {...TOWN_ROUND_CONFIG, ...overrides}, playerActorId: 'cast.14'});
+// A round whose cooldown is spent and whose kill-point is far from the player.
+const armedRound = (overrides = {}) => {
+ const r = newRound(overrides);
+ r.start(TOWN_IDS);
+ const cd = r.state().cooldown;
+ r.tick(cd + 0.1);
+ return r;
+};
+const duckOf = r => r.duckId();
+const victimSetup = (r, {victimPos = [0.3, 0], playerPos = [10, 0]} = {}) => {
+ const id = r.duckId();
+ const victims = TOWN_IDS.filter(v => v !== id).map((v, i) => ({id: v, position: i === 0 ? victimPos : [50 + i, 50 + i]}));
+ return {duckId: id, duck: {id, position: [0, 0], paused: false}, victims, player: {position: playerPos, firstPerson: false, forward: [0, -1]}};
+};
+const tickToZero = (r) => { const cd = r.state().cooldown; if (cd !== null) r.tick(cd + 0.1); };
+
+check('round: 同seed鸭子选取确定且首冷却在firstKillCooldown区间', () => {
+ const a = newRound(), b = newRound();
+ a.start(TOWN_IDS); b.start(TOWN_IDS);
+ assert.equal(a.duckId(), b.duckId());
+ assert.ok(TOWN_IDS.includes(a.duckId()));
+ assert.ok(a.state().cooldown !== null && a.state().cooldown >= TOWN_ROUND_CONFIG.firstKillCooldown[0] && a.state().cooldown <= TOWN_ROUND_CONFIG.firstKillCooldown[1],
+  `cooldown=${a.state().cooldown}`);
+ assert.equal(a.alive().length, 5);
+});
+check('round: 同seed两次运行duck/冷却序列完全一致', () => {
+ const a = newRound(), b = newRound();
+ a.start(TOWN_IDS); b.start(TOWN_IDS);
+ for (let i = 0; i < 4; i++) {
+  const victim = a.alive().find(id => id !== a.duckId());
+  a.recordKill(victim, [i, i]);
+  const bVictim = b.alive().find(id => id !== b.duckId());
+  b.recordKill(bVictim, [i, i]);
+  assert.equal(a.state().cooldown, b.state().cooldown, `第${i + 1}刀后冷却不一致`);
+ }
+ assert.deepEqual(a.corpses().map(c => c.actor), b.corpses().map(c => c.actor));
+});
+check('round: nextRound等价config.seed+1', () => {
+ const bumped = newRound({seed: TOWN_ROUND_CONFIG.seed + 1});
+ const r = armedRound();
+ const before = r.state().seed;
+ r.resolveMeeting({ejectedId: r.duckId()}); // duck-out -> nextRound()
+ assert.equal(r.state().seed, before + 1);
+ bumped.start(TOWN_IDS); r.start(TOWN_IDS);
+ assert.equal(r.duckId(), bumped.duckId());
+ assert.equal(r.state().cooldown, bumped.state().cooldown);
+});
+check('round: 冷却未到canKill拒绝,tick推进后放行,非法dt忽略', () => {
+ const r = newRound();
+ r.start(TOWN_IDS);
+ const {duck, victims, player} = victimSetup(r);
+ assert.ok(r.state().cooldown > 0);
+ assert.equal(r.canKill({duck, victims, player}), null); // 冷却中
+ r.tick(-1); r.tick(NaN); r.tick('x'); r.tick(0);
+ assert.equal(r.state().cooldown, r.state().cooldown); // 非法dt不动
+ tickToZero(r);
+ assert.equal(r.canKill({duck, victims, player}), victims[0].id); // 冷却到了
+});
+check('round: canKill资格——paused/鸭子身份/无靶/超刀程/存活不足', () => {
+ const r = armedRound();
+ const far = {position: [10, 0], firstPerson: false, forward: [0, -1]};
+ const duck = duckOf(r);
+ const others = TOWN_IDS.filter(id => id !== duck);
+ const near = id => ({id, position: [0.3, 0]});
+ // 鸭子停顿
+ assert.equal(r.canKill({duck: {id: duck, position: [0, 0], paused: true}, victims: [near(others[0])], player: far}), null);
+ // 不是鸭子
+ assert.equal(r.canKill({duck: {id: others[0], position: [0, 0], paused: false}, victims: [near(others[1])], player: far}), null);
+ // 无靶
+ assert.equal(r.canKill({duck: {id: duck, position: [0, 0], paused: false}, victims: [], player: far}), null);
+ // 超刀程
+ assert.equal(r.canKill({duck: {id: duck, position: [0, 0], paused: false}, victims: [{id: others[0], position: [TOWN_ROUND_CONFIG.killRange + 0.01, 0]}], player: far}), null);
+ // 存活镇民(含鸭子)<2:除鸭子外无人
+ assert.equal(r.canKill({duck: {id: duck, position: [0, 0], paused: false}, victims: [], player: far}), null);
+ // 恰好刀程边界内放行
+ assert.equal(r.canKill({duck: {id: duck, position: [0, 0], paused: false}, victims: [near(others[0])], player: far}), others[0]);
+});
+check('round: 俯视目击——刀点5m内禁止,≥5m允许', () => {
+ const r = armedRound();
+ const {duck, victims} = victimSetup(r);
+ const near = {position: [3, 0], firstPerson: false, forward: [0, -1]}; // 3m < 5m
+ assert.equal(r.canKill({duck, victims, player: near}), null);
+ const edge = {position: [TOWN_ROUND_CONFIG.witnessDistance + 0.3, 0], firstPerson: false, forward: [0, -1]}; // 恰5m(刀点在0.3)
+ assert.equal(r.canKill({duck, victims, player: edge}), victims[0].id);
+});
+check('round: 第一人称——面对刀点禁止,背对/侧向允许', () => {
+ const r = armedRound();
+ const {duckId: id, victims} = victimSetup(r, {victimPos: [0, -3]}); // 刀点在玩家正北3m
+ const duck = {id, position: [0, -3], paused: false}; // 鸭子贴着靶子(刀程内)
+ // 面向刀点:dot≈1 > 0.35 -> 禁止
+ assert.equal(r.canKill({duck, victims, player: {position: [0, 0], firstPerson: true, forward: [0, -1]}}), null);
+ // 背对:dot≈-1 -> 允许
+ assert.equal(r.canKill({duck, victims, player: {position: [0, 0], firstPerson: true, forward: [0, 1]}}), victims[0].id);
+ // 侧向:dot=0 <= 0.35 -> 允许
+ assert.equal(r.canKill({duck, victims, player: {position: [0, 0], firstPerson: true, forward: [1, 0]}}), victims[0].id);
+});
+check('round: maxCorpses上限——第4具腿后拒绝再刀', () => {
+ const r = armedRound();
+ const duck = duckOf(r);
+ for (let i = 0; i < TOWN_ROUND_CONFIG.maxCorpses; i++) {
+  const victim = r.alive().find(id => id !== duck);
+  r.recordKill(victim, [i * 2, 0]);
+  tickToZero(r);
+ }
+ assert.equal(r.corpses().length, TOWN_ROUND_CONFIG.maxCorpses);
+ const others = r.alive().filter(id => id !== duck);
+ const player = {position: [100, 100], firstPerson: false, forward: [0, -1]};
+ assert.equal(r.canKill({duck: {id: duck, position: [200, 200], paused: false}, victims: others.map(id => ({id, position: [200.1, 200]})), player}), null);
+});
+check('round: recordKill登记腿/计数/重置冷却/alive缩短/同id不重复', () => {
+ const r = armedRound();
+ const duck = duckOf(r);
+ const victim = r.alive().find(id => id !== duck);
+ const killsBefore = r.state().kills;
+ r.recordKill(victim, [3, 4]);
+ const corpse = r.corpses().find(c => c.actor === victim);
+ assert.ok(corpse && corpse.position[0] === 3 && corpse.position[1] === 4);
+ assert.equal(r.state().kills, killsBefore + 1);
+ assert.ok(!r.alive().includes(victim));
+ const cd = r.state().cooldown;
+ assert.ok(cd >= TOWN_ROUND_CONFIG.killCooldown[0] && cd <= TOWN_ROUND_CONFIG.killCooldown[1], `cooldown=${cd}`);
+ const cdAgain = (r.recordKill(victim, [9, 9]), r.state().cooldown);
+ assert.equal(r.corpses().filter(c => c.actor === victim).length, 1); // 不重复登记
+ assert.equal(cdAgain, cd); // 重复登记不消耗rng
+});
+check('round: forceKill置零冷却+一次性目击放行,不改鸭子', () => {
+ const r = newRound();
+ r.start(TOWN_IDS);
+ const duckBefore = r.duckId();
+ const {duck, victims} = victimSetup(r);
+ const near = {position: [1, 0], firstPerson: false, forward: [0, -1]}; // 俯视1m内
+ r.forceKill();
+ assert.equal(r.state().cooldown, 0);
+ assert.equal(r.duckId(), duckBefore); // 不改变鸭子
+ assert.equal(r.canKill({duck, victims, player: near}), victims[0].id); // 放行一次
+ // 第二刀恢复目击判定(冷却由recordKill重置,此处只验证bypass已耗尽)
+ const r2 = armedRound();
+ const {duck: duck2, victims: victims2} = victimSetup(r2);
+ r2.forceKill();
+ r2.canKill({duck: duck2, victims: victims2, player: near}); // 消耗bypass
+ r2.recordKill(victims2[0].id, victims2[0].position);
+ tickToZero(r2);
+ const v2 = r2.alive().find(id => id !== r2.duckId());
+ assert.equal(r2.canKill({duck: {id: r2.duckId(), position: [0, 0], paused: false}, victims: [{id: v2, position: [0.3, 0]}], player: near}), null);
+});
+check('round: reportable——1.2m内报最近腿,之外为null', () => {
+ const r = armedRound();
+ r.recordKill('tA', [0, 0]); // 不在townsfolk的不登记,先用真实id
+ assert.equal(r.corpses().length, 0); // townsfolk之外的id被拒绝
+ const duck = duckOf(r);
+ const first = r.alive().find(id => id !== duck);
+ const second = r.alive().find(id => id !== duck && id !== first);
+ r.recordKill(first, [0, 0]);
+ r.recordKill(second, [0.5, 0]);
+ assert.deepEqual(r.reportable([0.1, 0]).actor, first); // 更近的first
+ assert.deepEqual(r.reportable([0.49, 0]).actor, second);
+ assert.equal(r.reportable([2, 0]), null); // 距两腿都>1.2
+ assert.equal(r.reportable([0.5, 0]).actor, second); // 恰在1.2内
+});
+check('round: meetingStart——8席roster、玩家首席、absent只取名单内', () => {
+ const r = armedRound();
+ const duck = duckOf(r);
+ const victim = r.alive().find(id => id !== duck);
+ r.recordKill(victim, [0, 0]);
+ const rosterFn = () => ['cast.14', ...TOWN_IDS]; // 模拟selectRoster结果
+ const ms = r.meetingStart(rosterFn);
+ assert.equal(ms.actorIds.length, 6);
+ assert.equal(ms.actorIds[0], 'cast.14');
+ assert.deepEqual(ms.absent.dead, [victim]);
+ assert.deepEqual(ms.absent.eliminated, []);
+ // 死者不在名单内会被过滤:换一个不含victim的roster
+ const ms2 = r.meetingStart(() => ['cast.14', 'other.1']);
+ assert.deepEqual(ms2.absent.dead, []);
+});
+check('round: resolveMeeting——goose-out累加eliminated并重置冷却', () => {
+ const r = armedRound();
+ r.recordKill('x', [0, 0]); // townsfolk外id:不登记
+ const duck = duckOf(r);
+ const victim = r.alive().find(id => id !== duck);
+ r.recordKill(victim, [0, 0]);
+ const ejected = r.alive().find(id => id !== duck && id !== victim);
+ const beforeCd = r.state().cooldown;
+ r.tick(0); // no-op
+ const result = r.resolveMeeting({ejectedId: ejected});
+ assert.equal(result.outcome, 'goose-out');
+ assert.equal(result.newRound, false);
+ assert.equal(result.ejectedId, ejected);
+ assert.equal(r.corpses().length, 0); // 腿清空
+ assert.deepEqual(r.eliminated(), [ejected]);
+ assert.ok(!r.alive().includes(ejected));
+ assert.ok(r.state().cooldown >= TOWN_ROUND_CONFIG.killCooldown[0]); // 冷却已重置
+ assert.ok(r.state().seed === TOWN_ROUND_CONFIG.seed); // 未换轮
+});
+check('round: resolveMeeting——duck-out新一轮清空', () => {
+ const r = armedRound();
+ const duck = duckOf(r);
+ const victim = r.alive().find(id => id !== duck);
+ r.recordKill(victim, [0, 0]);
+ const goose = r.alive().find(id => id !== duck && id !== victim);
+ r.resolveMeeting({ejectedId: goose}); // 先累加一个eliminated
+ r.start(TOWN_IDS); // 模拟补人后start(新一轮中间态)
+ const duck2 = duckOf(r);
+ const victim2 = r.alive().find(id => id !== duck2);
+ r.recordKill(victim2, [1, 1]);
+ const result = r.resolveMeeting({ejectedId: duck2});
+ assert.equal(result.outcome, 'duck-out');
+ assert.equal(result.newRound, true);
+ assert.equal(r.corpses().length, 0);
+ assert.deepEqual(r.eliminated(), []); // 清空
+ assert.equal(r.duckId(), null); // 等下一次start重选
+});
+check('round: resolveMeeting——null/未知ejected为none,仍清腿', () => {
+ const r = armedRound();
+ const duck = duckOf(r);
+ const victim = r.alive().find(id => id !== duck);
+ r.recordKill(victim, [0, 0]);
+ const seedBefore = r.state().seed;
+ const cdBefore = r.state().cooldown;
+ const none = r.resolveMeeting({ejectedId: null});
+ assert.equal(none.outcome, 'none');
+ assert.equal(none.newRound, false);
+ assert.equal(r.corpses().length, 0);
+ const unknown = r.resolveMeeting({ejectedId: 'ghost'});
+ assert.equal(unknown.outcome, 'none');
+ assert.equal(r.state().seed, seedBefore);
+ assert.deepEqual(r.eliminated(), []);
+ // 'none'不重置鸭子冷却
+ r.start(TOWN_IDS);
+ assert.ok(r.state().cooldown >= TOWN_ROUND_CONFIG.firstKillCooldown[0]); // start重置为首刀冷却
+});
+check('round: checkSilence——存活≤1且无腿才寂静', () => {
+ const r = armedRound();
+ const duck = duckOf(r);
+ assert.equal(r.checkSilence(), false); // 5存活
+ r.recordKill(r.alive().find(id => id !== duck), [0, 0]);
+ r.recordKill(r.alive().find(id => id !== duck), [1, 0]);
+ r.recordKill(r.alive().find(id => id !== duck), [2, 0]);
+ assert.equal(r.checkSilence(), false); // 有腿,即使存活1
+ r.resolveMeeting({ejectedId: r.alive().find(id => id !== duck)}); // 清腿+出局1
+ assert.equal(r.checkSilence(), true); // 存活1(鸭子)且无腿
+});
+check('round: state深拷贝——外部修改不渗入', () => {
+ const r = armedRound();
+ const duck = duckOf(r);
+ r.recordKill(r.alive().find(id => id !== duck), [0, 0]);
+ const s = r.state();
+ s.corpses[0].position[0] = 999;
+ s.eliminated.push('intruder');
+ s.alive.push('intruder');
+ assert.equal(r.corpses()[0].position[0], 0);
+ assert.deepEqual(r.eliminated(), []);
+ assert.ok(!r.alive().includes('intruder'));
 });
 
 // --- baseline immutability --------------------------------------------------
