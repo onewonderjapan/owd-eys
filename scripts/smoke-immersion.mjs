@@ -1183,9 +1183,32 @@ try {
         repSnap = fkReporting && await fkPage.evaluate(() => window.eys.state().walk.immersion);
         check('round: 报警进入reporting且entry=report', Boolean(repSnap && repSnap.entry === 'report'), JSON.stringify(repSnap && {phase: repSnap.phase, entry: repSnap.entry}));
       } else {
+        // Belt and braces before E: report beats bell, so ring only with nothing
+        // reportable. A leg by the bell (hold failed) must clear first — wait,
+        // else sidestep within the bell room and re-check; pressing E anyway
+        // would report and derail the loop, so the assertion records it.
+        const fkWalkState = () => fkPage.evaluate(() => { const w = window.eys.state().walk; return {reportable: w.reportable, phase: w.immersion && w.immersion.phase, corpses: w.npcs && w.npcs.round && w.npcs.round.corpses.length}; });
+        let fkPreE = await fkWalkState();
+        if (fkPreE.reportable) {
+          await fkPage.waitForFunction(() => !window.eys?.state?.().walk?.reportable, null, {timeout: 5000}).catch(() => {});
+          fkPreE = await fkWalkState();
+        }
+        if (fkPreE.reportable) {
+          const fkBellPt = cfgModule ? [...cfgModule.IMMERSION_CONFIG.bell.interaction] : [9.12, -7.56];
+          for (const [ox, oz] of [[0, 0.7], [0.7, 0], [-0.7, 0]]) { // sidestep inside room 04
+            await driveToTarget(fkPage, [fkBellPt[0] + ox, fkBellPt[1] + oz], 600, 0.8);
+            fkPreE = await fkWalkState();
+            if (!fkPreE.reportable) break;
+          }
+        }
+        check('round: 按E前无可报腿', !fkPreE.reportable, `loop=${fkLoop} ${JSON.stringify(fkPreE)}`);
         await fkPage.keyboard.press('KeyE');
-        const fkRing = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 20000}).then(() => true).catch(() => false);
-        check('round: 按铃进入ringing(entry=ring,缺席席位带账本)', fkRing === true, `loop=${fkLoop}`);
+        // Same two-stage wait as the main session segment: accepting the bell
+        // first goes busy/preparing (up to 20s), ringing follows (30s more).
+        const fkAccepted = await fkPage.waitForFunction(() => { const im = window.eys?.state?.().walk?.immersion; return Boolean(im && (im.phase === 'ringing' || im.busy)); }, null, {timeout: 20000}).then(() => true).catch(() => false);
+        const fkRing = await fkPage.waitForFunction(() => window.eys?.state?.().walk?.immersion?.phase === 'ringing', null, {timeout: 30000}).then(() => true).catch(() => false);
+        const fkPhaseDiag = await fkPage.evaluate(() => { const im = window.eys?.state?.().walk?.immersion; return im ? {phase: im.phase, busy: im.busy, entry: im.entry} : null; });
+        check('round: 按铃进入ringing(entry=ring,缺席席位带账本)', fkAccepted === true && fkRing === true, `loop=${fkLoop} accepted=${fkAccepted} ${JSON.stringify(fkPhaseDiag)}`);
         for (let sk = 0; sk < 3; sk++) { // ringing -> seating -> discussion -> voting
           await fkPage.evaluate(() => document.querySelector('#immersion-skip')?.click());
           await fkPage.waitForTimeout(400);
