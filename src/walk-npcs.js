@@ -21,7 +21,7 @@ const FOOT_NAME=/foot|shin|webbed[\s_]paddle|toe[\s_]seam/i;
 
 export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActor,isMobile=()=>false,reducedMotion=false,camera,host,round=null,getPlayerView=null,onRoundStarted=null,onCorpse=null}){
  const list=[];let corpses=[];let started=false,hidden=false,corpsesHidden=false,bubblesSuppressed=false,bubbleLayer=null,loadToken=0,activeLoads=0,queue=[],activeCount=0,rng=makeRng(20260920),graph=null;
- let roundLive=false,kill=null,corpsePlaceholder=false,corpseMeshNames=null;
+ let roundLive=false,kill=null;
  // Stroll targets come from the walk-start wander graph (see createWanderGraph):
  // routing over its precomputed cells costs ~2ms instead of the ~73ms median a
  // full findPath needed, which matters because this runs inside the RAF tick.
@@ -191,46 +191,35 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
    chooseTarget(duck,getPlayerPosition?.(),TOWN_ROUND_CONFIG.fleeDistance); // walk away, ≥ fleeDistance
   }
  }
- // Turn a toppled townsperson into the leg (design §2 腿的造型, plan A: reuse
- // the loaded avatar, zero new assets).
+ // Turn a toppled townsperson into the official-style corpse (owner screenshot
+ // 2026-09-26): the body stays upright and sinks into the ground so only the
+ // top visibleFraction emerges from a flat cartoon red pool; no legs show.
+ // Reuses the loaded avatar, zero new assets.
  function makeCorpse(entry){
   const a=entry.avatar;
   if(entry.el){entry.el.remove();entry.el=null;}
-  a.visual.position.y=0;a.model.rotation.z=0;
-  let color=null;
-  a.model.traverse(o=>{ // victim main color from the recolor-tagged materials
-   if(color||!o.isMesh||!o.userData.recolor)return;
-   const m=Array.isArray(o.material)?o.material[0]:o.material;
-   if(m&&m.color)color=m.color.getHex();
-  });
-  const footMeshes=[],allNames=[];
-  a.model.traverse(o=>{
+  a.visual.position.y=0;a.visual.rotation.z=0;a.model.rotation.z=0; // un-topple: upright dome
+  let feetHidden=0,bodyShown=0;
+  a.model.traverse(o=>{ // hide only the feet; body/head/eyes/beak/hat/gear stay visible
    if(!o.isMesh)return;
-   allNames.push(o.name||'(unnamed)');
-   if(FOOT_NAME.test(o.name||'')){footMeshes.push(o);o.visible=true;}
-   else o.visible=false;
+   if(FOOT_NAME.test(o.name||'')){o.visible=false;feetHidden++;}
+   else{o.visible=true;bodyShown++;}
   });
-  corpsePlaceholder=footMeshes.length===0;
-  corpseMeshNames=allNames;
-  if(corpsePlaceholder)buildPlaceholderCorpse(a,color); // DIAGNOSTIC ONLY, never acceptance
-  // Legs to the sky: rotation.x = π stands the shins upright with the flat
-  // webbed paddles on top (the GGD corpse read); -π/2 lays the legs flat under
-  // the disc (tried first, unreadable). The owner re-judges from
-  // corpse-close.png against the official shot.
-  a.model.rotation.x=Math.PI;
-  a.model.scale.multiplyScalar(TOWN_ROUND_CONFIG.corpse.legScale||1); // before anchoring: the box below sees the scaled legs
+  const c=TOWN_ROUND_CONFIG.corpse;
   a.player.updateWorldMatrix(true,true);
-  if(footMeshes.length){
-   const inv=new THREE.Matrix4().copy(a.player.matrixWorld).invert();
-   const box=new THREE.Box3();
-   for(const m of footMeshes){const b=new THREE.Box3().setFromObject(m);b.applyMatrix4(inv);box.union(b);}
-   if(!box.isEmpty()){
-    const c=TOWN_ROUND_CONFIG.corpse;
-    // model.position.y is in visual units (visual scales by ~0.28): convert the
-    // player-space shift or the legs come out 3.5x too short (first smoke shot).
-    const scale=a.visual.scale.x||0.28;
-    a.model.position.y+=(-c.sink-box.min.y)/scale; // min.y ≈ -sink: grounded, slightly buried
-   }
+  const inv=new THREE.Matrix4().copy(a.player.matrixWorld).invert();
+  const box=new THREE.Box3().setFromObject(a.model).applyMatrix4(inv);
+  let shape=null;
+  if(!box.isEmpty()){
+   // model.position.y is in visual units (visual scales by ~0.28): convert the
+   // player-space shift or the sink comes out 3.5x too shallow.
+   const scale=a.visual.scale.x||0.28;
+   const height=box.max.y-box.min.y;
+   a.model.position.y+=((height*c.visibleFraction)-box.max.y)/scale; // exposed top at height × visibleFraction
+   a.player.updateWorldMatrix(true,true);
+   const sunken=new THREE.Box3().setFromObject(a.model).applyMatrix4(inv);
+   const halfW=Math.max(sunken.max.x-sunken.min.x,sunken.max.z-sunken.min.z)/2;
+   shape={exposedFraction:+Math.max(0,sunken.max.y/height).toFixed(3),poolRadius:+(halfW*c.poolScale).toFixed(3),feetHidden,bodyShown};
   }
   for(const child of [...a.player.children]){ // remove the gold ring marker; the shadow patch stays
    // BufferGeometry subclasses carry no is* flag in three 0.180 — match by type
@@ -241,29 +230,16 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
     for(const m of Array.isArray(child.material)?child.material:[child.material])m.dispose();
    }
   }
-  const c=TOWN_ROUND_CONFIG.corpse;
-  if(color!==null){
-   const disc=new THREE.Mesh(new THREE.CylinderGeometry(c.discRadius,c.discRadius,c.discThickness,24),new THREE.MeshStandardMaterial({color}));
-   disc.name='corpse-body-disc';disc.position.y=c.discThickness/2;
-   a.player.add(disc); // disposed with the avatar by disposeWalkingAvatar (single owner)
+  if(shape){ // flat cartoon pool under the dome; disposed with the avatar by disposeWalkingAvatar (single owner)
+   const pool=new THREE.Mesh(new THREE.CylinderGeometry(shape.poolRadius,shape.poolRadius,c.poolThickness,24),new THREE.MeshStandardMaterial({color:c.poolColor}));
+   pool.name='corpse-pool';pool.position.y=c.poolThickness/2;
+   a.player.add(pool);
   }
-  corpses.push({actor:entry.actorId,avatar:a,position:[...entry.position]});
- }
- // Placeholder legs (two cylinders + two flat discs) when the foot-mesh regex
- // finds nothing: diagnostics only so the shape can be seen and reported.
- function buildPlaceholderCorpse(a,color){
-  const c=TOWN_ROUND_CONFIG.corpse;
-  const mat=new THREE.MeshStandardMaterial({color:color??0xcfcfcf});
-  for(const side of [-1,1]){
-   const leg=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,c.footRise,8),mat);
-   leg.position.set(side*.08,c.footRise/2,0);a.player.add(leg);
-   const foot=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,c.discThickness,10),mat);
-   foot.position.set(side*.08,c.footRise,0);a.player.add(foot);
-  }
+  corpses.push({actor:entry.actorId,avatar:a,position:[...entry.position],shape});
  }
  function clearCorpses(){
   for(const c of corpses){if(c.avatar){scene.remove(c.avatar.player);disposeWalkingAvatar(c.avatar);}}
-  corpses=[];kill=null;corpsePlaceholder=false;corpseMeshNames=null;
+  corpses=[];kill=null;
  }
  // Meeting aftermath (map-walk restoreImmersion → round.resolveMeeting result):
  // dispose the ejected townsperson, clear every leg, repopulate on a new round.
@@ -366,14 +342,14 @@ export function createWalkNpcs({scene,nav,config,getPlayerPosition,getPlayerActo
   for(const c of corpses){if(c.avatar){scene.remove(c.avatar.player);disposeWalkingAvatar(c.avatar);}}
   corpses=[];
   if(bubbleLayer){bubbleLayer.remove();bubbleLayer=null;}
-  graph=null;hidden=false;corpsesHidden=false;bubblesSuppressed=false;rng=makeRng(20260920);corpsePlaceholder=false;corpseMeshNames=null;
+  graph=null;hidden=false;corpsesHidden=false;bubblesSuppressed=false;rng=makeRng(20260920);
  }
  const state=()=>({
   count:activeCount,loaded:list.length,hidden,
   corpsesVisible:corpses.filter(c=>c.avatar&&c.avatar.player.visible).length,
   npcs:list.map(n=>({actor:n.actorId,position:[n.position[0],n.position[1]],moving:n.moving,bubble:n.bubbleText})),
   round:round?round.state():null,killing:Boolean(kill),
-  corpsePlaceholder,corpseMeshNames:corpseMeshNames?[...corpseMeshNames]:null,
+  corpseShapes:corpses.map(c=>c.shape).filter(Boolean), // measured from the real meshes at corpse time (smoke shape checks)
  });
  return {start,update,setHidden,setBubblesHidden,stop,applyRound,state};
 }

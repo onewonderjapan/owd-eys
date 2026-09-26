@@ -1061,8 +1061,8 @@ try {
     const fkPage = await browser.newPage({viewport: finalViewport});
     const fkErrors = [];
     fkPage.on('pageerror', e => fkErrors.push(String(e && e.message || e).slice(0, 200)));
-    await fkPage.goto(url + '?round=force-kill', {waitUntil: 'networkidle'});
-    await fkPage.click('#character-grid button:nth-child(3)');
+    await fkPage.goto(url + '?round=force-kill' + (actorParam ? `&actor=${actorParam}` : ''), {waitUntil: 'networkidle'});
+    if (!actorParam) await fkPage.click('#character-grid button:nth-child(3)');
     await fkPage.click('#walk-enter');
     await fkPage.waitForFunction(() => window.eys?.state?.().walk?.active, {timeout: 40000});
     const fkRoundReady = await fkPage.waitForFunction(() => {
@@ -1080,6 +1080,8 @@ try {
     const fkWalkerActors = await fkPage.evaluate(() => window.eys.state().walk.npcs.npcs.map(m => m.actor));
     check('round: 腿的actor不再出现在行走镇民名单', !fkWalkerActors.includes(fkCorpseActor), `corpse=${fkCorpseActor} walkers=${JSON.stringify(fkWalkerActors)}`);
     check('round: 腿位于可走地面(刀点)', nav ? nav.collision(fkCorpsePos) === null : true, JSON.stringify(fkCorpsePos));
+    const fkShape = await fkPage.evaluate(() => (window.eys.state().walk.npcs.corpseShapes || [])[0] || null);
+    check('round: 尸体新造型——红斑在、身体可见、脚隐藏、露出高度0.35~0.5', Boolean(fkShape) && fkShape.poolRadius > 0 && fkShape.bodyShown > 0 && fkShape.feetHidden > 0 && fkShape.exposedFraction >= 0.35 && fkShape.exposedFraction <= 0.5, JSON.stringify(fkShape));
     // Walk to 1.2m of the leg, then run the full report -> meeting -> aftermath
     // loop three times (K3d): memory must not grow across rounds.
     const fkTap = async key => { await fkPage.keyboard.down(key); await fkPage.waitForTimeout(60); await fkPage.keyboard.up(key); await fkPage.waitForTimeout(25); };

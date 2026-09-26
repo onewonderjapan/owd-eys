@@ -124,9 +124,11 @@ export const TOWN_ROUND_CONFIG = Object.freeze({
  fleeDistance: 4.0,             // 刀后鸭子选路的最小距离
  reportDistance: 1.2,           // 出「报警」提示的距离
  maxCorpses: 4,
- // Review 2026-09-27: a 0.25 disc dwarfed the 21cm legs (read as a red plate);
- // smaller body disc + legs scaled up so the upturned legs carry the silhouette.
- corpse: Object.freeze({footRise: 0.18, discRadius: 0.14, discThickness: 0.04, sink: 0.02, legScale: 1.6}),
+ // Official-style corpse (owner screenshot 2026-09-26): the victim's upper body
+ // (own colors, hat) emerges from a flat cartoon red pool, no legs visible.
+ // visibleFraction is the exposed share of the full model height; the pool
+ // radius scales each character's horizontal half-width.
+ corpse: Object.freeze({visibleFraction: 0.42, poolScale: 1.3, poolColor: '#b3122a', poolThickness: 0.012}),
  reporting: 1.0,                // 发现演出时长（正本在 IMMERSION_CONFIG.timings，此处兜底）
  summary: 3.0,                  // 会后小结卡停留
 });

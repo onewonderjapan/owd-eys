@@ -1,7 +1,8 @@
 // One-off K2b probe (diagnostic, not a gate): ?round=force-kill -> wait for the
-// leg -> route to 1.2m south of it, final approach walking north -> KeyV (first
-// person faces the last heading, i.e. the leg) -> corpse-close.png. Overview ->
-// corpse-top.png. Prints corpse diagnostics (placeholder? foot-mesh names).
+// corpse -> route to 1.2m south of it, final approach walking north -> KeyV
+// (first person faces the last heading, i.e. the corpse) -> corpse-probe-close.png.
+// Overview -> corpse-probe-top.png. Prints corpse shape diagnostics (exposed
+// fraction, pool radius, hidden feet — measured at corpse time).
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
@@ -29,12 +30,11 @@ try {
   const corpseOk = await page.waitForFunction(() => window.eys?.state?.().walk?.npcs?.round?.corpses?.length === 1, null, {timeout: 10000}).then(() => true).catch(() => false);
   const diag = await page.evaluate(() => {
     const n = window.eys.state().walk.npcs;
-    return {round: n && n.round, placeholder: n && n.corpsePlaceholder, meshNames: (n && n.corpseMeshNames) || []};
+    return {round: n && n.round, shapes: (n && n.corpseShapes) || []};
   });
   console.log('corpse appeared:', corpseOk);
   console.log('round:', JSON.stringify(diag.round));
-  console.log('placeholder(diagnostic):', diag.placeholder);
-  console.log('foot-mesh regex hits:', (diag.meshNames || []).filter(n => /foot|shin|webbed[\s_]paddle|toe[\s_]seam/i.test(n)).length, '/', diag.meshNames.length);
+  console.log('corpse shape (measured at corpse time):', JSON.stringify(diag.shapes));
   const corpse = diag.round.corpses[0].position;
   const stand = [corpse[0], corpse[1] + 1.2]; // 1.2m south of the leg
   const route = sim.findPath(nav, await page.evaluate(() => window.eys.state().walk.position), stand);

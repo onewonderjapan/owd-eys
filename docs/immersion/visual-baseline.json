@@ -92,11 +92,11 @@
     "maxBlock": 0.1796
   },
   "corpse-close": {
-    "variance": 1763.3,
-    "maxBlock": 0.3286
+    "variance": 1782.6,
+    "maxBlock": 0.3573
   },
   "report-pov": {
-    "variance": 2374.7,
-    "maxBlock": 0.1932
+    "variance": 2391.4,
+    "maxBlock": 0.1779
   }
 }
